@@ -128,21 +128,68 @@ class TestEvolutionRuntime:
         """Test elitism preserves best genomes."""
         evolution_config.elitism_enabled = True
         engine = EvolutionEngine(evolution_config)
-        
+
         population = engine.initialize_population()
-        
+
         # Evaluate initial fitness
         for genome in population:
             genome.fitness_score = fitness_function(genome)
-        
+
         initial_best = max(population, key=lambda g: g.fitness_score)
         initial_best_score = initial_best.fitness_score
-        
+
         # Evolve one generation
         await engine.evolve(population, fitness_function, generations=1)
-        
+
         # Best score should be maintained or improved
         assert engine.best_genome.fitness_score >= initial_best_score
+
+    @pytest.mark.asyncio
+    async def test_elite_preservation_hpc_mode(self, evolution_config, fitness_function):
+        """Test elite genomes remain unchanged during HPC mode in-place mutations."""
+        evolution_config.elitism_enabled = True
+        evolution_config.hpc_mode = True
+        engine = EvolutionEngine(evolution_config)
+
+        population = engine.initialize_population()
+
+        # Evaluate initial fitness
+        for genome in population:
+            genome.fitness_score = fitness_function(genome)
+
+        # Sort by fitness and capture elite traits before evolution
+        population.sort(key=lambda g: g.fitness_score, reverse=True)
+        elitism_count = int(evolution_config.population_size * evolution_config.selection_pressure)
+        elite_genomes = population[:elitism_count]
+
+        # Store original traits of elites (deep copy to avoid reference issues)
+        elite_original_traits = []
+        for elite in elite_genomes:
+            elite_original_traits.append({
+                'traits': elite.traits.copy(),
+                'genome_id': elite.genome_id,
+                'fitness_score': elite.fitness_score
+            })
+
+        # Evolve one generation
+        await engine.evolve(population, fitness_function, generations=1)
+
+        # Verify elites remain in the population with unchanged traits
+        # The deepcopied elites should be in the new population
+        current_population = population
+
+        # Check that each original elite's traits are preserved.
+        # We search in a copy of the population and remove found elites
+        # to correctly handle cases where multiple elites have identical traits.
+        searchable_population = list(current_population)
+        for original_elite_data in elite_original_traits:
+            match_found = False
+            for i, genome in enumerate(searchable_population):
+                if genome.traits == original_elite_data['traits']:
+                    searchable_population.pop(i)
+                    match_found = True
+                    break
+            assert match_found, f"Elite genome traits from {original_elite_data['genome_id']} were not preserved"
     
     def test_population_diversity_tracking(self, evolution_engine, fitness_function):
         """Test population diversity is tracked correctly."""
@@ -258,4 +305,3 @@ class TestEvolutionRuntime:
         assert len(next_gen_high) == len(next_gen_low)
         for genome in next_gen_high + next_gen_low:
             assert_genome_valid(genome)
-
