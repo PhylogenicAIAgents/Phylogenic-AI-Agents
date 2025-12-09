@@ -44,7 +44,6 @@ from .types import AgentResponse, ConversationTurn
 from .exceptions import AgentError
 from .config import settings as allele_settings
 from .llm_client import LLMClient, LLMConfig
-from .llm_openai import OpenAIClient
 
 import structlog
 logger = structlog.get_logger(__name__)
@@ -312,12 +311,16 @@ class NLPAgent:
         key_map = {
             "openai": "OPENAI_API_KEY",
             "anthropic": "ANTHROPIC_API_KEY",
-            "ollama": "OLLAMA_API_KEY"  # For potential future ollama support
+            "ollama": "OLLAMA_API_KEY"  # Ollama doesn't actually use API keys for local models
         }
 
         env_var = key_map.get(self.config.llm_provider)
         if not env_var:
             raise ValueError(f"Unsupported LLM provider: {self.config.llm_provider}")
+
+        # Ollama uses local models, so no API key required
+        if self.config.llm_provider == "ollama":
+            return ""  # Empty string for Ollama (no auth needed)
 
         api_key = os.getenv(env_var)
         if not api_key:
@@ -379,9 +382,13 @@ class NLPAgent:
     async def _initialize_llm_client(self) -> None:
         """Initialize and validate LLM client based on provider."""
         try:
-            # Create appropriate client based on provider
+            # Create appropriate client based on provider (lazy imports to avoid dependency issues)
             if self.config.llm_provider == "openai":
+                from .llm_openai import OpenAIClient
                 self.llm_client = OpenAIClient(self.llm_config)
+            elif self.config.llm_provider == "ollama":
+                from .llm_ollama import OllamaClient
+                self.llm_client = OllamaClient(self.llm_config)
             elif self.config.llm_provider == "anthropic":
                 # Anthropic client would be imported and instantiated here
                 raise NotImplementedError("Anthropic support coming soon")

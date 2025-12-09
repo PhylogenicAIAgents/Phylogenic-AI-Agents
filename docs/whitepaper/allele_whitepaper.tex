@@ -12,7 +12,7 @@
 
 \title{Allele: Genome-Based Conversational AI Agents with Evolutionary Optimization and Liquid Neural Networks}
 \author{Jimmy De Jesus\\Bravetto AI Systems\\\texttt{jimmydejesus1129@gmail.com}}
-\date{December 2024}
+\date{December 2025}
 
 \begin{document}
 
@@ -162,6 +162,20 @@ where $\gamma$ is flow rate, $T$ is temperature, $u(t)$ is input injection.
 
 \section{Experimental Evaluation}
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{fig1_fitness.png}
+    \caption{\textbf{Evolutionary Convergence.} Best and Mean fitness scores over 20 generations (blue), plotted against population diversity (red). The system demonstrates rapid initial optimization (Generations 0-5) followed by stable convergence, while maintaining sufficient diversity to prevent premature stagnation.}
+    \label{fig:fitness}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{fig2_latency.png}
+    \caption{\textbf{Component Latency Analysis.} Mean processing time for genetic crossover operations compared to Liquid Neural Network (LNN) processing of varying sequence lengths. Crossover operations remain negligible ($<3$ms), while LNN processing scales linearly, staying within the 10ms real-time threshold for standard sentence lengths (50 tokens).}
+    \label{fig:latency}
+\end{figure}
+
 \subsection{Experimental Setup}
 
 \subsubsection{Implementation}
@@ -266,4 +280,3 @@ The open-source release enables researchers and practitioners to explore genome-
 \bibliography{references}
 
 \end{document}
-

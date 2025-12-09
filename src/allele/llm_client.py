@@ -46,6 +46,7 @@ class LLMConfig:
     model: str
     api_key: str
     base_url: Optional[str] = None
+    headers: Optional[Dict[str, str]] = None  # NEW: Custom headers for authentication
     temperature: float = 0.7
     max_tokens: int = 2048
     timeout: int = 60
@@ -61,8 +62,11 @@ class LLMConfig:
             raise ValueError("provider must be a non-empty string")
         if not self.model or not isinstance(self.model, str):
             raise ValueError("model must be a non-empty string")
-        if not self.api_key or not isinstance(self.api_key, str):
-            raise ValueError("api_key must be a non-empty string")
+        # Allow empty API key for local providers like ollama
+        if not isinstance(self.api_key, str):
+            raise ValueError("api_key must be a string")
+        if self.api_key == "" and self.provider not in ['ollama']:
+            raise ValueError("api_key must be a non-empty string for cloud providers")
         if not 0 <= self.temperature <= 2:
             raise ValueError("temperature must be between 0 and 2")
         if self.max_tokens <= 0:
