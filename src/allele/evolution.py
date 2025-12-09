@@ -33,6 +33,7 @@ Version: 1.0.0
 
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
+import copy
 import numpy as np
 
 from .genome import ConversationalGenome
@@ -267,7 +268,7 @@ class EvolutionEngine:
             )
             # Clone elites so they are preserved even when in-place mutation
             # is used on the source population during HPC mode.
-            next_generation = [ConversationalGenome.from_dict(g.to_dict()) for g in population[:elitism_count]]
+            next_generation = [copy.deepcopy(g) for g in population[:elitism_count]]
 
         # Create offspring
         # If hpc_mode is enabled and immutable_evolution is False (default),
@@ -336,4 +337,3 @@ class EvolutionEngine:
             diversities.append(std_dev)
 
         return float(np.mean(diversities)) if diversities else 0.0
-

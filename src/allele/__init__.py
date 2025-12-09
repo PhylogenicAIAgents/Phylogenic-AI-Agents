@@ -54,7 +54,7 @@ Version: 1.0.0
 License: AGPL-3.0
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Jimmy De Jesus & Bravetto AI Systems"
 __license__ = "AGPL-3.0"
 

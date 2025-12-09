@@ -7,12 +7,14 @@ name = "allele"
 version = "1.0.1"
 description = "Phylogenic AI Agents - Beyond Prompt Engineering. Evolve Genetically Optimized Personalities with Liquid Memory."
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "AGPL-3.0"}
 authors = [
-    { name = "Jimmy De Jesus", email = "jimmydejesus1129@gmail.com" }
+    { name = "Jimmy De Jesus", email = "jimmydejesus1129@gmail.com" },
+    { name = "Bravetto AI Systems" }
 ]
 maintainers = [
-    { name = "Jimmy De Jesus", email = "jimmydejesus1129@gmail.com" }
+    { name = "Jimmy De Jesus", email = "jimmydejesus1129@gmail.com" },
+    { name = "Bravetto AI Systems" }
 ]
 keywords = [
     "ai",
@@ -30,7 +32,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
