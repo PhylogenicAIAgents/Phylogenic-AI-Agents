@@ -113,6 +113,25 @@ pip install allele[ollama]    # Ollama (local)
 pip install allele[all]       # All providers
 ```
 
+### Quick Configuration
+
+Allele uses **centralized configuration** for easy customization:
+
+```python
+from allele import settings, AgentConfig
+
+# Use defaults
+config = AgentConfig.from_settings()
+
+# Or override via environment variables
+# AGENT__MODEL_NAME=gpt-4-turbo
+# AGENT__TEMPERATURE=0.9
+```
+
+See [Configuration Guide](docs/configuration.md) for details.
+
+**HPC mode:** Allele defaults to an in-place mutation strategy for the evolution engine to favor speed and low memory usage. If you need immutable behavior for reproducibility, set `EVOLUTION__IMMUTABLE_EVOLUTION=true` or use `EvolutionConfig(immutable_evolution=True)`.
+
 ---
 
 ## Why Allele?
@@ -148,9 +167,11 @@ pip install allele[all]       # All providers
 
 ## Documentation
 
+- [Configuration Guide](docs/configuration.md) - **Start here for setup**
 - [API Reference](docs/api.md)
 - [Evolution Guide](docs/evolution.md)
 - [Kraken LNN](docs/kraken_lnn.md)
+- [Testing Guide](docs/TESTING.md)
 - [Examples](examples/)
 
 ---
