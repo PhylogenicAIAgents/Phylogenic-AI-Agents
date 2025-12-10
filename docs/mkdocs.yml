@@ -1,0 +1,65 @@
+site_name: Allele Documentation
+site_description: Genome-Based Conversational AI Agents with Evolutionary Optimization
+site_author: Jimmy De Jesus, Bravetto AI Systems
+site_url: https://allele.readthedocs.io/
+
+repo_name: Fission-AI/OpenSpec
+repo_url: https://github.com/Fission-AI/OpenSpec
+edit_uri: edit/main/docs/
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Configuration: configuration.md
+    - Configuration Architecture: CONFIGURATION_ARCHITECTURE.md
+    - Configuration Summary: CONFIG_SUMMARY.md
+  - Integration:
+    - LLM Integration: LLM_INTEGRATION.md
+    - Real Integration Testing: REAL_INTEGRATION_TESTING.md
+  - Testing: TESTING.md
+  - Whitepaper:
+    - Allele Whitepaper: whitepaper/allele_whitepaper.md
+
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: green
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.arithmatex:
+      generic: true
+  - footnotes
+  - admonition
+  - toc:
+      permalink: true
+  - meta
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Fission-AI/OpenSpec
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/allele/
+
+copyright: Copyright &copy; 2025 Allele - MIT License
