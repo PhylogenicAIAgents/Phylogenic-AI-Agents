@@ -1,0 +1,1191 @@
+openapi: 3.1.0
+info:
+  title: Allele Conversation API
+  version: 1.0.0
+  description: |
+    REST API endpoints for conversational interactions with Allele NLP agents.
+    Supports both streaming and non-streaming chat, conversation history management,
+    and real-time personality-driven responses.
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+  contact:
+    name: Bravetto AI Systems
+    email: jimmydejesus1129@gmail.com
+
+servers:
+  - url: https://api.allele.ai/v1
+    description: Production server
+  - url: http://localhost:8000/v1
+    description: Local development server
+
+components:
+  schemas:
+    $ref: './schemas.yaml#/components/schemas'
+
+paths:
+
+  # === CHAT INTERACTIONS ===
+
+  /agents/{agent_id}/chat:
+    post:
+      summary: Send Chat Message
+      description: |
+        Send a chat message to an agent and receive a personality-driven response.
+        Supports genome-based conversational traits and LLM-powered responses.
+
+        **Features:**
+        - Real-time streaming responses (optional)
+        - Genome personality injection
+        - Conversation context management
+        - Quality scoring and metadata
+        - Rate limiting and error handling
+      operationId: chatWithAgent
+      tags:
+        - Conversation
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+        - name: stream
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Enable streaming response
+        - name: correlation_id
+          in: header
+          schema:
+            type: string
+            format: uuid
+          description: Client-provided correlation ID for request tracing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: Chat response generated successfully (non-streaming)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+          headers:
+            x-correlation-id:
+              schema:
+                type: string
+                format: uuid
+              description: Request correlation ID for tracing
+            x-accepted-by-agent:
+              schema:
+                type: string
+              description: ID of the agent that processed the request
+        '201':
+          description: Streaming response initiated (streaming mode)
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Initial chunk of streaming response
+              example: "Hello! I'm excited to help you with..."
+          headers:
+            content-type:
+              schema:
+                type: string
+                enum: [text/plain; charset=utf-8]
+              description: Content type for streaming response
+            x-stream-id:
+              schema:
+                type: string
+              description: Unique stream identifier
+            x-correlation-id:
+              schema:
+                type: string
+              description: Request correlation ID for tracing
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Agent not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "not_found"
+                message: "Agent 'agent_12345' not found"
+                timestamp: "2025-12-10T17:30:00Z"
+        '409':
+          description: Agent not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "agent_not_initialized"
+                message: "Agent must be initialized before chat"
+                details:
+                  agent_status: "created"
+                  required_action: "POST /agents/{agent_id}/initialize"
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /agents/{agent_id}/chat/stream:
+    get:
+      summary: Continue Streaming Chat
+      description: |
+        Continue receiving chunks from a streaming chat response.
+        Use the stream_id from the initial chat response header.
+
+        **Note:** This endpoint is typically called automatically by streaming clients.
+        Manual polling should use exponential backoff to avoid overwhelming the server.
+      operationId: continueStreamingChat
+      tags:
+        - Conversation
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+        - name: stream_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Stream identifier from initial chat request
+        - name: correlation_id
+          in: header
+          schema:
+            type: string
+          description: Correlation ID from initial request
+      responses:
+        '200':
+          description: Streaming chunk delivered
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/StreamingChatResponse'
+          headers:
+            x-chunk-finished:
+              schema:
+                type: boolean
+              description: Whether this is the final chunk
+            x-remaining-chunks:
+              schema:
+                type: integer
+              description: Estimated remaining chunks
+        '204':
+          description: Stream completed successfully
+          headers:
+            x-stream-finished:
+              schema:
+                type: boolean
+              description: Stream has ended (no more data)
+        '404':
+          description: Stream not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '410':
+          description: Stream timeout expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "stream_timeout"
+                message: "Stream timed out after 30 seconds of inactivity"
+                timestamp: "2025-12-10T17:30:00Z"
+
+  # === CONVERSATION MANAGEMENT ===
+
+  /agents/{agent_id}/conversation:
+    get:
+      summary: Get Conversation History
+      description: |
+        Retrieve the conversation history for an agent.
+        Returns both user and agent messages with timestamps and metadata.
+
+        **Privacy Note:** Conversation history may include sensitive user data.
+        This endpoint should be protected by appropriate authentication and authorization.
+      operationId: getConversationHistory
+      tags:
+        - Conversation
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Only return messages after this timestamp
+        - name: topic
+          in: query
+          schema:
+            type: string
+          description: Filter by conversation topic/tag
+        - name: min_quality_score
+          in: query
+          schema:
+            type: number
+            format: float
+            minimum: 0.0
+            maximum: 1.0
+          description: Minimum response quality score filter
+      responses:
+        '200':
+          description: Conversation history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent_id:
+                    type: string
+                  conversation:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConversationTurn'
+                    description: Chronological list of conversation turns
+                  summary:
+                    type: object
+                    properties:
+                      total_turns:
+                        type: integer
+                      date_range:
+                        type: object
+                        properties:
+                          start:
+                            type: string
+                            format: date-time
+                          end:
+                            type: string
+                            format: date-time
+                      topics_discussed:
+                        type: array
+                        items:
+                          type: string
+                      average_response_quality:
+                        type: number
+                        format: float
+                        minimum: 0.0
+                        maximum: 1.0
+                    description: Conversation analytics summary
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+                required:
+                  - agent_id
+                  - conversation
+                  - pagination
+              examples:
+                conversation_history:
+                  value:
+                    agent_id: "agent_12345"
+                    conversation: [
+                      {
+                        "user_input": "Hello, how can I optimize my website?",
+                        "agent_response": "Hello! I'd be happy to help you optimize your website. Web optimization covers many areas. Could you tell me what specific aspects you'd like to focus on?",
+                        "timestamp": "2025-12-10T17:25:00Z",
+                        "response_quality_score": 0.87
+                      },
+                      {
+                        "user_input": "SEO and performance",
+                        "agent_response": "Great topics! For SEO, focus on content quality and technical factors. For performance, consider image optimization, caching, and minimizing render-blocking resources. What CMS are you using?",
+                        "timestamp": "2025-12-10T17:25:30Z",
+                        "response_quality_score": 0.92
+                      }
+                    ]
+                    summary:
+                      total_turns: 2
+                      average_response_quality: 0.89
+                      topics_discussed: ["web_optimization", "seo", "performance"]
+                    pagination:
+                      page: 1
+                      page_size: 20
+                      total_pages: 1
+                      total_items: 2
+                      has_next: false
+                      has_previous: false
+        '403':
+          description: Insufficient permissions to access conversation history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Clear Conversation History
+      description: |
+        Permanently clear the conversation history for an agent.
+        This action cannot be undone and removes all stored conversation turns.
+
+        **Security Note:** This operation should be restricted to administrators
+        and require explicit confirmation.
+      operationId: clearConversationHistory
+      tags:
+        - Conversation
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+        - name: confirmation_token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Confirmation token to prevent accidental deletion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                keep_last_n_turns:
+                  type: integer
+                  minimum: 0
+                  default: 0
+                  description: Keep the last N conversation turns
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for clearing history (for audit logs)
+                permanent:
+                  type: boolean
+                  default: true
+                  description: Whether deletion should be permanent
+              required:
+                - reason
+      responses:
+        '200':
+          description: Conversation history cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent_id:
+                    type: string
+                  cleared_at:
+                    type: string
+                    format: date-time
+                  turns_removed:
+                    type: integer
+                    minimum: 0
+                  turns_retained:
+                    type: integer
+                    minimum: 0
+                  reason:
+                    type: string
+                  audit_log_entry:
+                    type: object
+                    description: Audit log entry for compliance
+                    properties:
+                      log_id:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      actor:
+                        type: string
+                      action:
+                        type: string
+                        enum: [conversation_cleared]
+                    required:
+                      - log_id
+                      - timestamp
+                      - action
+                required:
+                  - agent_id
+                  - cleared_at
+                  - turns_removed
+        '400':
+          description: Invalid confirmation token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Agent has active conversations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "agent_busy"
+                message: "Cannot clear history while agent has active conversations"
+                timestamp: "2025-12-10T17:30:00Z"
+
+  /agents/{agent_id}/conversation/export:
+    post:
+      summary: Export Conversation History
+      description: |
+        Export conversation history in various formats for backup, analysis, or compliance.
+        Support for JSON, CSV, and Markdown formats with configurable date ranges.
+      operationId: exportConversationHistory
+      tags:
+        - Conversation
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                format:
+                  type: string
+                  enum: [json, csv, markdown, pdf]
+                  default: "json"
+                  description: Export format
+                date_range:
+                  type: object
+                  properties:
+                    start:
+                      type: string
+                      format: date-time
+                      description: Start date for export (inclusive)
+                    end:
+                      type: string
+                      format: date-time
+                      description: End date for export (inclusive)
+                  description: Date range filter
+                include_metadata:
+                  type: boolean
+                  default: true
+                  description: Include quality scores and metadata
+                include_genome_info:
+                  type: boolean
+                  default: true
+                  description: Include genome trait information
+                anonymize_users:
+                  type: boolean
+                  default: false
+                  description: Hash/anonymize user identifiers
+                compression:
+                  type: string
+                  enum: [none, gzip, zip]
+                  default: "none"
+                  description: Compression format
+                export_all_turns:
+                  type: boolean
+                  default: true
+                  description: Export all turns or use pagination
+              required:
+                - format
+      responses:
+        '202':
+          description: Export job started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  export_job_id:
+                    type: string
+                    description: Unique identifier for the export job
+                  status:
+                    type: string
+                    enum: [queued, processing]
+                  estimated_completion_seconds:
+                    type: integer
+                    description: Estimated time to complete export
+                  download_url:
+                    type: string
+                    format: uri
+                    description: URL to check status and download result
+                  expires_at:
+                    type: string
+                    format: date-time
+                    description: When the download URL expires
+                required:
+                  - export_job_id
+                  - status
+                  - download_url
+              headers:
+                location:
+                  schema:
+                    type: string
+                  description: URL to check export status
+        '200':
+          description: Export completed immediately (small dataset)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+              description: Exported conversation data
+          headers:
+            content-disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="conversation_export_20251210.json"'
+            content-type:
+              schema:
+                type: string
+                example: application/json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /exports/{export_job_id}/status:
+    get:
+      summary: Get Export Job Status
+      description: Check the status of an export job and download completed exports.
+      operationId: getExportJobStatus
+      tags:
+        - Conversation
+      parameters:
+        - name: export_job_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Export job identifier
+      responses:
+        '200':
+          description: Job status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  export_job_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [queued, processing, completed, failed, expired]
+                  progress_percent:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+                  created_at:
+                    type: string
+                    format: date-time
+                  started_at:
+                    type: string
+                    format: date-time
+                  completed_at:
+                    type: string
+                    format: date-time
+                  download_url:
+                    type: string
+                    format: uri
+                    description: Available when status is 'completed'
+                  expires_at:
+                    type: string
+                    format: date-time
+                    description: When download becomes unavailable
+                  error_message:
+                    type: string
+                    description: Available when status is 'failed'
+                  file_size_bytes:
+                    type: integer
+                    description: Size of exported file
+                required:
+                  - export_job_id
+                  - status
+                  - created_at
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Cancel Export Job
+      description: Cancel a queued or processing export job.
+      operationId: cancelExportJob
+      tags:
+        - Conversation
+      parameters:
+        - name: export_job_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Export job identifier
+      responses:
+        '204':
+          description: Export job cancelled successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Export job cannot be cancelled (already completed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # === CONVERSATION ANALYTICS ===
+
+  /agents/{agent_id}/conversation/analytics:
+    get:
+      summary: Get Conversation Analytics
+      description: |
+        Get detailed analytics and insights about agent's conversation patterns,
+        topic modeling, sentiment analysis, and personality effectiveness metrics.
+      operationId: getConversationAnalytics
+      tags:
+        - Conversation
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [1h, 24h, 7d, 30d, 90d]
+            default: "7d"
+          description: Analysis time period
+        - name: include_topic_modeling
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include automated topic clustering
+        - name: include_sentiment_analysis
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include sentiment analysis
+      responses:
+        '200':
+          description: Conversation analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent_id:
+                    type: string
+                  period:
+                    type: object
+                    properties:
+                      start:
+                        type: string
+                        format: date-time
+                      end:
+                        type: string
+                        format: date-time
+                    description: Analysis period
+                  conversation_metrics:
+                    type: object
+                    properties:
+                      total_conversations:
+                        type: integer
+                      total_turns:
+                        type: integer
+                      average_conversation_length:
+                        type: number
+                        format: float
+                      average_response_length:
+                        type: number
+                        format: float
+                      response_time_distribution:
+                        type: object
+                        description: Statistical distribution of response times
+                      quality_score_distribution:
+                        type: object
+                        description: Quality score histogram
+                    description: Basic conversation statistics
+                  personality_effectiveness:
+                    type: object
+                    properties:
+                      trait_effectiveness:
+                        type: object
+                        additionalProperties:
+                          type: number
+                          format: float
+                          minimum: 0.0
+                          maximum: 1.0
+                        description: Effectiveness score for each personality trait
+                      adaptation_events:
+                        type: integer
+                        description: Number of evolutionary adaptations
+                      user_satisfaction_trends:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            timestamp:
+                              type: string
+                              format: date-time
+                            satisfaction_score:
+                              type: number
+                              format: float
+                    description: How well the personality traits are working
+                  topic_analysis:
+                    type: object
+                    properties:
+                      dominant_topics:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            topic:
+                              type: string
+                            frequency:
+                              type: number
+                              format: float
+                            confidence_score:
+                              type: number
+                              format: float
+                          required:
+                            - topic
+                            - frequency
+                        description: Most common conversation topics
+                      topic_clusters:
+                        type: array
+                        items:
+                          type: object
+                          description: Topic clusters with conversation examples
+                    description: Topic modeling results (if enabled)
+                  sentiment_trends:
+                    type: object
+                    properties:
+                      overall_sentiment:
+                        type: string
+                        enum: [positive, negative, neutral]
+                      sentiment_distribution:
+                        type: object
+                        properties:
+                          positive:
+                            type: number
+                            format: float
+                          negative:
+                            type: number
+                            format: float
+                          neutral:
+                            type: number
+                            format: float
+                      sentiment_over_time:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            timestamp:
+                              type: string
+                              format: date-time
+                            sentiment_score:
+                              type: number
+                              format: float
+                          required:
+                            - timestamp
+                            - sentiment_score
+                    description: Sentiment analysis results (if enabled)
+                required:
+                  - agent_id
+                  - period
+                  - conversation_metrics
+              examples:
+                conversation_analytics:
+                  value:
+                    agent_id: "agent_12345"
+                    period:
+                      start: "2025-12-03T00:00:00Z"
+                      end: "2025-12-10T17:30:00Z"
+                    conversation_metrics:
+                      total_conversations: 45
+                      total_turns: 238
+                      average_conversation_length: 5.3
+                      average_response_length: 142.5
+                      response_time_distribution:
+                        p50: 1.2
+                        p95: 3.8
+                        p99: 8.1
+                    personality_effectiveness:
+                      trait_effectiveness:
+                        empathy: 0.87
+                        technical_knowledge: 0.92
+                        creativity: 0.76
+                      user_satisfaction_trends: [
+                        {"timestamp": "2025-12-10T15:00:00Z", "satisfaction_score": 0.9}
+                      ]
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Analysis period too large or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  # === BATCH OPERATIONS ===
+
+  /agents/{agent_id}/chat/batch:
+    post:
+      summary: Batch Chat Messages
+      description: |
+        Send multiple chat messages for batch processing.
+        Useful for evaluating agent responses across different scenarios,
+        A/B testing personality traits, or bulk conversation processing.
+
+        **Rate Limits:** Batch processing may have stricter rate limits
+        and require special authentication.
+      operationId: batchChatWithAgent
+      tags:
+        - Conversation
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+        - name: correlation_id
+          in: header
+          schema:
+            type: string
+          description: Batch operation correlation ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messages:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ChatRequest'
+                  minItems: 1
+                  maxItems: 50
+                  description: Batch of chat messages to process
+                processing_options:
+                  type: object
+                  properties:
+                    parallel_processing:
+                      type: boolean
+                      default: false
+                      description: Process messages in parallel (if supported)
+                    genome_overrides:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          message_index:
+                            type: integer
+                            minimum: 0
+                            description: Which message in the batch
+                          trait_overrides:
+                            $ref: '#/components/schemas/TraitDict'
+                        description: Custom genome overrides per message
+                    continue_on_error:
+                      type: boolean
+                      default: true
+                      description: Continue processing remaining messages if one fails
+                    timeout_seconds:
+                      type: integer
+                      minimum: 10
+                      maximum: 3600
+                      default: 300
+                      description: Overall timeout for batch operation
+                  description: Processing configuration options
+                callback_url:
+                  type: string
+                  format: uri
+                  description: Webhook URL for async completion notifications
+              required:
+                - messages
+      responses:
+        '202':
+          description: Batch processing started asynchronously
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  batch_job_id:
+                    type: string
+                    description: Unique identifier for the batch job
+                  status:
+                    type: string
+                    enum: [queued, processing]
+                  messages_queued:
+                    type: integer
+                    minimum: 0
+                    description: Number of messages accepted for processing
+                  estimated_completion_seconds:
+                    type: integer
+                    description: Estimated completion time
+                  status_check_url:
+                    type: string
+                    format: uri
+                    description: URL to check batch job status
+                  results_webhook_url:
+                    type: string
+                    format: uri
+                    description: Webhook URL where results will be posted
+                required:
+                  - batch_job_id
+                  - status
+                  - messages_queued
+          headers:
+            location:
+              schema:
+                type: string
+              description: Batch job status URL
+        '200':
+          description: Batch processing completed synchronously
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  batch_job_id:
+                    type: string
+                    description: Batch job identifier (even for sync processing)
+                  status:
+                    type: string
+                    enum: [completed]
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message_index:
+                          type: integer
+                          description: Original message position in batch
+                        chat_response:
+                          $ref: '#/components/schemas/ChatResponse'
+                        processing_time_seconds:
+                          type: number
+                          format: float
+                        error:
+                          type: object
+                          description: Error details if message failed
+                          properties:
+                            code:
+                              type: string
+                            message:
+                              type: string
+                            timestamp:
+                              type: string
+                              format: date-time
+                      required:
+                        - message_index
+                    description: Individual message results
+                  summary:
+                    type: object
+                    properties:
+                      total_messages:
+                        type: integer
+                      successful_messages:
+                        type: integer
+                      failed_messages:
+                        type: integer
+                      average_processing_time:
+                        type: number
+                        format: float
+                      error_breakdown:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                        description: Count of different error types
+                    description: Batch processing summary statistics
+                required:
+                  - batch_job_id
+                  - status
+                  - results
+                  - summary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /batch-jobs/{batch_job_id}/status:
+    get:
+      summary: Get Batch Job Status
+      description: Check progress and results of an asynchronous batch chat operation.
+      operationId: getBatchJobStatus
+      tags:
+        - Conversation
+      parameters:
+        - name: batch_job_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Batch job identifier from batch submission
+      responses:
+        '200':
+          description: Batch job status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  batch_job_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [queued, processing, completed, failed, cancelled]
+                  progress:
+                    type: object
+                    properties:
+                      completed_messages:
+                        type: integer
+                        minimum: 0
+                      total_messages:
+                        type: integer
+                        minimum: 1
+                      progress_percent:
+                        type: integer
+                        minimum: 0
+                        maximum: 100
+                      estimated_time_remaining_seconds:
+                        type: integer
+                        minimum: 0
+                    description: Processing progress information
+                  results_download_url:
+                    type: string
+                    format: uri
+                    description: Available when status is 'completed'
+                  error_summary:
+                    type: object
+                    description: Error summary if any messages failed
+                    properties:
+                      total_errors:
+                        type: integer
+                        minimum: 0
+                      error_types:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                        description: Count by error type
+                  timing:
+                    type: object
+                    properties:
+                      created_at:
+                        type: string
+                        format: date-time
+                      started_at:
+                        type: string
+                        format: date-time
+                      completed_at:
+                        type: string
+                        format: date-time
+                      duration_seconds:
+                        type: number
+                        format: float
+                    description: Batch job timing information
+                required:
+                  - batch_job_id
+                  - status
+                  - progress
+                  - timing
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # === REAL-TIME CONVERSATION MONITORING ===
+
+  /agents/{agent_id}/conversation/live:
+    get:
+      summary: Live Conversation Stream
+      description: |
+        Subscribe to live conversation updates for an agent using Server-Sent Events (SSE).
+        Receive real-time updates for active conversations, quality metrics, and personality adaptations.
+
+        **Use Cases:**
+        - Real-time conversation monitoring dashboards
+        - Quality assurance monitoring
+        - Live debugging during development
+        - Performance analytics streams
+      operationId: streamLiveConversation
+      tags:
+        - Conversation
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+        - name: event_types
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [chat_request, chat_response, quality_score, adaptation_event, error_event, performance_metric]
+          style: form
+          explode: false
+          description: Types of events to stream (comma-separated)
+        - name: min_quality_threshold
+          in: query
+          schema:
+            type: number
+            format: float
+            minimum: 0.0
+            maximum: 1.0
+          description: Only stream responses above quality threshold
+        - name: include_context
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include full conversation context in events
+      responses:
+        '200':
+          description: Event stream established successfully
+          content:
+            text/event-stream:
+              schema:
+                type: object
+                properties:
+                  event:
+                    type: string
+                    enum: [chat_request, chat_response, quality_score, adaptation_event, error_event, performance_metric]
+                    example: "chat_response"
+                  data:
+                    type: object
+                    description: Event-specific data payload
+                    examples:
+                      chat_response:
+                        summary: Agent chat response event
+                        value:
+                          agent_id: "agent_12345"
+                          conversation_id: "conv_786"
+                          message: "Here's a comprehensive answer to your question..."
+                          quality_score: 0.91
+                          generation_time_ms: 1247
+                          timestamp: "2025-12-10T17:30:15Z"
+                      adaptation_event:
+                        summary: Personality adaptation event
+                        value:
+                          agent_id: "agent_12345"
+                          adaptation_type: "trait_adjustment"
+                          previous_traits:
+                            creativity: 0.7
+                          new_traits:
+                            creativity: 0.75
+                          reason: "user_feedback_response_quality"
+                          timestamp: "2025-12-10T17:29:42Z"
+                  id:
+                    type: string
+                    description: Event sequence ID
+                  timestamp:
+                    type: string
+                    format: date-time
+            examples:
+              chat_response_event:
+                summary: Live chat response event
+                value: |
+                  event: chat_response
+                  data: {"agent_id": "agent_12345", "conversation_id": "conv_786", "message": "Here's a comprehensive answer...", "quality_score": 0.91, "generation_time_ms": 1247}
+                  id: evt_123456789
+                  timestamp: 2025-12-10T17:30:15Z
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          description: Live streaming not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "service_unavailable"
+                message: "Live conversation streaming is temporarily disabled"
+                timestamp: "2025-12-10T17:30:00Z"
