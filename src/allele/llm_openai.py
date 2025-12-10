@@ -285,16 +285,40 @@ class OpenAIClient(LLMClient):
             yield chunk
 
     def _estimate_token_count(self, messages: List[Dict[str, str]]) -> int:
-        """Roughly estimate token count for rate limiting and cost calculation."""
-        # Simple approximation: ~4 characters per token for English text
-        # More sophisticated implementations could use tiktoken library
-        total_chars = sum(len(str(msg.get("content", ""))) for msg in messages)
-        estimated_tokens = max(1, total_chars // 4)
+        """Estimate token count using tiktoken for accurate OpenAI tokenization."""
+        try:
+            import tiktoken
+            # Use the appropriate encoding for the model
+            # For GPT-4 and newer models, use cl100k_base
+            encoding = tiktoken.get_encoding("cl100k_base")
 
-        # Add some overhead for message formatting and special tokens
-        overhead_tokens = len(messages) * 10  # Rough estimate
+            total_tokens = 0
+            for msg in messages:
+                content = str(msg.get("content", ""))
 
-        return estimated_tokens + overhead_tokens
+                # Count tokens in content
+                tokens_in_content = len(encoding.encode(content))
+                total_tokens += tokens_in_content
+
+                # Add overhead for message formatting (role, content keys, etc.)
+                # This is an approximation but much better than character-based
+                formatting_overhead = 4  # Rough estimate for JSON structure
+                total_tokens += formatting_overhead
+
+            return total_tokens
+
+        except ImportError:
+            # Fallback to improved character-based estimation if tiktoken unavailable
+            self.logger.warning("tiktoken not available, using improved character estimation")
+            total_chars = sum(len(str(msg.get("content", ""))) for msg in messages)
+
+            # Better approximation: ~3.5-4 characters per token for English
+            # Use 3.8 for conservative estimation (avoid API errors)
+            estimated_tokens = max(1, total_chars // 3.8)
+
+            # Add overhead proportional to messages
+            overhead_tokens = len(messages) * 6  # Reduced from 10
+            return estimated_tokens + overhead_tokens
 
     def _update_metrics(self, usage) -> None:
         """Update usage metrics from OpenAI usage data."""

@@ -19,7 +19,10 @@ class TestLLMIntegration:
     # Set up Ollama Cloud API key for real integration testing
     def setup_method(self):
         """Set up environment variables for real API testing."""
-        os.environ['OLLAMA_API_KEY'] = 'd36d8eb3b3bc4aa4830a3848b4f1bbf4.SOsu3PaVKVqlusm4evvmxb0X'
+        api_key = os.getenv("TEST_OLLAMA_API_KEY")
+        if not api_key:
+            pytest.skip("TEST_OLLAMA_API_KEY not set")
+        os.environ['OLLAMA_API_KEY'] = api_key
 
     def teardown_method(self):
         """Clean up environment variables."""

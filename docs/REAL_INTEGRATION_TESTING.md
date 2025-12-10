@@ -38,7 +38,7 @@ async def test_ollama_cloud_real_chat():
 ### Ollama Cloud API Key
 ```bash
 # Required for real cloud testing
-export OLLAMA_API_KEY="d36d8eb3b3bc4aa4830a3848b4f1bbf4.SOsu3PaVKVqlusm4evvmxb0X"
+export OLLAMA_API_KEY="<your-ollama-cloud-key>"
 ```
 
 ### OpenAI API Key (Optional)

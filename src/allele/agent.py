@@ -615,7 +615,7 @@ class NLPAgent:
             return messages
 
     def _truncate_context(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
-        """Truncate conversation context to stay within token limits."""
+        """Truncate conversation context to stay within token limits using proper tokenization."""
         # Keep system message always
         if not messages or messages[0]["role"] != "system":
             return messages
@@ -623,17 +623,17 @@ class NLPAgent:
         system_msg = messages[0]
         other_messages = messages[1:]
 
-        # Simple character-based estimation (real implementation would use proper tokenization)
-        max_chars = self.config.max_context_length * 4  # Rough approximation
-        total_chars = len(system_msg["content"])
+        # Estimate tokens properly if available, fallback to character-based
+        max_tokens = self._estimate_tokens([system_msg])
+        estimated_tokens = max_tokens
 
         truncated_messages = [system_msg]
 
         for msg in reversed(other_messages):  # Add most recent first
-            msg_chars = len(msg["content"])
-            if total_chars + msg_chars <= max_chars:
+            msg_tokens = self._estimate_tokens([msg])
+            if estimated_tokens + msg_tokens <= self.config.max_context_length:
                 truncated_messages.insert(1, msg)  # Insert after system message
-                total_chars += msg_chars
+                estimated_tokens += msg_tokens
             else:
                 # Add truncation notice
                 if len(truncated_messages) == 1:  # Only system message
@@ -644,6 +644,22 @@ class NLPAgent:
                 break
 
         return truncated_messages
+
+    def _estimate_tokens(self, messages: List[Dict[str, str]]) -> int:
+        """Estimate token count using available tokenization methods."""
+        try:
+            # Try to use LLM client's token estimation if available
+            if self.llm_client and hasattr(self.llm_client, '_estimate_token_count'):
+                return self.llm_client._estimate_token_count(messages)
+            else:
+                # Fallback to character-based approximation
+                total_chars = sum(len(str(msg.get("content", ""))) for msg in messages)
+                # Conservative estimate: ~3.5 characters per token
+                return max(1, total_chars // 3.5)
+        except Exception:
+            # Ultimate fallback
+            total_chars = sum(len(str(msg.get("content", ""))) for msg in messages)
+            return max(1, total_chars // 4)
 
     async def _add_conversation_turn(
         self,

@@ -160,32 +160,6 @@ pytest tests/test_llm_integration.py::test_ollama_cloud_real_chat -xvs
 3. **Personality Scoring** - Responses scored for trait adherence
 4. **Adaptive Evolution** - Genomes evolve based on performance metrics
 
-## Genome-Based Personalization (Legacy)
-
-The agent creates dynamic system prompts based on genome traits:
-
-```python
-genome = ConversationalGenome("tech_support", {
-    'empathy': 0.8,
-    'technical_knowledge': 0.9,
-    'conciseness': 0.7,
-    'context_awareness': 0.8,
-})
-```
-
-This generates a prompt like:
-
-> You are an AI assistant with these personality traits:
-> - emotional understanding and compassionate responses (0.8/1.0)
-> - depth of technical expertise and accuracy (0.9/1.0)
-> - balancing completeness with brevity (0.7/1.0)
-> - understanding conversation history and maintaining continuity (0.8/1.0)
->
-> Your genome ID: tech_support
-> Current generation: 0
->
-> Respond naturally while embodying these traits in your communication style.
-
 ## Error Handling
 
 ### Automatic Retries
