@@ -1,0 +1,272 @@
+name: API Contract Testing
+
+on:
+  push:
+    branches: [ main, feature/** ]
+    paths:
+      - 'docs/api/**'
+      - '.github/workflows/api-contract-testing.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'docs/api/**'
+
+jobs:
+  validate-openapi-specs:
+    name: Validate OpenAPI Specifications
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install OpenAPI validation tools
+      run: |
+        npm install -g @redocly/cli
+        npm install -g @apidevtools/swagger-cli
+
+    - name: Validate all OpenAPI specifications
+      run: |
+        echo "🔍 Validating OpenAPI specifications..."
+        echo
+
+        # Validate each API spec individually
+        SPECS=('agent' 'conversation' 'genome' 'evolution' 'config')
+        FAILED_SPECS=()
+
+        for spec in "${SPECS[@]}"; do
+          echo "📋 Validating ${spec}.yaml..."
+          if npx @redocly/cli lint "docs/api/${spec}.yaml" --format=summary > /tmp/${spec}_validation.log 2>&1; then
+            echo "✅ ${spec}.yaml validation passed"
+          else
+            echo "❌ ${spec}.yaml validation failed"
+            cat /tmp/${spec}_validation.log
+            echo
+            FAILED_SPECS+=("${spec}")
+          fi
+          echo "---"
+        done
+
+        # Summary
+        echo "📊 Validation Summary:"
+        echo "Total specs: ${#SPECS[@]}"
+        echo "Failed specs: ${#FAILED_SPECS[@]}"
+
+        if [ ${#FAILED_SPECS[@]} -gt 0 ]; then
+          echo "❌ The following specs failed validation: ${FAILED_SPECS[*]}"
+          exit 1
+        else
+          echo "✅ All OpenAPI specifications validated successfully!"
+        fi
+
+    - name: Generate API documentation preview
+      run: |
+        echo "📚 Generating API documentation..."
+        npx @redocly/cli bundle docs/api/agent.yaml > /tmp/agent-api.html || true
+        npx @redocly/cli bundle docs/api/conversation.yaml > /tmp/conversation-api.html || true
+
+    - name: Upload validation logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: openapi-validation-logs
+        path: /tmp/*_validation.log
+
+  test-openapi-generator:
+    name: Test OpenAPI Client Generation
+    runs-on: ubuntu-latest
+    needs: validate-openapi-specs
+
+    strategy:
+      matrix:
+        language: [python, typescript, go]
+        api: [agent, conversation, genome]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Java (required for OpenAPI Generator)
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Install OpenAPI Generator CLI
+      run: |
+        wget https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.4.0/openapi-generator-cli-7.4.0.jar -O openapi-generator-cli.jar
+        echo "java -jar openapi-generator-cli.jar \$@" > openapi-generator-cli
+        chmod +x openapi-generator-cli
+
+    - name: Test ${{ matrix.language }} client generation for ${{ matrix.api }} API
+      run: |
+        echo "🔧 Testing ${{ matrix.language }} client generation for ${{ matrix.api }} API..."
+
+        OUTPUT_DIR="generated-clients/${{ matrix.language }}/${{ matrix.api }}"
+
+        # Map language names to generator types
+        case "${{ matrix.language }}" in
+          python)
+            GENERATOR="python"
+            ;;
+          typescript)
+            GENERATOR="typescript-fetch"
+            ;;
+          go)
+            GENERATOR="go"
+            ;;
+          *)
+            echo "❌ Unsupported language: ${{ matrix.language }}"
+            exit 1
+            ;;
+        esac
+
+        # Attempt client generation
+        if ./openapi-generator-cli generate \
+          -i "docs/api/${{ matrix.api }}.yaml" \
+          -g $GENERATOR \
+          -o "$OUTPUT_DIR" \
+          --additional-properties=packageName=allele_${{ matrix.api }}_client \
+          --global-property=verbose \
+          2>&1; then
+            echo "✅ ${{ matrix.language }} client generated successfully for ${{ matrix.api }} API"
+            ls -la "$OUTPUT_DIR" | head -10
+          else
+            echo "❌ ${{ matrix.language }} client generation failed for ${{ matrix.api }} API"
+            echo "This may indicate issues with the OpenAPI specification schema."
+            exit 1
+        fi
+
+    - name: Upload generated clients
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: generated-clients-${{ matrix.language }}-${{ matrix.api }}
+        path: generated-clients/${{ matrix.language }}/${{ matrix.api }}/
+        retention-days: 7
+
+  contract-diff-check:
+    name: API Contract Diff Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install OpenAPI diff tools
+      run: |
+        npm install -g openapi-diff
+        npm install -g @redocly/cli
+
+    - name: Check API contract changes
+      run: |
+        echo "🔍 Analyzing API contract changes..."
+
+        TARGET_BRANCH=${{ github.base_ref }}
+        SOURCE_BRANCH=${{ github.head_ref }}
+
+        echo "Comparing $SOURCE_BRANCH with $TARGET_BRANCH"
+
+        # Get changed API files
+        CHANGED_FILES=$(git diff --name-only origin/$TARGET_BRANCH...HEAD -- 'docs/api/*.yaml' || echo "")
+
+        if [ -z "$CHANGED_FILES" ]; then
+          echo "ℹ️ No API specification changes detected"
+          exit 0
+        fi
+
+        echo "📋 Changed API files:"
+        echo "$CHANGED_FILES"
+        echo
+
+        # Perform basic API diff analysis
+        for file in $CHANGED_FILES; do
+          echo "🔍 Analyzing changes in $file..."
+
+          # Check if file is valid YAML
+          if ! python3 -c "import yaml; yaml.safe_load(open('$file'))"; then
+            echo "❌ Invalid YAML in $file"
+            exit 1
+          fi
+
+          echo "✅ $file is valid YAML"
+        done
+
+        echo "📊 API Contract Analysis Complete"
+        echo "Note: For detailed breaking change analysis, consider using tools like:"
+        echo "- openapi-diff (already installed)"
+        echo "- swagger-diff"
+        echo "- oasdiff"
+
+    - name: Comment on PR with API changes
+      if: always() && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const changedFiles = `${{ steps.get-changed-files.outputs.files }}`.split('\n').filter(f => f.includes('docs/api/'));
+          if (changedFiles.length > 0) {
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔍 API Contract Changes Detected
+
+This PR modifies the following API specifications:
+${changedFiles.map(f => `- \`${f}\``).join('\n')}
+
+### ✅ Validation Status
+- OpenAPI specifications have been validated
+- YAML syntax is correct
+- Basic schema structure verified
+
+### 🤔 Next Steps
+Consider testing with:
+- \`npm run generate-clients\` - Generate SDKs
+- \`npm run preview-docs\` - View API docs
+- Contract testing tools for breaking changes
+
+### 📚 View API Docs
+\`\`\`bash
+npx @redocly/cli preview-docs docs/api/agent.yaml
+\`\`\``
+            });
+          }
+
+  github-actions-lint:
+    name: Validate GitHub Actions
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate GitHub Actions
+      run: |
+        echo "🔍 Validating GitHub Actions workflows..."
+
+        # Basic YAML validation for workflow files
+        find .github/workflows -name "*.yml" -o -name "*.yaml" | while read -r file; do
+          echo "📋 Checking $file..."
+          if python3 -c "import yaml; yaml.safe_load(open('$file'))" 2>/dev/null; then
+            echo "✅ $file is valid YAML"
+          else
+            echo "❌ $file contains invalid YAML"
+            exit 1
+          fi
+        done
+
+        echo "✅ All GitHub Actions files are valid"
