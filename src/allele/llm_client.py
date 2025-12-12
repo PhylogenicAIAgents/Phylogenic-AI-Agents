@@ -390,3 +390,36 @@ class LLMClient(ABC):
             "available_models": available_models[:10],  # Limit for brevity
             "status": "healthy" if self.initialized else "uninitialized"
         }
+
+
+class MockLLMClient(LLMClient):
+    """Simple mock LLM client for local development and CI testing.
+
+    This mock client provides deterministic, fast responses and minimal
+    behavior so unit tests and local runs do not require network access
+    or API keys.
+    """
+
+    async def initialize(self) -> None:
+        self._initialized = True
+
+    async def chat_completion(self, messages: List[Dict[str, str]], stream: bool = True) -> AsyncGenerator[str, None]:
+        # Simple mock response echoing the last user message
+        content = ""
+        if messages:
+            last = messages[-1].get("content", "")
+            content = f"Mock response to: {last}"
+        if stream:
+            # Yield as one chunk for simplicity
+            yield content
+        else:
+            yield content
+
+    async def estimate_cost(self, input_tokens: int, output_tokens: int) -> float:
+        return 0.0
+
+    async def get_available_models(self) -> List[str]:
+        return ["gpt-4", "gpt-3.5-turbo", "gpt-4-turbo-preview"]
+
+    async def close(self) -> None:
+        self._initialized = False

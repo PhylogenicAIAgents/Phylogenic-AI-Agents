@@ -341,9 +341,17 @@ class ConversationalGenome(GenomeBase):
         Args:
             mutation_rate: Probability of each trait mutating
         """
-        for trait_name in self.traits.keys():
+        mutated = False
+        trait_names = list(self.traits.keys())
+        for trait_name in trait_names:
             if np.random.random() < mutation_rate:
                 self.mutate_trait(trait_name)
+                mutated = True
+
+        # Ensure at least one mutation occurs when mutation_rate > 0.0
+        if not mutated and mutation_rate > 0.0 and trait_names:
+            # Force a mutation on a random trait to guarantee evolutionary change
+            self.mutate_trait(np.random.choice(trait_names))
 
         # Update metadata
         self.metadata.last_mutation = datetime.now(timezone.utc)

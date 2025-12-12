@@ -98,3 +98,92 @@ def mock_genome():
             'personability': 0.8
         }
     )
+
+
+@pytest.fixture
+def custom_genome():
+    """Alias fixture for a reusable test genome used across tests."""
+    from tests.test_utils import generate_random_genome
+    return generate_random_genome("custom_genome", seed=42)
+
+
+@pytest.fixture
+def default_genome():
+    """Default genome with library defaults."""
+    from allele import ConversationalGenome
+    return ConversationalGenome(genome_id="default_genome")
+
+
+@pytest.fixture
+def technical_genome():
+    """Genome skewed toward technical knowledge for targeted tests."""
+    from allele import ConversationalGenome
+    return ConversationalGenome(
+        genome_id="technical",
+        traits={
+            'technical_knowledge': 0.98,
+            'empathy': 0.2,
+            'engagement': 0.3,
+            'creativity': 0.2,
+            'conciseness': 0.6,
+            'context_awareness': 0.4,
+            'adaptability': 0.5,
+            'personability': 0.3
+        }
+    )
+
+
+@pytest.fixture
+def fitness_function():
+    """Simple fitness function for evolution tests."""
+    from tests.test_utils import generate_fitness_function
+    return generate_fitness_function()
+
+
+@pytest.fixture
+def evolution_config():
+    """Lightweight evolution config for tests."""
+    from allele.evolution import EvolutionConfig
+    return EvolutionConfig(population_size=20, generations=5, mutation_rate=0.1)
+
+
+@pytest.fixture
+def population_of_genomes():
+    """Generate a small population for testing."""
+    from tests.test_utils import generate_population
+    return generate_population(20, seed=1)
+
+
+@pytest.fixture
+def sample_sequence():
+    """Short sample sequence for LNN tests."""
+    from tests.test_utils import generate_test_sequence
+    return generate_test_sequence(20, seed=123)
+
+
+@pytest.fixture
+def kraken_lnn():
+    """Instantiate a Kraken LNN for runtime tests."""
+    from allele.kraken_lnn import KrakenLNN
+    return KrakenLNN(reservoir_size=100, connectivity=0.1)
+
+
+@pytest.fixture
+def agent_config():
+    """Default AgentConfig for runtime tests."""
+    from allele.agent import AgentConfig
+    return AgentConfig()
+
+
+@pytest.fixture
+def evolution_engine(evolution_config):
+    """Instantiate an EvolutionEngine for runtime tests."""
+    from allele.evolution import EvolutionEngine
+    return EvolutionEngine(evolution_config)
+
+
+@pytest.fixture
+def custom_liquid_dynamics():
+    """Custom LiquidDynamics instance used in Kraken LNN tests."""
+    from allele.kraken_lnn import LiquidDynamics
+    return LiquidDynamics(viscosity=0.15, temperature=1.2, pressure=0.9)

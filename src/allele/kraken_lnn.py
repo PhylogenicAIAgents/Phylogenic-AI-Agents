@@ -124,6 +124,11 @@ class LiquidStateMachine:
             connectivity: Connection density in the reservoir
             dynamics: Liquid dynamics configuration
         """
+        # Guard against unreasonable reservoir sizes that can cause OOM
+        max_reservoir = 5000
+        if reservoir_size <= 0 or reservoir_size > max_reservoir:
+            raise ValueError(f"reservoir_size must be between 1 and {max_reservoir}")
+
         self.reservoir_size = reservoir_size
         self.connectivity = connectivity
         self.dynamics = dynamics or LiquidDynamics()
