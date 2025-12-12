@@ -12,7 +12,7 @@ Thank you for your interest in contributing to Allele! We welcome contributions 
 - [Reporting Issues](#reporting-issues)
 
 ## Code of Conduct
-This project follows a code of conduct to ensure a welcoming environment for all contributors. Please be respectful and considerate in your interactions.
+This project follows a [Code of Conduct](CODE_OF_CONDUCT.md) to ensure a welcoming environment for all contributors. Please be respectful and considerate in your interactions.
 
 ## Getting Started
 1. Fork the repository on GitHub.
@@ -22,10 +22,13 @@ This project follows a code of conduct to ensure a welcoming environment for all
 ## Development Environment
 1. Install Python 3.8 or later.
 2. Install dependencies: `pip install -e .[dev]`
+3. Set up pre-commit hooks: `pre-commit install`
 
 ## Making Changes
 - Follow the coding standards in this project.
 - Use [ruff](https://github.com/astral-sh/ruff) for linting.
+- Use [black](https://github.com/psf/black) for code formatting.
+- Use [isort](https://pycqa.github.io/isort/) for import sorting.
 - Use [mypy](https://mypy.readthedocs.io/) for type checking.
 - Write clear, concise commit messages.
 

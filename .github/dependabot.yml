@@ -5,12 +5,17 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "[dependabot]"
+      prefix: "chore(deps)"
     open-pull-requests-limit: 5
+    reviewers:
+      - "jimmyjdejesus-cmyk"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "[dependabot]"
+      prefix: "chore(deps)"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "jimmyjdejesus-cmyk"
