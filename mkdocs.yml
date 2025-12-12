@@ -13,6 +13,10 @@ nav:
     - Configuration: configuration.md
     - Configuration Architecture: CONFIGURATION_ARCHITECTURE.md
     - Configuration Summary: CONFIG_SUMMARY.md
+  - Core Features:
+    - API Reference: api.md
+    - Evolution Guide: evolution.md
+    - Kraken LNN: kraken_lnn.md
   - Integration:
     - LLM Integration: LLM_INTEGRATION.md
     - Real Integration Testing: REAL_INTEGRATION_TESTING.md
@@ -58,7 +62,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/Fission-AI/OpenSpec
+      link: https://github.com/allele-ai/allele
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/allele/
 

@@ -388,4 +388,4 @@ info:
 **Need Help?**
 - 📧 Email: jimmydejesus1129@gmail.com
 - 📖 Documentation: [Allele SDK Docs](../docs/)
-- 🔗 Repository: [GitHub](https://github.com/bravetto/allele)
+- 🔗 Repository: [GitHub](https://github.com/allele-ai/allele)

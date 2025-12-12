@@ -254,11 +254,11 @@ For academic/research use, the AGPL v3 terms are automatically satisfied without
 
 ## Links
 
-- **Homepage**: [allele.ai](https://fission-ai.github.io/OpenSpec/)
+- **Homepage**: [allele.ai](https://allele-ai.github.io/allele/)
 - **Documentation**: [docs.allele.ai](https://allele.readthedocs.io/)
-- **GitHub**: [github.com/Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec)
+- **GitHub**: [github.com/allele-ai/allele](https://github.com/allele-ai/allele)
 - **PyPI**: [pypi.org/project/allele](https://pypi.org/project/allele/)
-- **Issues**: [github.com/Fission-AI/OpenSpec/issues](https://github.com/Fission-AI/OpenSpec/issues)
+- **Issues**: [github.com/allele-ai/allele/issues](https://github.com/allele-ai/allele/issues)
 
 ---
 
