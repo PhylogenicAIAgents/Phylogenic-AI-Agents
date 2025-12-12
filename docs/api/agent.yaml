@@ -1,0 +1,720 @@
+openapi: 3.1.0
+info:
+  title: Allele Agent Management API
+  version: 1.0.0
+  description: |
+    REST API endpoints for managing Allele NLP agents. This API provides
+    lifecycle management, monitoring, and control of conversational AI agents
+    built with genome-based personality encoding.
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+  contact:
+    name: Bravetto AI Systems
+    email: jimmydejesus1129@gmail.com
+
+servers:
+  - url: https://api.allele.ai/v1
+    description: Production server
+  - url: http://localhost:8000/v1
+    description: Local development server
+
+components:
+  # Reference the shared schemas
+  schemas:
+    $ref: './schemas.yaml#/components/schemas'
+
+paths:
+
+  # === AGENT LIFECYCLE ===
+
+  /agents:
+    post:
+      summary: Create Agent
+      description: |
+        Create and initialize a new NLP agent with specified genome and configuration.
+        The agent will be ready for conversation upon successful creation.
+
+        **Note:** Agent creation includes LLM client initialization, which may take
+        several seconds depending on the provider.
+      operationId: createAgent
+      tags:
+        - Agent Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                genome_id:
+                  type: string
+                  description: ID of genome to use for this agent
+                  example: "support_agent_v1"
+                config:
+                  $ref: '#/components/schemas/AgentConfig'
+                auto_initialize:
+                  type: boolean
+                  default: true
+                  description: Whether to initialize the agent immediately
+              required:
+                - genome_id
+                - config
+            examples:
+              create_support_agent:
+                summary: Create customer support agent
+                value:
+                  genome_id: "support_agent_v1"
+                  config:
+                    llm_provider: "openai"
+                    model_name: "gpt-4-turbo-preview"
+                    temperature: 0.7
+                    max_tokens: 2048
+                    streaming: true
+                  auto_initialize: true
+      responses:
+        '201':
+          description: Agent created and initialized successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent_id:
+                    type: string
+                    description: Unique identifier for the created agent
+                    example: "agent_12345"
+                  genome_id:
+                    type: string
+                    example: "support_agent_v1"
+                  status:
+                    type: string
+                    enum: [initialized, initializing]
+                    example: "initialized"
+                  created_at:
+                    type: string
+                    format: date-time
+                  health_status:
+                    type: object
+                    description: Agent health information
+                    properties:
+                      uptime_seconds:
+                        type: number
+                        format: float
+                      model_ready:
+                        type: boolean
+                        description: Whether LLM model is accessible
+                required:
+                  - agent_id
+                  - status
+              examples:
+                agent_created:
+                  value:
+                    agent_id: "agent_12345"
+                    genome_id: "support_agent_v1"
+                    status: "initialized"
+                    created_at: "2025-12-10T17:30:00Z"
+                    health_status:
+                      uptime_seconds: 2.5
+                      model_ready: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Agent with this ID already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "conflict"
+                message: "Agent with ID 'agent_12345' already exists"
+                timestamp: "2025-12-10T17:30:00Z"
+        '422':
+          description: Genome or configuration validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /agents/{agent_id}:
+    get:
+      summary: Get Agent
+      description: Get detailed information about a specific agent including status, metrics, and configuration.
+      operationId: getAgent
+      tags:
+        - Agent Management
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+      responses:
+        '200':
+          description: Agent information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent_id:
+                    type: string
+                  genome_id:
+                    type: string
+                  config:
+                    $ref: '#/components/schemas/AgentConfig'
+                  status:
+                    type: string
+                    enum: [initialized, initializing, error, closed]
+                  created_at:
+                    type: string
+                    format: date-time
+                  last_active:
+                    type: string
+                    format: date-time
+                  metrics:
+                    $ref: '#/components/schemas/PerformanceMetrics'
+                  llm_health:
+                    $ref: '#/components/schemas/LLMHealthMetrics'
+                  conversation_summary:
+                    type: object
+                    properties:
+                      total_turns:
+                        type: integer
+                      average_response_length:
+                        type: number
+                      topics_discussed:
+                        type: array
+                        items:
+                          type: string
+                  health_score:
+                    type: number
+                    format: float
+                    minimum: 0.0
+                    maximum: 1.0
+                    description: Overall health score (0-1)
+                required:
+                  - agent_id
+                  - status
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+    delete:
+      summary: Delete Agent
+      description: |
+        Close and delete an agent, cleaning up all resources including LLM connections.
+        This operation is permanent and cannot be undone.
+      operationId: deleteAgent
+      tags:
+        - Agent Management
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+      responses:
+        '204':
+          description: Agent successfully deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Agent is in use and cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "agent_in_use"
+                message: "Cannot delete agent that is actively processing requests"
+                timestamp: "2025-12-10T17:30:00Z"
+
+  /agents/{agent_id}/status:
+    get:
+      summary: Get Agent Status
+      description: Get real-time status and health information for an agent.
+      operationId: getAgentStatus
+      tags:
+        - Agent Management
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+      responses:
+        '200':
+          description: Agent status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [initialized, initializing, error, closed]
+                  uptime_seconds:
+                    type: number
+                    format: float
+                  last_heartbeat:
+                    type: string
+                    format: date-time
+                  health_checks:
+                    type: object
+                    properties:
+                      database_connection:
+                        type: boolean
+                      llm_service:
+                        type: boolean
+                      memory_usage:
+                        type: string
+                        enum: [normal, high, critical]
+                      error_rate:
+                        type: number
+                        format: float
+                  active_requests:
+                    type: integer
+                    description: Number of currently active requests
+                required:
+                  - agent_id
+                  - status
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /agents/{agent_id}/initialize:
+    post:
+      summary: Initialize Agent
+      description: |
+        Manually initialize an agent that was created without auto-initialization.
+        This establishes LLM connections and prepares the agent for use.
+      operationId: initializeAgent
+      tags:
+        - Agent Management
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                timeout_seconds:
+                  type: integer
+                  minimum: 10
+                  maximum: 300
+                  default: 60
+                  description: Timeout for initialization
+                skip_health_checks:
+                  type: boolean
+                  default: false
+                  description: Skip post-initialization health checks
+      responses:
+        '200':
+          description: Agent initialized successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [initialized]
+                  initialization_time_seconds:
+                    type: number
+                    format: float
+                  health_status:
+                    type: object
+                    description: Post-initialization health check results
+                required:
+                  - status
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Agent already initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '408':
+          description: Initialization timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /agents/{agent_id}/reset:
+    post:
+      summary: Reset Agent
+      description: |
+        Reset agent state by clearing conversation history and refreshing internal state.
+        The agent remains initialized but conversation context is cleared.
+      operationId: resetAgent
+      tags:
+        - Agent Management
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                preserve_metrics:
+                  type: boolean
+                  default: true
+                  description: Whether to preserve performance metrics
+                clear_config_overrides:
+                  type: boolean
+                  default: false
+                  description: Whether to reset configuration overrides
+      responses:
+        '200':
+          description: Agent reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reset_at:
+                    type: string
+                    format: date-time
+                  conversation_cleared:
+                    type: boolean
+                  metrics_preserved:
+                    type: boolean
+                  config_reset:
+                    type: boolean
+                required:
+                  - reset_at
+                  - conversation_cleared
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/BadRequest'
+
+  /agents/{agent_id}/config:
+    get:
+      summary: Get Agent Configuration
+      description: Retrieve the current configuration of an agent.
+      operationId: getAgentConfig
+      tags:
+        - Agent Management
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+      responses:
+        '200':
+          description: Agent configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentConfig'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update Agent Configuration
+      description: |
+        Update agent configuration parameters. Some changes may require agent restart.
+        This endpoint supports partial updates - only specified fields will be changed.
+      operationId: updateAgentConfig
+      tags:
+        - Agent Management
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                temperature:
+                  type: number
+                  format: float
+                  minimum: 0.0
+                  maximum: 2.0
+                max_tokens:
+                  type: integer
+                  minimum: 1
+                streaming:
+                  type: boolean
+                memory_enabled:
+                  type: boolean
+                evolution_enabled:
+                  type: boolean
+                kraken_enabled:
+                  type: boolean
+                conversation_memory:
+                  type: integer
+                  minimum: 1
+                context_window:
+                  type: integer
+                  minimum: 1
+                max_context_length:
+                  type: integer
+                  minimum: 1
+                max_retry_attempts:
+                  type: integer
+                  minimum: 0
+                request_timeout:
+                  type: integer
+                  minimum: 1
+                rate_limit_requests_per_minute:
+                  type: integer
+                  minimum: 1
+                rate_limit_tokens_per_minute:
+                  type: integer
+                  minimum: 1
+                fallback_to_mock:
+                  type: boolean
+            description: Configuration fields to update (partial update supported)
+            example:
+              temperature: 0.9
+              streaming: false
+              memory_enabled: true
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated_config:
+                    $ref: '#/components/schemas/AgentConfig'
+                  restart_required:
+                    type: boolean
+                    description: Whether agent restart is required for changes
+                  applied_at:
+                    type: string
+                    format: date-time
+                required:
+                  - updated_config
+                  - restart_required
+              examples:
+                config_updated:
+                  value:
+                    updated_config:
+                      llm_provider: "openai"
+                      temperature: 0.9
+                      streaming: false
+                    restart_required: false
+                    applied_at: "2025-12-10T17:30:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/BadRequest'
+
+  /agents/{agent_id}/metrics:
+    get:
+      summary: Get Agent Metrics
+      description: Get comprehensive performance and health metrics for an agent.
+      operationId: getAgentMetrics
+      tags:
+        - Monitoring
+      parameters:
+        - $ref: '#/components/parameters/agentId'
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [1m, 5m, 15m, 1h, 24h]
+            default: "5m"
+          description: Time period for metric aggregation
+        - name: include_raw_data
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include raw metric data points
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent_id:
+                    type: string
+                  period:
+                    type: string
+                  metrics:
+                    type: object
+                    properties:
+                      agent:
+                        $ref: '#/components/schemas/PerformanceMetrics'
+                      llm:
+                        $ref: '#/components/schemas/LLMHealthMetrics'
+                      conversation:
+                        type: object
+                        description: Conversation-specific metrics
+                    required:
+                      - agent
+                      - llm
+                  health_score:
+                    type: number
+                    format: float
+                    minimum: 0.0
+                    maximum: 1.0
+                  alerts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        level:
+                          type: string
+                          enum: [info, warning, error]
+                        message:
+                          type: string
+                        timestamp:
+                          type: string
+                          format: date-time
+                    description: Active health alerts
+                  raw_data:
+                    type: object
+                    description: Raw metric data points (only if requested)
+                required:
+                  - agent_id
+                  - period
+                  - metrics
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # === AGENT COLLECTIONS ===
+
+  /agents:
+    get:
+      summary: List Agents
+      description: Get a paginated list of all managed agents.
+      operationId: listAgents
+      tags:
+        - Agent Management
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [initialized, initializing, error, closed]
+          description: Filter by agent status
+        - name: genome_id
+          in: query
+          schema:
+            type: string
+          description: Filter by genome ID
+        - name: llm_provider
+          in: query
+          schema:
+            type: string
+            enum: [openai, anthropic, ollama]
+          description: Filter by LLM provider
+      responses:
+        '200':
+          description: Agents list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        agent_id:
+                          type: string
+                        genome_id:
+                          type: string
+                        status:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                        last_active:
+                          type: string
+                          format: date-time
+                        llm_provider:
+                          type: string
+                        model_name:
+                          type: string
+                        uptime_seconds:
+                          type: number
+                        active_requests:
+                          type: integer
+                    description: Agent summary information
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+                required:
+                  - data
+                  - pagination
+
+  /agents/health:
+    get:
+      summary: Get System Health
+      description: Get overall system health and agent fleet status.
+      operationId: getSystemHealth
+      tags:
+        - Monitoring
+      responses:
+        '200':
+          description: System health information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  system_status:
+                    type: string
+                    enum: [healthy, degraded, critical]
+                    example: "healthy"
+                  total_agents:
+                    type: integer
+                  active_agents:
+                    type: integer
+                  agents_by_status:
+                    type: object
+                    properties:
+                      initialized:
+                        type: integer
+                      initializing:
+                        type: integer
+                      error:
+                        type: integer
+                      closed:
+                        type: integer
+                  agents_by_provider:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                  system_metrics:
+                    type: object
+                    properties:
+                      total_requests_last_hour:
+                        type: integer
+                      average_response_time_ms:
+                        type: number
+                      system_memory_usage_percent:
+                        type: number
+                      error_rate_percent:
+                        type: number
+                  uptime_seconds:
+                    type: number
+                    format: float
+                  last_health_check:
+                    type: string
+                    format: date-time
+                required:
+                  - system_status
+                  - total_agents
+                  - system_metrics
+                  - uptime_seconds
+        '503':
+          description: System health check failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

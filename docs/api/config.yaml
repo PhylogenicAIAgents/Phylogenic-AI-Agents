@@ -1,0 +1,1332 @@
+openapi: 3.1.0
+info:
+  title: Allele Configuration Management API
+  version: 1.0.0
+  description: |
+    REST API endpoints for managing Allele SDK configuration, environment variables,
+    settings management, and runtime configuration across all components.
+    Supports centralized configuration management with environment variable overrides,
+    validation, and deployment-specific configurations.
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+  contact:
+    name: Bravetto AI Systems
+    email: jimmydejesus1129@gmail.com
+
+servers:
+  - url: https://api.allele.ai/v1
+    description: Production server
+  - url: http://localhost:8000/v1
+    description: Local development server
+
+components:
+  schemas:
+    $ref: './schemas.yaml#/components/schemas'
+
+paths:
+
+  # === GLOBAL SETTINGS MANAGEMENT ===
+
+  /config/settings:
+    get:
+      summary: Get Current Settings
+      description: Retrieve the current global configuration settings for the Allele SDK.
+      operationId: getGlobalSettings
+      tags:
+        - Configuration
+      parameters:
+        - name: include_defaults
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include default values for unset configuration
+        - name: mask_sensitive
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Mask sensitive values like API keys
+        - name: expand_env_vars
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Resolve environment variable references
+      responses:
+        '200':
+          description: Global settings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settings:
+                    type: object
+                    properties:
+                      agent:
+                        $ref: '#/components/schemas/AgentConfig'
+                      evolution:
+                        $ref: '#/components/schemas/EvolutionConfig'
+                      kraken:
+                        type: object
+                        properties:
+                          reservoir_size:
+                            type: integer
+                            minimum: 10
+                            default: 100
+                          flow_rate:
+                            type: number
+                            format: float
+                          temperature:
+                            type: number
+                            format: float
+                        description: Kraken LNN configuration
+                      logging:
+                        type: object
+                        properties:
+                          level:
+                            type: string
+                            enum: [DEBUG, INFO, WARNING, ERROR, CRITICAL]
+                            default: "INFO"
+                          format:
+                            type: string
+                            enum: [json, text]
+                            default: "text"
+                          structured_logging:
+                            type: boolean
+                            default: true
+                        description: Logging configuration
+                      experimental:
+                        type: object
+                        properties:
+                          enable_new_features:
+                            type: boolean
+                            default: false
+                          beta_algorithms:
+                            type: boolean
+                            default: false
+                        description: Experimental features
+                    description: Categorized configuration settings
+                  sources:
+                    type: object
+                    properties:
+                      environment:
+                        type: array
+                        items:
+                          type: string
+                        description: Environment variables that were loaded
+                      config_files:
+                        type: array
+                        items:
+                          type: string
+                        description: Configuration files that were processed
+                      programmatic:
+                        type: boolean
+                        description: Whether programmatic overrides were applied
+                    description: Sources of configuration values
+                  last_updated:
+                    type: string
+                    format: date-time
+                    description: When settings were last loaded
+                  validation_status:
+                    type: string
+                    enum: [valid, warnings, errors]
+                    description: Overall validation status of configuration
+                required:
+                  - settings
+                  - sources
+          examples:
+            current_settings:
+              value:
+                settings:
+                  agent:
+                    llm_provider: "openai"
+                    model_name: "gpt-4-turbo-preview"
+                    temperature: 0.7
+                  evolution:
+                    population_size: 100
+                    generations: 20
+                  kraken:
+                    reservoir_size: 100
+                sources:
+                  environment:
+                    - AGENT__MODEL_NAME
+                    - EVOLUTION__POPULATION_SIZE
+                  config_files: []
+                  programmatic: false
+                last_updated: "2025-12-10T18:45:00Z"
+                validation_status: "valid"
+
+    put:
+      summary: Update Global Settings
+      description: |
+        Update global configuration settings. Supports partial updates.
+        Changes may require restart of dependent components.
+
+        **NOTE**: Sensitive values like API keys should be updated via environment variables,
+        not through this API endpoint for security reasons.
+      operationId: updateGlobalSettings
+      tags:
+        - Configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                settings:
+                  type: object
+                  properties:
+                    agent:
+                      type: object
+                      properties:
+                        model_name:
+                          type: string
+                        temperature:
+                          type: number
+                          format: float
+                          minimum: 0.0
+                          maximum: 2.0
+                        max_tokens:
+                          type: integer
+                          minimum: 1
+                        streaming:
+                          type: boolean
+                        memory_enabled:
+                          type: boolean
+                        evolution_enabled:
+                          type: boolean
+                        kraken_enabled:
+                          type: boolean
+                        conversation_memory:
+                          type: integer
+                          minimum: 1
+                        context_window:
+                          type: integer
+                          minimum: 1
+                        max_context_length:
+                          type: integer
+                          minimum: 1
+                        max_retry_attempts:
+                          type: integer
+                          minimum: 0
+                        request_timeout:
+                          type: integer
+                          minimum: 1
+                        fallback_to_mock:
+                          type: boolean
+                    evolution:
+                      type: object
+                      properties:
+                        population_size:
+                          type: integer
+                          minimum: 2
+                        generations:
+                          type: integer
+                          minimum: 1
+                        mutation_rate:
+                          type: number
+                          format: float
+                          minimum: 0.0
+                          maximum: 1.0
+                        crossover_rate:
+                          type: number
+                          format: float
+                          minimum: 0.0
+                          maximum: 1.0
+                        elitism_enabled:
+                          type: boolean
+                        immutable_evolution:
+                          type: boolean
+                    kraken:
+                      type: object
+                      properties:
+                        reservoir_size:
+                          type: integer
+                          minimum: 10
+                        flow_rate:
+                          type: number
+                          format: float
+                        temperature:
+                          type: number
+                          format: float
+                    logging:
+                      type: object
+                      properties:
+                        level:
+                          type: string
+                          enum: [DEBUG, INFO, WARNING, ERROR, CRITICAL]
+                        format:
+                          type: string
+                          enum: [json, text]
+                        structured_logging:
+                          type: boolean
+                    experimental:
+                      type: object
+                      properties:
+                        enable_new_features:
+                          type: boolean
+                        beta_algorithms:
+                          type: boolean
+                  description: Settings to update (supports partial updates)
+                validate_before_apply:
+                  type: boolean
+                  default: true
+                  description: Validate updated settings before applying
+                restart_required_components:
+                  type: boolean
+                  default: false
+                  description: Attempt to restart affected components (admin only)
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for configuration change (for audit logs)
+              required:
+                - settings
+                - reason
+      responses:
+        '200':
+          description: Settings updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated_settings:
+                    type: object
+                    description: The updated settings object
+                  components_restarted:
+                    type: array
+                    items:
+                      type: string
+                    description: Components that were restarted
+                  restart_required:
+                    type: array
+                    items:
+                      type: string
+                    description: Components requiring manual restart
+                  validation_warnings:
+                    type: array
+                    items:
+                      type: string
+                    description: Non-critical validation warnings
+                  applied_at:
+                    type: string
+                    format: date-time
+                required:
+                  - updated_settings
+                  - restart_required
+              examples:
+                settings_updated:
+                  value:
+                    updated_settings:
+                      agent:
+                        temperature: 0.9
+                        streaming: false
+                        memory_enabled: true
+                      evolution:
+                        population_size: 150
+                    components_restarted: []
+                    restart_required: ["agent_pool", "evolution_engine"]
+                    applied_at: "2025-12-10T18:50:00Z"
+        '422':
+          $ref: '#/components/responses/BadRequest'
+
+    delete:
+      summary: Reset Global Settings
+      description: |
+        Reset global settings to defaults, removing all programmatic overrides.
+        This action cannot be undone.
+
+        **NOTE**: Environment variables and config files will still be loaded on next startup.
+      operationId: resetGlobalSettings
+      tags:
+        - Configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                confirmation_token:
+                  type: string
+                  description: Confirmation token required for reset
+                reset_scope:
+                  type: string
+                  enum: [programmatic_only, all_settings]
+                  default: "programmatic_only"
+                  description: What to reset
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for reset (for audit logs)
+              required:
+                - confirmation_token
+                - reason
+      responses:
+        '200':
+          description: Settings reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reset_scope:
+                    type: string
+                  reset_at:
+                    type: string
+                    format: date-time
+                  previous_settings_backup:
+                    type: object
+                    description: Backup of previous settings
+                  restarted_components:
+                    type: array
+                    items:
+                      type: string
+                  audit_entry:
+                    type: object
+                    description: Audit log entry
+                required:
+                  - reset_scope
+                  - reset_at
+        '400':
+          description: Invalid confirmation token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # === ENVIRONMENT VARIABLE MANAGEMENT ===
+
+  /config/environment:
+    get:
+      summary: Get Environment Variables
+      description: |
+        Get effective environment variable values that affect Allele configuration.
+        Includes both set and unset variables with their current values.
+
+        **Security**: Sensitive values are masked by default.
+      operationId: getEnvironmentVariables
+      tags:
+        - Configuration
+      parameters:
+        - name: show_sensitive
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Show actual values for sensitive variables (admin only)
+        - name: filter_category
+          in: query
+          schema:
+            type: string
+            enum: [agent, evolution, llm, database, security, logging, experimental]
+          description: Filter environment variables by category
+        - name: include_unset
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include variables that are not currently set
+      responses:
+        '200':
+          description: Environment variables retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  environment_variables:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        variable:
+                          type: string
+                          example: "AGENT__MODEL_NAME"
+                        value:
+                          type: string
+                          description: Current value (masked for sensitive variables)
+                          example: "gpt-4-turbo-preview"
+                        is_set:
+                          type: boolean
+                          description: Whether the variable is currently set
+                        category:
+                          type: string
+                          enum: [agent, evolution, llm, database, security, logging, experimental]
+                          example: "agent"
+                        description:
+                          type: string
+                          description: What this variable controls
+                          example: "Default LLM model name"
+                        sensitive:
+                          type: boolean
+                          description: Whether this variable contains sensitive data
+                          example: false
+                        last_modified:
+                          type: string
+                          format: date-time
+                          description: When this variable was last changed
+                      required:
+                        - variable
+                        - value
+                        - is_set
+                        - category
+                        - sensitive
+                  summary:
+                    type: object
+                    properties:
+                      total_variables:
+                        type: integer
+                      set_variables:
+                        type: integer
+                      unset_variables:
+                        type: integer
+                      sensitive_variables:
+                        type: integer
+                      by_category:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                    description: Environment variable statistics
+                required:
+                  - environment_variables
+                  - summary
+              examples:
+                env_vars_response:
+                  value:
+                    environment_variables: [
+                      {
+                        "variable": "AGENT__MODEL_NAME",
+                        "value": "gpt-4-turbo-preview",
+                        "is_set": true,
+                        "category": "agent",
+                        "description": "Default LLM model name",
+                        "sensitive": false,
+                        "last_modified": "2025-12-10T15:30:00Z"
+                      },
+                      {
+                        "variable": "OPENAI_API_KEY",
+                        "value": "sk-****masked****",
+                        "is_set": true,
+                        "category": "llm",
+                        "description": "OpenAI API authentication key",
+                        "sensitive": true,
+                        "last_modified": "2025-12-10T10:00:00Z"
+                      }
+                    ]
+                    summary:
+                      total_variables: 45
+                      set_variables: 12
+                      unset_variables: 33
+                      sensitive_variables: 5
+
+  /config/environment/{variableName}:
+    put:
+      summary: Set Environment Variable
+      description: |
+        Set an environment variable that affects Allele configuration.
+        Changes take effect immediately for new processes and components.
+
+        **Security**: This endpoint requires administrative privileges.
+        Sensitive values like API keys should be handled securely.
+      operationId: setEnvironmentVariable
+      tags:
+        - Configuration
+      parameters:
+        - name: variable_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Environment variable name
+          example: "AGENT__MODEL_NAME"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+                  description: New value for the environment variable
+                  example: "gpt-4-turbo"
+                validate_value:
+                  type: boolean
+                  default: true
+                  description: Validate the value before setting
+                restart_affected_components:
+                  type: boolean
+                  default: false
+                  description: Restart components affected by this change
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for the change (for audit logs)
+                temporary:
+                  type: boolean
+                  default: false
+                  description: Whether this is a temporary change (not persisted)
+              required:
+                - value
+                - reason
+      responses:
+        '200':
+          description: Environment variable set successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  variable:
+                    type: string
+                  previous_value:
+                    type: string
+                    description: Previous value (masked if sensitive)
+                  new_value:
+                    type: string
+                    description: New value (masked if sensitive)
+                  affected_components:
+                    type: array
+                    items:
+                      type: string
+                    description: Components that were affected
+                  restarted_components:
+                    type: array
+                    items:
+                      type: string
+                    description: Components that were restarted
+                  applied_at:
+                    type: string
+                    format: date-time
+                  temporary:
+                    type: boolean
+                  audit_entry:
+                    type: object
+                    description: Audit log entry
+                required:
+                  - variable
+                  - affected_components
+                  - applied_at
+                  - temporary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Insufficient privileges to set this environment variable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Invalid value for this environment variable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+    delete:
+      summary: Unset Environment Variable
+      description: Remove an environment variable, causing Allele to use default values.
+      operationId: unsetEnvironmentVariable
+      tags:
+        - Configuration
+      parameters:
+        - name: variable_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Environment variable name to unset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for unsetting (for audit logs)
+              required:
+                - reason
+      responses:
+        '204':
+          description: Environment variable unset successfully
+        '404':
+          description: Environment variable was not set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # === CONFIGURATION PROFILES ===
+
+  /config/profiles:
+    get:
+      summary: List Configuration Profiles
+      description: Get available system configuration profiles for different deployment scenarios.
+      operationId: listConfigProfiles
+      tags:
+        - Configuration
+      responses:
+        '200':
+          description: Configuration profiles retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profiles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        profile_id:
+                          type: string
+                          example: "development"
+                        name:
+                          type: string
+                          example: "Development Environment"
+                        description:
+                          type: string
+                          example: "Lightweight configuration optimized for local development"
+                        use_case:
+                          type: string
+                          enum: [development, staging, production, testing, research, enterprise]
+                        default_settings:
+                          type: object
+                          description: Default configuration values for this profile
+                        environment_variables:
+                          type: object
+                          additionalProperties:
+                            type: string
+                          description: Required environment variables
+                        resource_requirements:
+                          type: object
+                          properties:
+                            min_memory_gb:
+                              type: number
+                              format: float
+                            min_cpu_cores:
+                              type: integer
+                            recommended_storage_gb:
+                              type: number
+                              format: float
+                          description: Hardware requirements
+                        created_at:
+                          type: string
+                          format: date-time
+                      required:
+                        - profile_id
+                        - name
+                        - use_case
+                  active_profile:
+                    type: string
+                    description: Currently active configuration profile (if any)
+                required:
+                  - profiles
+              examples:
+                config_profiles:
+                  value:
+                    profiles: [
+                      {
+                        "profile_id": "development",
+                        "name": "Development Environment",
+                        "description": "Lightweight configuration optimized for local development",
+                        "use_case": "development",
+                        "default_settings": {
+                          "agent": {
+                            "fallback_to_mock": true,
+                            "request_timeout": 30
+                          },
+                          "evolution": {
+                            "population_size": 10,
+                            "generations": 5
+                          }
+                        }
+                      },
+                      {
+                        "profile_id": "production",
+                        "name": "Production Environment",
+                        "description": "Optimized for high availability and performance",
+                        "use_case": "production",
+                        "default_settings": {
+                          "agent": {
+                            "max_retry_attempts": 5,
+                            "request_timeout": 120
+                          },
+                          "evolution": {
+                            "population_size": 200,
+                            "generations": 100
+                          }
+                        },
+                        "resource_requirements": {
+                          "min_memory_gb": 16,
+                          "min_cpu_cores": 8,
+                          "recommended_storage_gb": 100
+                        }
+                      }
+                    ]
+                    active_profile: null
+
+    post:
+      summary: Create Configuration Profile
+      description: Create a new reusable configuration profile with preset values.
+      operationId: createConfigProfile
+      tags:
+        - Configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profile_id:
+                  type: string
+                  pattern: "^[a-zA-Z0-9_-]+$"
+                  description: Unique identifier for the profile
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 500
+                use_case:
+                  type: string
+                  enum: [development, staging, production, testing, research, enterprise]
+                default_settings:
+                  type: object
+                  additionalProperties: true
+                environment_variables:
+                  type: object
+                  additionalProperties:
+                    type: string
+                resource_requirements:
+                  type: object
+                  properties:
+                    min_memory_gb:
+                      type: number
+                      format: float
+                    min_cpu_cores:
+                      type: integer
+                    recommended_storage_gb:
+                      type: number
+                      format: float
+                tags:
+                  type: array
+                  items:
+                    type: string
+              required:
+                - profile_id
+                - name
+                - use_case
+                - default_settings
+      responses:
+        '201':
+          description: Configuration profile created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile:
+                    type: object
+                    description: The created configuration profile
+                  created_at:
+                    type: string
+                    format: date-time
+                  validation_status:
+                    type: string
+                    enum: [valid, warnings]
+                required:
+                  - profile
+                  - created_at
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Profile ID already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /config/profiles/{profileId}/activate:
+    post:
+      summary: Activate Configuration Profile
+      description: |
+        Activate a configuration profile, applying its default settings and
+        environment variable requirements to the current system.
+
+        **NOTE**: This will override existing configuration with profile defaults.
+      operationId: activateConfigProfile
+      tags:
+        - Configuration
+      parameters:
+        - name: profile_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Profile identifier to activate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                merge_with_current:
+                  type: boolean
+                  default: true
+                  description: Merge profile settings with current configuration
+                override_env_vars:
+                  type: boolean
+                  default: false
+                  description: Override existing environment variables
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for profile activation
+              required:
+                - reason
+      responses:
+        '200':
+          description: Configuration profile activated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile_id:
+                    type: string
+                  activated_at:
+                    type: string
+                    format: date-time
+                  changes_applied:
+                    type: object
+                    properties:
+                      settings_updated:
+                        type: integer
+                        description: Number of settings that were changed
+                      env_vars_set:
+                        type: integer
+                        description: Number of environment variables set
+                      components_restarted:
+                        type: array
+                        items:
+                          type: string
+                        description: Components that were restarted
+                    required:
+                      - settings_updated
+                      - env_vars_set
+                  previous_profile:
+                    type: string
+                    description: Previously active profile ID (if any)
+                required:
+                  - profile_id
+                  - activated_at
+                  - changes_applied
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Profile cannot be activated due to validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  # === CONFIGURATION VALIDATION ===
+
+  /config/validate:
+    post:
+      summary: Validate Configuration
+      description: |
+        Validate a configuration object or settings file against Allele requirements.
+        Useful for checking configurations before deployment or troubleshooting issues.
+      operationId: validateConfiguration
+      tags:
+        - Configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                config:
+                  type: object
+                  additionalProperties: true
+                  description: Configuration object to validate
+                config_format:
+                  type: string
+                  enum: [nested, flat, env_vars, yaml_content, json_content]
+                  default: "nested"
+                  description: Format of the provided configuration
+                strict_validation:
+                  type: boolean
+                  default: false
+                  description: Perform additional checks beyond basic validation
+                include_suggestions:
+                  type: boolean
+                  default: true
+                  description: Include improvement suggestions for invalid configurations
+              required:
+                - config
+              examples:
+                validate_config:
+                  summary: Validate nested configuration object
+                  value:
+                    config: {
+                      "agent": {
+                        "llm_provider": "openai",
+                        "model_name": "gpt-4-turbo-preview",
+                        "temperature": 0.7
+                      },
+                      "evolution": {
+                        "population_size": 100,
+                        "generations": 20
+                      }
+                    }
+                    config_format: "nested"
+                    strict_validation: true
+                    include_suggestions: true
+                validate_env_vars:
+                  summary: Validate environment variables
+                  value:
+                    config: {
+                      "AGENT__MODEL_NAME": "gpt-4-turbo-preview",
+                      "AGENT__TEMPERATURE": "0.7",
+                      "EVOLUTION__POPULATION_SIZE": "100"
+                    }
+                    config_format: "env_vars"
+                    strict_validation: true
+          application/x-yaml:
+            schema:
+              type: string
+              description: YAML configuration content to validate
+          text/plain:
+            schema:
+              type: string
+              description: Environment variable content to validate
+      responses:
+        '200':
+          description: Configuration is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+                  validation_level:
+                    type: string
+                    enum: [basic, strict]
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+                    description: Non-critical validation warnings
+                  checked_at:
+                    type: string
+                    format: date-time
+                required:
+                  - valid
+                  - validation_level
+                  - checked_at
+        '422':
+          description: Configuration has validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                error: "validation_error"
+                message: "Configuration validation failed"
+                validation_errors: [
+                  {
+                    "field": "evolution.population_size",
+                    "value": -1,
+                    "message": "population_size must be positive"
+                  },
+                  {
+                    "field": "agent.temperature",
+                    "value": 3.0,
+                    "message": "temperature must be between 0 and 2"
+                  }
+                ]
+                timestamp: "2025-12-10T19:00:00Z"
+
+  # === CONFIGURATION EXPORT/IMPORT ===
+
+  /config/export:
+    post:
+      summary: Export Configuration
+      description: Export current or template configuration in various formats for backup or sharing.
+      operationId: exportConfiguration
+      tags:
+        - Configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                format:
+                  type: string
+                  enum: [json, yaml, env_file, docker_compose, kubernetes]
+                  default: "json"
+                  description: Export format
+                include_comments:
+                  type: boolean
+                  default: true
+                  description: Include explanatory comments
+                mask_sensitive:
+                  type: boolean
+                  default: true
+                  description: Mask sensitive values
+                export_scope:
+                  type: string
+                  enum: [current, defaults, effective]
+                  default: "effective"
+                  description: What configuration to export
+                template_profile:
+                  type: string
+                  default: "development"
+                  description: Profile to use as template base (for template exports)
+              required:
+                - format
+      responses:
+        '200':
+          description: Configuration exported successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            content-disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="allele_config_20251210.yaml"'
+            content-type:
+              schema:
+                type: string
+                example: application/yaml
+          examples:
+            config_export:
+              value: |
+                # Allele SDK Configuration
+                # Generated: 2025-12-10T19:00:00Z
+                AGENT__LLM_PROVIDER=openai
+                AGENT__MODEL_NAME=gpt-4-turbo-preview
+                AGENT__TEMPERATURE=0.7
+                # ... etc
+
+  /config/import:
+    post:
+      summary: Import Configuration
+      description: Import configuration from various formats and apply to the system.
+      operationId: importConfiguration
+      tags:
+        - Configuration
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                config_file:
+                  type: string
+                  format: binary
+                  description: Configuration file to import
+                format:
+                  type: string
+                  enum: [json, yaml, env_file, auto]
+                  default: "auto"
+                  description: Format of the configuration file
+                import_options:
+                  type: string
+                  description: JSON string with import options
+                  default: '{"validate_before_import": true, "merge_with_current": true, "backup_current": true}'
+          application/json:
+            schema:
+              type: object
+              properties:
+                config:
+                  type: object
+                  additionalProperties: true
+                  description: Configuration object to import
+                merge_with_current:
+                  type: boolean
+                  default: true
+                  description: Merge with current configuration
+                validate_before_import:
+                  type: boolean
+                  default: true
+                  description: Validate configuration before importing
+                create_backup:
+                  type: boolean
+                  default: true
+                  description: Backup current configuration
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for import (for audit logs)
+              required:
+                - config
+      responses:
+        '200':
+          description: Configuration imported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  import_result:
+                    type: string
+                    enum: [success, partial_success]
+                  settings_applied:
+                    type: integer
+                    description: Number of settings that were applied
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+                    description: Non-critical import warnings
+                  restarted_components:
+                    type: array
+                    items:
+                      type: string
+                    description: Components that were restarted
+                  imported_at:
+                    type: string
+                    format: date-time
+                  backup_id:
+                    type: string
+                    description: ID of the created backup (if any)
+                required:
+                  - import_result
+                  - settings_applied
+                  - imported_at
+        '422':
+          $ref: '#/components/responses/BadRequest'
+
+  # === HEALTH & DIAGNOSTICS ===
+
+  /config/health:
+    get:
+      summary: Get Configuration Health
+      description: Get comprehensive health status of the configuration system and detect issues.
+      operationId: getConfigurationHealth
+      tags:
+        - Configuration
+      responses:
+        '200':
+          description: Configuration health retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  overall_status:
+                    type: string
+                    enum: [healthy, warning, critical, unknown]
+                    example: "healthy"
+                  checks:
+                    type: object
+                    properties:
+                      settings_loaded:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                            enum: [pass, fail]
+                          message:
+                            type: string
+                          last_checked:
+                            type: string
+                            format: date-time
+                      validation_passed:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                            enum: [pass, fail]
+                          message:
+                            type: string
+                          errors_found:
+                            type: integer
+                          warnings_found:
+                            type: integer
+                      components_accessible:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                            enum: [pass, fail]
+                          message:
+                            type: string
+                          inaccessible_count:
+                            type: integer
+                      environment_configured:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                            enum: [pass, fail]
+                          message:
+                            type: string
+                          required_vars_set:
+                            type: integer
+                          required_vars_total:
+                            type: integer
+                    description: Individual health checks
+                  recommendations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        severity:
+                          type: string
+                          enum: [info, warning, error]
+                        message:
+                          type: string
+                        action_required:
+                          type: boolean
+                        suggested_fix:
+                          type: string
+                      required:
+                        - severity
+                        - message
+                    description: Health recommendations and issues
+                  last_health_check:
+                    type: string
+                    format: date-time
+                required:
+                  - overall_status
+                  - checks
+                  - recommendations
+                  - last_health_check
+              examples:
+                healthy_config:
+                  value:
+                    overall_status: "healthy"
+                    checks:
+                      settings_loaded: {
+                        "status": "pass",
+                        "message": "All settings loaded successfully",
+                        "last_checked": "2025-12-10T19:05:00Z"
+                      }
+                    recommendations: []
+                    last_health_check: "2025-12-10T19:05:00Z"

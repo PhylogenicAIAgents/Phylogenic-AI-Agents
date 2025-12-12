@@ -1,0 +1,696 @@
+openapi: 3.1.0
+info:
+  title: Allele SDK Common Schemas
+  version: 1.0.0
+  description: Shared schema components for Allele SDK APIs
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+  contact:
+    name: Bravetto AI Systems
+    email: jimmydejesus1129@gmail.com
+
+servers: []
+
+components:
+  schemas:
+
+    # === TRAIT SYSTEM ===
+
+    TraitValue:
+      type: number
+      format: float
+      minimum: 0.0
+      maximum: 1.0
+      description: Trait expression level (0.0 = minimum, 1.0 = maximum)
+
+    TraitDict:
+      type: object
+      title: Genome Traits
+      description: Dictionary of 8 core conversational traits
+      properties:
+        empathy:
+          $ref: '#/components/schemas/TraitValue'
+          description: 'Emotional understanding and compassionate responses'
+        engagement:
+          $ref: '#/components/schemas/TraitValue'
+          description: 'Conversational energy and enthusiasm'
+        technical_knowledge:
+          $ref: '#/components/schemas/TraitValue'
+          description: 'Depth of technical expertise and accuracy'
+        creativity:
+          $ref: '#/components/schemas/TraitValue'
+          description: 'Innovative thinking and creative problem-solving'
+        conciseness:
+          $ref: '#/components/schemas/TraitValue'
+          description: 'Balancing completeness with brevity'
+        context_awareness:
+          $ref: '#/components/schemas/TraitValue'
+          description: 'Understanding conversation history and maintaining continuity'
+        adaptability:
+          $ref: '#/components/schemas/TraitValue'
+          description: 'Flexible adaptation to different conversation styles'
+        personability:
+          $ref: '#/components/schemas/TraitValue'
+          description: 'Friendliness and natural human-like communication'
+      required:
+        - empathy
+        - engagement
+        - technical_knowledge
+        - creativity
+        - conciseness
+        - context_awareness
+        - adaptability
+        - personability
+
+    # === GENOME TYPES ===
+
+    ConversationalGenome:
+      type: object
+      title: Conversational Genome
+      description: Complete genome definition with traits and metadata
+      properties:
+        genome_id:
+          type: string
+          description: Unique identifier for the genome
+          example: "support_agent_v1"
+        traits:
+          $ref: '#/components/schemas/TraitDict'
+        generation:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Genome generation number
+        parent_ids:
+          type: array
+          items:
+            type: string
+          description: IDs of parent genomes (for evolution tracking)
+        lineage:
+          type: array
+          items:
+            type: string
+          description: Complete evolutionary lineage
+        tags:
+          type: array
+          items:
+            type: string
+          description: User-defined tags for organization
+        created_at:
+          type: string
+          format: date-time
+          description: Genome creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+      required:
+        - genome_id
+        - traits
+
+    GenomeCreateRequest:
+      type: object
+      title: Genome Creation Request
+      description: Parameters for creating a new genome
+      properties:
+        genome_id:
+          type: string
+          example: "customer_support_bot"
+        traits:
+          $ref: '#/components/schemas/TraitDict'
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Optional additional metadata
+      required:
+        - genome_id
+        - traits
+
+    # === AGENT CONFIGURATION ===
+
+    LLMProvider:
+      type: string
+      enum:
+        - openai
+        - anthropic
+        - ollama
+      description: Supported LLM provider
+      example: openai
+
+    AgentConfig:
+      type: object
+      title: Agent Configuration
+      description: Complete configuration for an NLP agent
+      properties:
+        llm_provider:
+          $ref: '#/components/schemas/LLMProvider'
+        api_key:
+          type: string
+          description: API key for LLM provider (can be null for environment variables)
+        model_name:
+          type: string
+          description: Specific model name
+          example: "gpt-4-turbo-preview"
+        temperature:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 2.0
+          default: 0.7
+        max_tokens:
+          type: integer
+          minimum: 1
+          default: 2048
+        streaming:
+          type: boolean
+          default: true
+          description: Enable streaming responses
+        memory_enabled:
+          type: boolean
+          default: true
+          description: Enable conversation memory
+        evolution_enabled:
+          type: boolean
+          default: true
+          description: Enable evolutionary adaptation
+        kraken_enabled:
+          type: boolean
+          default: true
+          description: Enable Kraken LNN processing
+        conversation_memory:
+          type: integer
+          minimum: 1
+          default: 50
+          description: Number of conversation turns to retain
+        context_window:
+          type: integer
+          minimum: 1
+          default: 10
+          description: Recent messages for context
+        max_context_length:
+          type: integer
+          minimum: 1
+          default: 8000
+          description: Maximum context length in tokens
+        max_retry_attempts:
+          type: integer
+          minimum: 0
+          default: 3
+        request_timeout:
+          type: integer
+          minimum: 1
+          default: 60
+        rate_limit_requests_per_minute:
+          type: integer
+          minimum: 1
+          default: 60
+        rate_limit_tokens_per_minute:
+          type: integer
+          minimum: 1
+          default: 10000
+        fallback_to_mock:
+          type: boolean
+          default: false
+          description: Enable mock responses for development
+      required:
+        - llm_provider
+
+    # === CONVERSATION TYPES ===
+
+    ConversationTurn:
+      type: object
+      title: Conversation Turn
+      description: Single turn in a conversation
+      properties:
+        user_input:
+          type: string
+          description: User's message
+          example: "How does machine learning work?"
+        agent_response:
+          type: string
+          description: Agent's response
+          example: "Machine learning is a subset of artificial intelligence..."
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO format timestamp
+        response_quality_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Quality score of the response
+        evolutionary_adaptations:
+          type: array
+          items:
+            type: string
+          description: Adaptations made during this turn
+      required:
+        - timestamp
+
+    ChatRequest:
+      type: object
+      title: Chat Request
+      description: Request payload for chat endpoint
+      properties:
+        message:
+          type: string
+          description: User's message
+          example: "Explain quantum computing to me"
+        context:
+          type: object
+          description: Optional conversation context
+          properties:
+            user_id:
+              type: string
+              example: "user_123"
+            session_id:
+              type: string
+              example: "session_abc897"
+            topic:
+              type: string
+              example: "quantum computing"
+            tone:
+              type: string
+              enum: [formal, casual, friendly, professional]
+              example: "friendly"
+      required:
+        - message
+
+    ChatResponse:
+      type: object
+      title: Chat Response
+      description: Response containing agent message and metadata
+      properties:
+        content:
+          type: string
+          description: Generated response content
+        genome_id:
+          type: string
+          description: ID of genome that generated the response
+        traits_used:
+          $ref: '#/components/schemas/TraitDict'
+        quality_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Overall quality score
+        generation_time:
+          type: number
+          format: float
+          description: Time taken to generate (seconds)
+        timestamp:
+          type: string
+          format: date-time
+        correlation_id:
+          type: string
+          description: Request correlation ID for tracing
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional response metadata
+      required:
+        - content
+        - genome_id
+        - traits_used
+        - generation_time
+
+    StreamingChatResponse:
+      type: object
+      title: Streaming Chat Response
+      description: Streaming response chunk
+      properties:
+        chunk:
+          type: string
+          description: Text chunk for streaming
+        finished:
+          type: boolean
+          description: Whether this is the final chunk
+        metadata:
+          type: object
+          description: Chunk-level metadata (optional)
+      required:
+        - chunk
+        - finished
+
+    # === EVOLUTION TYPES ===
+
+    EvolutionConfig:
+      type: object
+      title: Evolution Configuration
+      description: Parameters for the evolution engine
+      properties:
+        population_size:
+          type: integer
+          minimum: 2
+          default: 100
+          description: Number of genomes in population
+        generations:
+          type: integer
+          minimum: 1
+          default: 20
+          description: Maximum evolution generations
+        mutation_rate:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.1
+          description: Probability of gene mutation
+        crossover_rate:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.8
+          description: Probability of parent crossover
+        selection_pressure:
+          type: number
+          format: float
+          minimum: 0.1
+          maximum: 1.0
+          default: 0.2
+          description: Fraction of best individuals to keep
+        elitism_enabled:
+          type: boolean
+          default: true
+          description: Preserve best genomes
+        immutable_evolution:
+          type: boolean
+          default: false
+          description: Use immutable genome copies
+      required: []
+
+    Population:
+      type: object
+      title: Genome Population
+      description: Collection of genomes for evolution
+      properties:
+        genomes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationalGenome'
+          description: List of genomes in the population
+        generation:
+          type: integer
+          minimum: 0
+          description: Current generation number
+        fitness_scores:
+          type: array
+          items:
+            type: number
+            format: float
+          description: Fitness scores for each genome
+        metadata:
+          type: object
+          additionalProperties: true
+      required:
+        - genomes
+
+    EvolutionResult:
+      type: object
+      title: Evolution Result
+      description: Outcome of an evolution run
+      properties:
+        best_genome:
+          $ref: '#/components/schemas/ConversationalGenome'
+        final_population:
+          $ref: '#/components/schemas/Population'
+        generations_completed:
+          type: integer
+          description: Number of generations run
+        convergence_reached:
+          type: boolean
+          description: Whether evolution converged
+        fitness_improvement:
+          type: number
+          format: float
+          description: Overall fitness improvement
+        duration_seconds:
+          type: number
+          format: float
+          description: Total evolution time
+      required:
+        - best_genome
+        - final_population
+
+    # === METRICS AND HEALTH ===
+
+    PerformanceMetrics:
+      type: object
+      title: Agent Performance Metrics
+      description: Runtime performance and health metrics
+      properties:
+        total_requests:
+          type: integer
+          minimum: 0
+        successful_requests:
+          type: integer
+          minimum: 0
+        failed_requests:
+          type: integer
+          minimum: 0
+        average_latency_ms:
+          type: number
+          format: float
+        error_rate:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        total_cost:
+          type: number
+          format: float
+          minimum: 0.0
+        uptime_seconds:
+          type: number
+          format: float
+
+    LLMHealthMetrics:
+      type: object
+      title: LLM Client Health
+      description: Metrics specific to LLM provider integration
+      properties:
+        total_requests:
+          type: integer
+        total_tokens:
+          type: integer
+        total_cost:
+          type: number
+          format: float
+        error_rate:
+          type: number
+          format: float
+        rate_limit_hits:
+          type: integer
+        available_models:
+          type: array
+          items:
+            type: string
+
+    # === ERROR SCHEMAS ===
+
+    ErrorResponse:
+      type: object
+      title: Error Response
+      description: Standardized error response
+      properties:
+        error:
+          type: string
+          description: Error type/category
+          enum:
+            - validation_error
+            - authentication_error
+            - rate_limit_error
+            - quota_exceeded
+            - model_not_available
+            - generation_error
+            - evolution_error
+            - genome_error
+            - agent_error
+            - internal_server_error
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error context
+        correlation_id:
+          type: string
+          description: Request correlation ID
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - error
+        - message
+        - timestamp
+
+    ValidationError:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            error:
+              enum: [validation_error]
+            validation_errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  value:
+                    type: string
+                  message:
+                    type: string
+                required:
+                  - field
+                  - message
+
+    # === PAGINATION ===
+
+    PaginationMeta:
+      type: object
+      title: Pagination Metadata
+      description: Pagination information for list endpoints
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+        total_pages:
+          type: integer
+          minimum: 0
+        total_items:
+          type: integer
+          minimum: 0
+        has_next:
+          type: boolean
+        has_previous:
+          type: boolean
+
+    PagedResponse:
+      type: object
+      title: Paginated Response
+      description: Base structure for paginated list responses
+      properties:
+        data:
+          type: array
+          description: Array of items
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+      required:
+        - data
+        - pagination
+
+  # === REQUEST/RESPONSE PATTERNS ===
+
+  parameters:
+    genomeId:
+      name: genome_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Unique identifier of the genome
+      example: "support_agent_v1"
+
+    agentId:
+      name: agent_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Unique identifier of the agent
+      example: "agent_12345"
+
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Page number for pagination
+
+    PageSizeParam:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Number of items per page
+
+  # === COMMON RESPONSES ===
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "authentication_error"
+            message: "API key required"
+            timestamp: "2025-12-10T17:00:00Z"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "not_found"
+            message: "Genome not found"
+            timestamp: "2025-12-10T17:00:00Z"
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "rate_limit_error"
+            message: "Too many requests"
+            details:
+              retry_after_seconds: 60
+            timestamp: "2025-12-10T17:00:00Z"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "internal_server_error"
+            message: "Unexpected error occurred"
+            timestamp: "2025-12-10T17:00:00Z"
+
+    ServiceUnavailable:
+      description: Service temporarily unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "service_unavailable"
+            message: "LLM provider temporarily unavailable"
+            timestamp: "2025-12-10T17:00:00Z"

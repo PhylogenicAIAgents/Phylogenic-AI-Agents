@@ -152,3 +152,5 @@ logs/
 data/
 temp/
 
+# Duplicate documentation files
+CLINE.md

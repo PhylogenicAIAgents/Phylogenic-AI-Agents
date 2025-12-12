@@ -1,0 +1,1143 @@
+openapi: 3.1.0
+info:
+  title: Allele Evolution Engine API
+  version: 1.0.0
+  description: |
+    REST API endpoints for managing evolutionary optimization of conversational genomes.
+    Provides genetic algorithm control, population management, fitness evaluation,
+    and convergence monitoring for automated personality development.
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+  contact:
+    name: Bravetto AI Systems
+    email: jimmydejesus1129@gmail.com
+
+servers:
+  - url: https://api.allele.ai/v1
+    description: Production server
+  - url: http://localhost:8000/v1
+    description: Local development server
+
+components:
+  schemas:
+    $ref: './schemas.yaml#/components/schemas'
+
+paths:
+
+  # === EVOLUTION RUN MANAGEMENT ===
+
+  /evolution/runs:
+    get:
+      summary: List Evolution Runs
+      description: Retrieve a paginated list of evolution runs with filtering and search capabilities.
+      operationId: listEvolutionRuns
+      tags:
+        - Evolution Management
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [queued, running, completed, failed, cancelled, paused]
+          description: Filter by run status
+        - name: genome_id
+          in: query
+          schema:
+            type: string
+          description: Filter by base genome ID used for evolution
+        - name: algorithm
+          in: query
+          schema:
+            type: string
+            enum: [simple_ga, elitist_ga, speciation_ga, cooperative_coevolution]
+          description: Filter by evolution algorithm
+        - name: created_after
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Only show runs created after this timestamp
+        - name: created_before
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Only show runs created before this timestamp
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, best_fitness, duration, generations_completed]
+            default: "created_at"
+          description: Sort field
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: "desc"
+          description: Sort direction
+      responses:
+        '200':
+          description: Evolution runs retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/EvolutionResult'
+                            - type: object
+                              properties:
+                                run_id:
+                                  type: string
+                                  description: Unique evolution run identifier
+                                status:
+                                  type: string
+                                  enum: [queued, running, completed, failed, cancelled, paused]
+                                algorithm:
+                                  type: string
+                                  enum: [simple_ga, elitist_ga, speciation_ga, cooperative_coevolution]
+                                base_genome_id:
+                                  type: string
+                                  description: ID of the initial genome
+                                config:
+                                  $ref: '#/components/schemas/EvolutionConfig'
+                                created_at:
+                                  type: string
+                                  format: date-time
+                                started_at:
+                                  type: string
+                                  format: date-time
+                                completed_at:
+                                  type: string
+                                  format: date-time
+                                duration_seconds:
+                                  type: number
+                                  format: float
+                                average_fitness_improvement:
+                                  type: number
+                                  format: float
+                                best_genome_found:
+                                  type: boolean
+                                  description: Whether a new best genome was discovered
+                      summary:
+                        type: object
+                        properties:
+                          total_runs:
+                            type: integer
+                          running_runs:
+                            type: integer
+                          completed_runs:
+                            type: integer
+                          failed_runs:
+                            type: integer
+                          average_improvement:
+                            type: number
+                            format: float
+                          most_successful_algorithm:
+                            type: string
+    post:
+      summary: Start Evolution Run
+      description: |
+        Initiate a new evolutionary optimization run for genome development.
+        Supports different algorithms and configuration options for personality evolution.
+
+        **Resource Requirements**: Evolution runs are computationally intensive
+        and may take significant time depending on population size and generations.
+      operationId: startEvolutionRun
+      tags:
+        - Evolution Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                run_name:
+                  type: string
+                  description: Human-readable name for this evolution run
+                  example: "customer_service_empathy_optimization"
+                base_genome_id:
+                  type: string
+                  description: ID of genome to use as starting point
+                  example: "customer_service_v1"
+                algorithm:
+                  type: string
+                  enum: [simple_ga, elitist_ga, speciation_ga, cooperative_coevolution]
+                  default: "simple_ga"
+                  description: Evolutionary algorithm to use
+                config:
+                  $ref: '#/components/schemas/EvolutionConfig'
+                fitness_function:
+                  type: object
+                  description: Custom fitness evaluation function configuration
+                  properties:
+                    type:
+                      type: string
+                      enum: [conversation_quality, trait_balance, diversity, user_feedback]
+                      default: "trait_balance"
+                    parameters:
+                      type: object
+                      additionalProperties: true
+                      description: Algorithm-specific parameters
+                    evaluation_mode:
+                      type: string
+                      enum: [simulated, real_conversation, hybrid]
+                      default: "simulated"
+                      description: How to evaluate genome fitness
+                termination_conditions:
+                  type: object
+                  description: Conditions that will stop the evolution early
+                  properties:
+                    max_generations_without_improvement:
+                      type: integer
+                      minimum: 5
+                      default: 20
+                      description: Stop if no improvement for N generations
+                    min_fitness_threshold:
+                      type: number
+                      format: float
+                      minimum: 0.0
+                      maximum: 1.0
+                      description: Stop when best fitness exceeds this threshold
+                    max_total_runtime_seconds:
+                      type: integer
+                      minimum: 60
+                      default: 3600
+                      description: Maximum allowed runtime
+                    convergence_threshold:
+                      type: number
+                      format: float
+                      minimum: 0.0
+                      default: 0.001
+                      description: Stop when fitness improvement is below this threshold
+                notifications:
+                  type: object
+                  description: Optional progress notifications
+                  properties:
+                    webhook_url:
+                      type: string
+                      format: uri
+                      description: URL to notify when run completes or milestones are reached
+                    notify_on_completion:
+                      type: boolean
+                      default: false
+                    notify_on_milestones:
+                      type: boolean
+                      default: false
+                      description: Notify every N generations
+                    milestone_interval:
+                      type: integer
+                      minimum: 1
+                      default: 10
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Tags for categorizing this evolution run
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  description: Additional run metadata
+              required:
+                - base_genome_id
+              examples:
+                empathy_optimization:
+                  summary: Optimize empathy trait for customer service
+                  value:
+                    run_name: "empathy_optimization_run_001"
+                    base_genome_id: "customer_service_v1"
+                    algorithm: "elitist_ga"
+                    config:
+                      population_size: 50
+                      generations: 20
+                      mutation_rate: 0.1
+                      crossover_rate: 0.8
+                    fitness_function:
+                      type: "conversation_quality"
+                      evaluation_mode: "simulated"
+                      parameters:
+                        target_trait: "empathy"
+                        weight: 3.0
+                    termination_conditions:
+                      max_generations_without_improvement: 10
+                      min_fitness_threshold: 0.9
+        '202':
+          description: Evolution run started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_id:
+                    type: string
+                    description: Unique identifier for the evolution run
+                  status:
+                    type: string
+                    enum: [queued, running]
+                    example: "queued"
+                  estimated_completion_seconds:
+                    type: integer
+                    description: Estimated time to complete the run
+                  queue_position:
+                    type: integer
+                    description: Position in execution queue (if queued)
+                  monitoring_url:
+                    type: string
+                    format: uri
+                    description: URL to monitor run progress
+                  cancellation_token:
+                    type: string
+                    description: Token for cancelling the run
+                required:
+                  - run_id
+                  - status
+                examples:
+                  evolution_started:
+                    value:
+                      run_id: "evo_123456789"
+                      status: "running"
+                      estimated_completion_seconds: 1800
+                      monitoring_url: "https://api.allele.ai/v1/evolution/runs/evo_123456789/progress"
+                      cancellation_token: "cancel_abcdef123456"
+
+  /evolution/runs/{runId}:
+    get:
+      summary: Get Evolution Run
+      description: Retrieve detailed information about a specific evolution run including progress, results, and performance metrics.
+      operationId: getEvolutionRun
+      tags:
+        - Evolution Management
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Evolution run identifier
+        - name: include_population
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include current population genomes (may be large)
+        - name: include_history
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include evolution history and fitness progression
+      responses:
+        '200':
+          description: Evolution run details retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/EvolutionResult'
+                  - type: object
+                    properties:
+                      run_id:
+                        type: string
+                      run_name:
+                        type: string
+                      status:
+                        type: string
+                        enum: [queued, running, completed, failed, cancelled, paused]
+                      current_generation:
+                        type: integer
+                        description: Current generation being processed
+                      progress:
+                        type: object
+                        properties:
+                          completed_generations:
+                            type: integer
+                          total_generations:
+                            type: integer
+                          progress_percent:
+                            type: number
+                            format: float
+                            minimum: 0.0
+                            maximum: 100.0
+                          estimated_time_remaining_seconds:
+                            type: integer
+                          fitness_history:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                generation:
+                                  type: integer
+                                average_fitness:
+                                  type: number
+                                  format: float
+                                best_fitness:
+                                  type: number
+                                  format: float
+                                population_diversity:
+                                  type: number
+                                  format: float
+                        description: Current run progress information
+                      config:
+                        $ref: '#/components/schemas/EvolutionConfig'
+                      base_genome_id:
+                        type: string
+                      algorithm_used:
+                        type: string
+                      timing:
+                        type: object
+                        properties:
+                          queued_at:
+                            type: string
+                            format: date-time
+                          started_at:
+                            type: string
+                            format: date-time
+                          completed_at:
+                            type: string
+                            format: date-time
+                          duration_seconds:
+                            type: number
+                            format: float
+                          estimated_remaining_seconds:
+                            type: integer
+                      resource_usage:
+                        type: object
+                        properties:
+                          cpu_seconds_used:
+                            type: number
+                            format: float
+                          memory_peak_mb:
+                            type: integer
+                          fitness_evaluations:
+                            type: integer
+                          genomes_created:
+                            type: integer
+                        description: Resource consumption statistics
+                      current_population:
+                        type: object
+                        description: Current population state (only if requested)
+                        allOf:
+                          - $ref: '#/components/schemas/Population'
+                      error_details:
+                        type: object
+                        description: Error information (only if status is 'failed')
+                        properties:
+                          error_type:
+                            type: string
+                          message:
+                            type: string
+                          generation_failed:
+                            type: integer
+                          traceback:
+                            type: string
+                required:
+                  - run_id
+                  - status
+                  - progress
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Cancel Evolution Run
+      description: |
+        Cancel a queued or running evolution run. Completed runs cannot be cancelled.
+        Running generations will be allowed to complete gracefully.
+      operationId: cancelEvolutionRun
+      tags:
+        - Evolution Management
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Evolution run identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for cancellation (for audit logs)
+                force_immediate:
+                  type: boolean
+                  default: false
+                  description: Force immediate termination (may lose current generation data)
+                save_partial_results:
+                  type: boolean
+                  default: true
+                  description: Save partial results from completed generations
+              required:
+                - reason
+      responses:
+        '202':
+          description: Evolution run cancellation initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_id:
+                    type: string
+                  cancellation_acknowledged:
+                    type: boolean
+                    description: Whether cancellation was acknowledged
+                  estimated_graceful_shutdown_seconds:
+                    type: integer
+                    description: Time to complete graceful shutdown
+                  partial_results_available:
+                    type: boolean
+                    description: Whether partial results will be saved
+                required:
+                  - run_id
+                  - cancellation_acknowledged
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Cannot cancel completed run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "operation_not_allowed"
+                message: "Cannot cancel run that has already completed"
+                timestamp: "2025-12-10T18:30:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Run is in non-cancellable state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # === EVOLUTION PROGRESS MONITORING ===
+
+  /evolution/runs/{runId}/progress:
+    get:
+      summary: Get Evolution Run Progress
+      description: Get real-time progress updates for a running evolution run.
+      operationId: getEvolutionProgress
+      tags:
+        - Evolution Monitoring
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Evolution run identifier
+        - name: last_update_timestamp
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Only return updates newer than this timestamp (for efficient polling)
+      responses:
+        '200':
+          description: Evolution progress retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_id:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: When this progress was captured
+                  status:
+                    type: string
+                    enum: [queued, running, completed, failed, cancelled, paused]
+                  current_generation:
+                    type: integer
+                  progress_metrics:
+                    type: object
+                    properties:
+                      completed_generations:
+                        type: integer
+                      total_generations:
+                        type: integer
+                      progress_percent:
+                        type: number
+                        format: float
+                      generations_completed_this_hour:
+                        type: integer
+                      estimated_completion_timestamp:
+                        type: string
+                        format: date-time
+                      remaining_generations:
+                        type: integer
+                  performance_metrics:
+                    type: object
+                    properties:
+                      current_best_fitness:
+                        type: number
+                        format: float
+                      average_fitness:
+                        type: number
+                        format: float
+                      fitness_improvement_rate:
+                        type: number
+                        format: float
+                        description: Fitness improvement per generation
+                      population_diversity_score:
+                        type: number
+                        format: float
+                        minimum: 0.0
+                        maximum: 1.0
+                      convergence_indicators:
+                        type: object
+                        properties:
+                          is_converging:
+                            type: boolean
+                          convergence_rate:
+                            type: number
+                            format: float
+                          generations_since_last_improvement:
+                            type: integer
+                        description: Indicators of evolutionary convergence
+                  recent_generations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        generation:
+                          type: integer
+                        best_fitness:
+                          type: number
+                          format: float
+                        average_fitness:
+                          type: number
+                          format: float
+                        diversity_score:
+                          type: number
+                          format: float
+                        duration_seconds:
+                          type: number
+                          format: float
+                        timestamp:
+                          type: string
+                          format: date-time
+                      description: Statistics from the most recent generations
+                    maxItems: 10
+                    description: Latest generation results (last 10)
+                  system_metrics:
+                    type: object
+                    properties:
+                      cpu_usage_percent:
+                        type: number
+                        format: float
+                      memory_usage_mb:
+                        type: integer
+                      active_coroutines:
+                        type: integer
+                      queue_depth:
+                        type: integer
+                    description: System resource usage during evolution
+                required:
+                  - run_id
+                  - timestamp
+                  - status
+                  - current_generation
+              examples:
+                evolution_progress:
+                  value:
+                    run_id: "evo_123456789"
+                    timestamp: "2025-12-10T18:15:30Z"
+                    status: "running"
+                    current_generation: 8
+                    progress_metrics:
+                      completed_generations: 8
+                      total_generations: 20
+                      progress_percent: 40.0
+                      estimated_completion_timestamp: "2025-12-10T19:30:00Z"
+                    performance_metrics:
+                      current_best_fitness: 0.87
+                      average_fitness: 0.76
+                      fitness_improvement_rate: 0.023
+                      population_diversity_score: 0.68
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /evolution/runs/{runId}/pause:
+    post:
+      summary: Pause Evolution Run
+      description: Pause a running evolution run. The run can be resumed later.
+      operationId: pauseEvolutionRun
+      tags:
+        - Evolution Management
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Evolution run identifier
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for pausing
+                graceful:
+                  type: boolean
+                  default: true
+                  description: Allow current generation to complete before pausing
+      responses:
+        '200':
+          description: Evolution run paused successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [paused]
+                  paused_at_generation:
+                    type: integer
+                  paused_at:
+                    type: string
+                    format: date-time
+                  can_resume:
+                    type: boolean
+                  resume_url:
+                    type: string
+                    format: uri
+                required:
+                  - run_id
+                  - status
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Run cannot be paused (invalid state)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /evolution/runs/{runId}/resume:
+    post:
+      summary: Resume Evolution Run
+      description: Resume a previously paused evolution run.
+      operationId: resumeEvolutionRun
+      tags:
+        - Evolution Management
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Evolution run identifier
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for resuming
+                adjusted_config:
+                  $ref: '#/components/schemas/EvolutionConfig'
+                  description: Optional configuration changes for resumed run
+      responses:
+        '200':
+          description: Evolution run resumed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [running]
+                  resumed_at_generation:
+                    type: integer
+                  resumed_at:
+                    type: string
+                    format: date-time
+                  updated_config:
+                    $ref: '#/components/schemas/EvolutionConfig'
+                  estimated_completion_seconds:
+                    type: integer
+                required:
+                  - run_id
+                  - status
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Run cannot be resumed (invalid state)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # === EVOLUTION ANALYTICS ===
+
+  /evolution/analytics:
+    get:
+      summary: Get Evolution Analytics
+      description: Get analytics and insights across all evolution runs and algorithms.
+      operationId: getEvolutionAnalytics
+      tags:
+        - Evolution Analytics
+      parameters:
+        - name: time_range
+          in: query
+          schema:
+            type: string
+            enum: [1h, 24h, 7d, 30d, 90d, 1y]
+            default: "7d"
+          description: Time range for analytics
+        - name: algorithm_filter
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [simple_ga, elitist_ga, speciation_ga, cooperative_coevolution]
+          style: form
+          explode: false
+          description: Filter by specific algorithms
+        - name: include_algorithm_comparison
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include algorithm performance comparison
+      responses:
+        '200':
+          description: Evolution analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  time_range:
+                    type: string
+                  summary_stats:
+                    type: object
+                    properties:
+                      total_runs:
+                        type: integer
+                      completed_runs:
+                        type: integer
+                      successful_runs:
+                        type: integer
+                      average_improvement:
+                        type: number
+                        format: float
+                      average_duration_seconds:
+                        type: number
+                        format: float
+                      most_successful_algorithm:
+                        type: string
+                      average_fitness_gain:
+                        type: number
+                        format: float
+                  algorithm_performance:
+                    type: object
+                    description: Performance comparison by algorithm
+                    properties:
+                      comparison:
+                        type: object
+                        additionalProperties:
+                          type: object
+                          properties:
+                            runs_count:
+                              type: integer
+                            success_rate:
+                              type: number
+                              format: float
+                            average_improvement:
+                              type: number
+                              format: float
+                            average_duration_seconds:
+                              type: number
+                              format: float
+                            best_fitness_achieved:
+                              type: number
+                              format: float
+                            convergence_reliability:
+                              type: number
+                              format: float
+                      recommendations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            algorithm:
+                              type: string
+                            use_case:
+                              type: string
+                            explanation:
+                              type: string
+                          required:
+                            - algorithm
+                            - use_case
+                            - explanation
+                        description: Algorithm recommendations based on performance data
+                  trends:
+                    type: object
+                    description: Temporal trends in evolution performance
+                    properties:
+                      improvement_over_time:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            time_bucket:
+                              type: string
+                            average_improvement:
+                              type: number
+                              format: float
+                            runs_count:
+                              type: integer
+                          required:
+                            - time_bucket
+                            - average_improvement
+                        description: How evolution performance has changed over time
+                      algorithm_trends:
+                        type: object
+                        description: Trends for specific algorithms
+                  system_insights:
+                    type: object
+                    properties:
+                      optimal_population_sizes:
+                        type: object
+                        properties:
+                          recommended_min:
+                            type: integer
+                          recommended_max:
+                            type: integer
+                          performance_correlation:
+                            type: number
+                            format: float
+                        description: Insights on population size optimization
+                      convergence_patterns:
+                        type: object
+                        properties:
+                          average_convergence_generation:
+                            type: number
+                            format: float
+                          convergence_success_rate:
+                            type: number
+                            format: float
+                          early_stagnation_indicators:
+                            type: array
+                            items:
+                              type: string
+                        description: Patterns in evolutionary convergence
+                    description: System-level insights and recommendations
+                required:
+                  - time_range
+                  - summary_stats
+              examples:
+                evolution_analytics:
+                  value:
+                    time_range: "7d"
+                    summary_stats:
+                      total_runs: 45
+                      completed_runs: 38
+                      successful_runs: 32
+                      average_improvement: 0.23
+                      average_duration_seconds: 1847
+                      most_successful_algorithm: "elitist_ga"
+                      average_fitness_gain: 0.18
+                    algorithm_performance:
+                      comparison:
+                        simple_ga:
+                          runs_count: 15
+                          success_rate: 0.73
+                          average_improvement: 0.21
+                          average_duration_seconds: 1234
+                          best_fitness_achieved: 0.89
+                        elitist_ga:
+                          runs_count: 20
+                          success_rate: 0.85
+                          average_improvement: 0.26
+                          average_duration_seconds: 2156
+                          best_fitness_achieved: 0.92
+                      recommendations: [
+                        {
+                          "algorithm": "elitist_ga",
+                          "use_case": "high_quality_required",
+                          "explanation": "Best for applications requiring maximum fitness improvement"
+                        }
+                      ]
+        '422':
+          description: Invalid analytics parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  # === TEMPLATE FITNESS FUNCTIONS ===
+
+  /evolution/fitness-templates:
+    get:
+      summary: List Fitness Function Templates
+      description: Get available pre-built fitness function templates for common evolutionary goals.
+      operationId: listFitnessTemplates
+      tags:
+        - Evolution Management
+      responses:
+        '200':
+          description: Fitness templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  templates:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        template_id:
+                          type: string
+                        name:
+                          type: string
+                        description:
+                          type: string
+                        category:
+                          type: string
+                          enum: [trait_optimization, balance, diversity, performance, custom]
+                        target_goals:
+                          type: array
+                          items:
+                            type: string
+                        parameters:
+                          type: object
+                          description: Available configuration parameters
+                        expected_improvement:
+                          type: string
+                        example_use_cases:
+                          type: array
+                          items:
+                            type: string
+                        complexity:
+                          type: string
+                          enum: [simple, moderate, complex]
+                      required:
+                        - template_id
+                        - name
+                        - description
+                        - category
+                required:
+                  - templates
+              examples:
+                fitness_templates:
+                  value:
+                    templates: [
+                      {
+                        "template_id": "trait_empathy_maximization",
+                        "name": "Empathy Maximization",
+                        "description": "Optimize genome for maximum empathy while maintaining conversation quality",
+                        "category": "trait_optimization",
+                        "target_goals": ["maximize_empathy", "maintain_coherence"],
+                        "expected_improvement": "15-25% empathy improvement",
+                        "example_use_cases": ["customer_support", "counseling"],
+                        "complexity": "simple"
+                      }
+                    ]
+
+  /evolution/system/status:
+    get:
+      summary: Get Evolution System Status
+      description: Get comprehensive status and health of the evolutionary optimization system.
+      operationId: getEvolutionSystemStatus
+      tags:
+        - Evolution Monitoring
+      responses:
+        '200':
+          description: Evolution system status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  system_health:
+                    type: string
+                    enum: [healthy, degraded, critical, maintenance]
+                  active_runs:
+                    type: integer
+                  queued_runs:
+                    type: integer
+                  completed_runs_last_24h:
+                    type: integer
+                  failed_runs_last_24h:
+                    type: integer
+                  system_resources:
+                    type: object
+                    properties:
+                      available_cpu_cores:
+                        type: integer
+                      available_memory_gb:
+                        type: number
+                        format: float
+                      active_evolution_threads:
+                        type: integer
+                      queue_depth:
+                        type: integer
+                      estimated_queue_wait_seconds:
+                        type: integer
+                  algorithm_capacities:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    description: Max concurrent runs per algorithm
+                  alerts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        level:
+                          type: string
+                          enum: [info, warning, error]
+                        message:
+                          type: string
+                        timestamp:
+                          type: string
+                          format: date-time
+                        affected_runs:
+                          type: integer
+                    description: Active system alerts
+                  last_health_check:
+                    type: string
+                    format: date-time
+                required:
+                  - system_health
+                  - active_runs
+                  - queued_runs

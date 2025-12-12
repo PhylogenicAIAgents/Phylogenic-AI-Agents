@@ -4,8 +4,13 @@
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-AGPL%20v3-blue.svg)](LICENSE)
 [![PyPI](https://img.shields.io/badge/PyPI-allele-blue)](https://pypi.org/project/allele/)
+[![Documentation Status](https://readthedocs.org/projects/allele/badge/?version=latest)](https://allele.readthedocs.io/en/latest/?badge=latest)
+[![LLM Ready](https://img.shields.io/badge/LLM-Ready-green.svg)](docs/LLM_INTEGRATION.md)
+[![Real API Tested](https://img.shields.io/badge/Real%20API-Tested-brightgreen.svg)](docs/REAL_INTEGRATION_TESTING.md)
 
-**Beyond Prompt Engineering. Evolve Genetically Optimized Personalities with Liquid Memory.**
+**[Website](https://allele-ai.github.io/allele/) | [Documentation](https://allele.readthedocs.io/) | [GitHub](https://github.com/allele-ai/allele)**
+
+**Beyond Prompt Engineering. Evolve Genetically Optimized Personalities with Liquid Memory & Real LLM Conversations.**
 
 ---
 
@@ -59,6 +64,50 @@ agent = await create_agent(genome, config)
 # Chat with genetically-defined personality
 async for response in agent.chat("I need help"):
     print(response)
+```
+
+---
+
+## 🚀 **Production-Ready Integration: Real AI, Real Results**
+
+### **Real LLM Conversational AI**
+Allele connects to **actual AI services** - not mocks or simulations:
+
+```python
+# Real Ollama Cloud integration
+config = AgentConfig(llm_provider="ollama", model_name="llama2")
+agent = NLPAgent(genome, config)
+await agent.initialize()  # Makes real HTTPS call to ollama.com
+
+async for chunk in agent.chat("What's the weather like?"):
+    print(chunk, end='')  # Real AI-generated response
+```
+
+### **Multi-Provider Support**
+- **OpenAI GPT** (ChatGPT models via API)
+- **Ollama Local** (Run models on your hardware)
+- **Ollama Cloud** (Cloud-hosted models with authentication)
+- **Anthropic Claude** (Coming soon)
+
+### **Behavioral AI: LLMs That *Change* Behavior**
+** Allele doesn't just call LLMs - it *transforms* them:**
+
+```python
+# Traditional prompting: Static text
+"You are helpful and creative..."
+
+# Allele: Dynamic personality injection
+# Every LLM call gets genome-based system prompts that modify behavior
+system_prompt = agent._create_system_prompt()
+# OUTPUT: "You are an AI with emotional understanding (0.9/1.0),
+#         technical expertise (0.8/1.0), creativity (0.7/1.0)..."
+```
+
+### **Verified Production Testing**
+```bash
+# Real API calls, no mocks
+pytest tests/test_llm_integration.py::test_ollama_cloud_real_chat -xvs
+# ✅ Validates actual personality changes via LLM behavior
 ```
 
 ---
@@ -168,6 +217,8 @@ See [Configuration Guide](docs/configuration.md) for details.
 ## Documentation
 
 - [Configuration Guide](docs/configuration.md) - **Start here for setup**
+- [Real Integration Testing](docs/REAL_INTEGRATION_TESTING.md) - **Production validation with real AI**
+- [LLM Integration Guide](docs/LLM_INTEGRATION.md) - **Multi-provider AI connectivity**
 - [API Reference](docs/api.md)
 - [Evolution Guide](docs/evolution.md)
 - [Kraken LNN](docs/kraken_lnn.md)
@@ -203,9 +254,11 @@ For academic/research use, the AGPL v3 terms are automatically satisfied without
 
 ## Links
 
-- **GitHub**: [github.com/bravetto/allele](https://github.com/bravetto/allele)
+- **Homepage**: [allele.ai](https://fission-ai.github.io/OpenSpec/)
+- **Documentation**: [docs.allele.ai](https://allele.readthedocs.io/)
+- **GitHub**: [github.com/Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec)
 - **PyPI**: [pypi.org/project/allele](https://pypi.org/project/allele/)
-- **Issues**: [github.com/bravetto/allele/issues](https://github.com/bravetto/allele/issues)
+- **Issues**: [github.com/Fission-AI/OpenSpec/issues](https://github.com/Fission-AI/OpenSpec/issues)
 
 ---
 

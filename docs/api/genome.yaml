@@ -1,0 +1,1041 @@
+openapi: 3.1.0
+info:
+  title: Allele Genome Management API
+  version: 1.0.0
+  description: |
+    REST API endpoints for managing Allele conversational genomes. Provides
+    comprehensive genome lifecycle management, trait manipulation, version control,
+    and metadata management for AI agent personalities.
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+  contact:
+    name: Bravetto AI Systems
+    email: jimmydejesus1129@gmail.com
+
+servers:
+  - url: https://api.allele.ai/v1
+    description: Production server
+  - url: http://localhost:8000/v1
+    description: Local development server
+
+components:
+  schemas:
+    $ref: './schemas.yaml#/components/schemas'
+
+paths:
+
+  # === GENOME LIFECYCLE ===
+
+  /genomes:
+    get:
+      summary: List Genomes
+      description: Retrieve a paginated list of available genomes with filtering and search capabilities.
+      operationId: listGenomes
+      tags:
+        - Genome Management
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search genomes by ID, name, or description
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: false
+          description: Filter by genome tags
+        - name: generation
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+          description: Filter by generation number
+        - name: trait_filter
+          in: query
+          schema:
+            type: string
+            description: JSON string specifying trait range filters (e.g., '{"empathy": {"min": 0.8, "max": 1.0}}')
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, updated_at, generation, performance_score]
+            default: "created_at"
+          description: Sort field
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: "desc"
+          description: Sort direction
+      responses:
+        '200':
+          description: Genomes retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/ConversationalGenome'
+                            - type: object
+                              properties:
+                                usage_count:
+                                  type: integer
+                                  description: Number of times this genome has been used by agents
+                                average_performance:
+                                  type: number
+                                  format: float
+                                  description: Average performance score across all uses
+                                last_used:
+                                  type: string
+                                  format: date-time
+                                  description: When this genome was last used
+                      search_metadata:
+                        type: object
+                        description: Search and filter metadata
+                        properties:
+                          search_term:
+                            type: string
+                          applied_filters:
+                            type: object
+                          total_matching:
+                            type: integer
+    post:
+      summary: Create Genome
+      description: |
+        Create a new conversational genome with specified traits and metadata.
+
+        **Validation**: All 8 required traits must be provided with valid ranges.
+        Genome ID must be unique within the system.
+      operationId: createGenome
+      tags:
+        - Genome Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/GenomeCreateRequest'
+                - type: object
+                  properties:
+                    description:
+                      type: string
+                      description: Human-readable description of the genome
+                    author:
+                      type: string
+                      description: Creator or author of the genome
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                      description: Categorization tags for the genome
+                    metadata:
+                      type: object
+                      additionalProperties: true
+                      description: Additional metadata for the genome
+              examples:
+                create_customer_service_genome:
+                  summary: Create a customer service genome
+                  value:
+                    genome_id: "customer_service_v2"
+                    traits:
+                      empathy: 0.95
+                      engagement: 0.90
+                      technical_knowledge: 0.70
+                      creativity: 0.50
+                      conciseness: 0.80
+                      context_awareness: 0.90
+                      adaptability: 0.85
+                      personability: 0.95
+                    description: "Optimized genome for customer support interactions"
+                    author: "Customer Experience Team"
+                    tags: ["customer-service", "support", "production"]
+                    metadata:
+                      target_audience: "enterprise_customers"
+                      training_dataset: "support_logs_q4_2024"
+      responses:
+        '201':
+          description: Genome created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ConversationalGenome'
+                  - type: object
+                    properties:
+                      created_at:
+                        type: string
+                        format: date-time
+                      validation_status:
+                        type: string
+                        enum: [valid, warnings]
+                        description: Whether the genome passed validation
+                      validation_warnings:
+                        type: array
+                        items:
+                          type: string
+                        description: Any validation warnings (if applicable)
+                examples:
+                  genome_created:
+                    value:
+                      genome_id: "customer_service_v2"
+                      traits:
+                        empathy: 0.95
+                        engagement: 0.90
+                        technical_knowledge: 0.70
+                        creativity: 0.50
+                        conciseness: 0.80
+                        context_awareness: 0.90
+                        adaptability: 0.85
+                        personability: 0.95
+                      generation: 0
+                      tags: ["customer-service", "support", "production"]
+                      created_at: "2025-12-10T17:45:00Z"
+                      validation_status: "valid"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Genome with this ID already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "conflict"
+                message: "Genome with ID 'customer_service_v2' already exists"
+                timestamp: "2025-12-10T17:45:00Z"
+
+  /genomes/{genomeId}:
+    get:
+      summary: Get Genome
+      description: Retrieve detailed information about a specific genome including complete trait values, metadata, and lineage.
+      operationId: getGenome
+      tags:
+        - Genome Management
+      parameters:
+        - $ref: '#/components/parameters/genomeId'
+        - name: include_lineage
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include complete evolutionary lineage
+        - name: include_usage_stats
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include usage statistics and performance metrics
+      responses:
+        '200':
+          description: Genome retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ConversationalGenome'
+                  - type: object
+                    properties:
+                      traits_analysis:
+                        type: object
+                        properties:
+                          dominant_traits:
+                            type: array
+                            items:
+                              type: string
+                            description: Top 3 traits by value
+                          balanced_score:
+                            type: number
+                            format: float
+                            minimum: 0.0
+                            maximum: 1.0
+                            description: How balanced the trait distribution is
+                          specialization_areas:
+                            type: array
+                            items:
+                              type: string
+                            description: Areas where this genome excels
+                        description: Automated analysis of genome traits
+                      usage_statistics:
+                        type: object
+                        properties:
+                          total_agents:
+                            type: integer
+                            description: Number of agents created with this genome
+                          active_agents:
+                            type: integer
+                            description: Currently active agents using this genome
+                          average_session_length:
+                            type: number
+                            format: float
+                            description: Average interaction length (turns)
+                          performance_history:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                timestamp:
+                                  type: string
+                                  format: date-time
+                                average_performance:
+                                  type: number
+                                  format: float
+                              description: Performance trends over time (if available)
+                        description: Usage statistics and performance data
+                      evolutionary_lineage:
+                        type: object
+                        description: Complete evolutionary lineage (if requested)
+                        properties:
+                          ancestors:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ConversationalGenome'
+                            description: Direct ancestors in the evolution tree
+                          descendants:
+                            type: array
+                            items:
+                              type: string
+                            description: IDs of evolved descendant genomes
+                          fitness_history:
+                            type: array
+                            items:
+                              type: number
+                              format: float
+                            description: Fitness scores throughout evolution
+      '404':
+        $ref: '#/components/responses/NotFound'
+    put:
+      summary: Update Genome
+      description: |
+        Update genome traits, metadata, and tags. Supports partial updates.
+        Some updates may require revalidation of dependent agents.
+
+        **Immutability Note**: Genome ID cannot be changed once created.
+        Major trait changes may affect existing agents.
+      operationId: updateGenome
+      tags:
+        - Genome Management
+      parameters:
+        - $ref: '#/components/parameters/genomeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                traits:
+                  $ref: '#/components/schemas/TraitDict'
+                  description: Updated trait values (partial update allowed)
+                description:
+                  type: string
+                  description: Updated description
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Updated tags (replaces existing tags)
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  description: Updated or additional metadata
+                validation_required:
+                  type: boolean
+                  default: true
+                  description: Whether to revalidate the genome after update
+            description: Fields to update (partial update supported)
+            examples:
+              update_traits:
+                summary: Update genome traits
+                value:
+                  traits:
+                    empathy: 0.98
+                    creativity: 0.60
+                  description: "Enhanced customer service genome with higher empathy"
+                  validation_required: true
+      responses:
+        '200':
+          description: Genome updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ConversationalGenome'
+                  - type: object
+                    properties:
+                      updated_at:
+                        type: string
+                        format: date-time
+                      validation_status:
+                        type: string
+                        enum: [valid, invalidated, warnings]
+                      affected_agents:
+                        type: array
+                        items:
+                          type: string
+                        description: IDs of agents that may need restarting
+                      previous_version:
+                        type: object
+                        description: Previous genome state for rollback
+                examples:
+                  genome_updated:
+                    value:
+                      genome_id: "customer_service_v2"
+                      traits:
+                        empathy: 0.98
+                        engagement: 0.90
+                        technical_knowledge: 0.70
+                      updated_at: "2025-12-10T17:50:00Z"
+                      validation_status: "valid"
+                      affected_agents: ["agent_12345"]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete Genome
+      description: |
+        Permanently delete a genome and all associated data.
+        This operation cannot be undone and may affect agents using this genome.
+
+        **Dependency Check**: Deletion will be blocked if any agents are actively using the genome.
+      operationId: deleteGenome
+      tags:
+        - Genome Management
+      parameters:
+        - $ref: '#/components/parameters/genomeId'
+        - name: confirmation_token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Confirmation token to prevent accidental deletion
+        - name: force
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Force deletion even if dependencies exist (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for deletion (for audit logs)
+                cascade_delete_agents:
+                  type: boolean
+                  default: false
+                  description: Whether to also delete all dependent agents
+              required:
+                - reason
+      responses:
+        '204':
+          description: Genome deleted successfully
+        '400':
+          description: Invalid confirmation token or missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Genome has active dependencies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "dependency_conflict"
+                message: "Genome cannot be deleted while 5 agents are actively using it"
+                details:
+                  dependent_agents: ["agent_123", "agent_456", "agent_789"]
+                  dependent_evolution_runs: ["evo_001", "evo_002"]
+                timestamp: "2025-12-10T17:50:00Z"
+
+  # === GENOME TRAIT MANAGEMENT ===
+
+  /genomes/{genomeId}/traits:
+    get:
+      summary: Get Genome Traits
+      description: Retrieve just the trait values for a genome, useful for lightweight API calls.
+      operationId: getGenomeTraits
+      tags:
+        - Genome Management
+      parameters:
+        - $ref: '#/components/parameters/genomeId'
+      responses:
+        '200':
+          description: Genome traits retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/TraitDict'
+                  - type: object
+                    properties:
+                      genome_id:
+                        type: string
+                        description: Genome identifier (for context)
+                      last_trait_update:
+                        type: string
+                        format: date-time
+                        description: When traits were last modified
+                examples:
+                  traits_only:
+                    value:
+                      empathy: 0.95
+                      engagement: 0.90
+                      technical_knowledge: 0.70
+                      creativity: 0.50
+                      conciseness: 0.80
+                      context_awareness: 0.90
+                      adaptability: 0.85
+                      personability: 0.95
+                      genome_id: "customer_service_v2"
+                      last_trait_update: "2025-12-10T17:50:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update Individual Genome Traits
+      description: |
+        Update specific traits while leaving others unchanged.
+        Provides fine-grained control over personality adjustments.
+
+        **Validation**: Updated traits must remain within valid ranges (0.0-1.0).
+      operationId: updateGenomeTraits
+      tags:
+        - Genome Management
+      parameters:
+        - $ref: '#/components/parameters/genomeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                traits:
+                  $ref: '#/components/schemas/TraitDict'
+                  description: Traits to update (only specified traits will be changed)
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for trait modifications
+                revalidate_agents:
+                  type: boolean
+                  default: true
+                  description: Whether to trigger agent revalidation
+              required:
+                - traits
+              examples:
+                adjust_empathy:
+                  summary: Fine-tune empathy trait
+                  value:
+                    traits:
+                      empathy: 0.95
+                      engagement: 0.88
+                    reason: "Customer feedback shows need for higher empathy"
+                    revalidate_agents: true
+      responses:
+        '200':
+          description: Genome traits updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  genome_id:
+                    type: string
+                  updated_traits:
+                    $ref: '#/components/schemas/TraitDict'
+                  unchanged_traits:
+                    type: object
+                    description: Traits that were not modified
+                  updated_at:
+                    type: string
+                    format: date-time
+                  affected_agents:
+                    type: array
+                    items:
+                      type: string
+                    description: Agents that were affected by this change
+                examples:
+                  traits_updated:
+                    value:
+                      genome_id: "customer_service_v2"
+                      updated_traits:
+                        empathy: 0.95
+                        engagement: 0.88
+                      unchanged_traits:
+                        technical_knowledge: 0.70
+                        creativity: 0.50
+                      updated_at: "2025-12-10T17:55:00Z"
+                      affected_agents: ["agent_12345", "agent_67890"]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # === GENOME VERSION CONTROL ===
+
+  /genomes/{genomeId}/versions:
+    get:
+      summary: Get Genome Versions
+      description: Retrieve the version history and snapshots for a genome.
+      operationId: getGenomeVersions
+      tags:
+        - Genome Management
+      parameters:
+        - $ref: '#/components/parameters/genomeId'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Genome versions retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/ConversationalGenome'
+                            - type: object
+                              properties:
+                                version_id:
+                                  type: string
+                                  description: Unique version identifier
+                                version_number:
+                                  type: integer
+                                  description: Sequential version number
+                                change_summary:
+                                  type: string
+                                  description: Summary of what changed
+                                change_type:
+                                  type: string
+                                  enum: [creation, trait_update, metadata_update, evolution, manual_edit]
+                                  description: Type of change
+                                changed_by:
+                                  type: string
+                                  description: User or system that made the change
+                                changed_at:
+                                  type: string
+                                  format: date-time
+                                is_current_version:
+                                  type: boolean
+                                  description: Whether this is the active version
+                      current_version:
+                        type: string
+                        description: ID of the currently active version
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /genomes/{genomeId}/versions/{versionId}/restore:
+    post:
+      summary: Restore Genome Version
+      description: Restore a genome to a specific previous version, creating a new version with the restored traits.
+      operationId: restoreGenomeVersion
+      tags:
+        - Genome Management
+      parameters:
+        - $ref: '#/components/parameters/genomeId'
+        - name: version_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Version identifier to restore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 255
+                  description: Reason for restoring this version
+                create_new_version:
+                  type: boolean
+                  default: true
+                  description: Whether to create a new version or replace current
+              required:
+                - reason
+      responses:
+        '200':
+          description: Genome version restored successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationalGenome'
+              examples:
+                version_restored:
+                  value:
+                    genome_id: "customer_service_v2"
+                    traits:
+                      empathy: 0.92  # Restored to previous value
+                      engagement: 0.90
+                      technical_knowledge: 0.70
+                    generation: 0
+                    tags: ["customer-service", "support", "restored"]
+                    updated_at: "2025-12-10T18:00:00Z"
+        '404':
+          description: Genome or version not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Restore operation would create conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # === GENOME ANALYSIS ===
+
+  /genomes/{genomeId}/analysis:
+    get:
+      summary: Analyze Genome
+      description: Perform detailed analysis of a genome including trait balance, optimization suggestions, and comparative metrics.
+      operationId: analyzeGenome
+      tags:
+        - Genome Analysis
+      parameters:
+        - $ref: '#/components/parameters/genomeId'
+        - name: analysis_types
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [trait_balance, optimization_suggestions, comparative_metrics, usage_patterns, evolutionary_potential]
+          style: form
+          explode: false
+          description: Types of analysis to perform
+        - name: comparison_genomes
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: false
+          description: Genome IDs to compare against
+      responses:
+        '200':
+          description: Genome analysis completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  genome_id:
+                    type: string
+                  analysis_timestamp:
+                    type: string
+                    format: date-time
+                  trait_balance:
+                    type: object
+                    description: Analysis of trait balance and distribution
+                    properties:
+                      overall_balance_score:
+                        type: number
+                        format: float
+                        minimum: 0.0
+                        maximum: 1.0
+                      dominant_traits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            trait:
+                              type: string
+                            value:
+                              type: number
+                              format: float
+                            rank:
+                              type: integer
+                            description:
+                              type: string
+                      underrepresented_traits:
+                        type: array
+                        items:
+                          type: string
+                        description: Traits that might benefit from adjustment
+                  optimization_suggestions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        suggestion_type:
+                          type: string
+                          enum: [trait_adjustment, complementarity, evolutionary_opportunity]
+                        trait:
+                          type: string
+                        suggested_value:
+                          type: number
+                          format: float
+                        reasoning:
+                          type: string
+                        expected_impact:
+                          type: string
+                      required:
+                        - suggestion_type
+                        - reasoning
+                    description: AI-generated suggestions for genome improvement
+                  comparative_metrics:
+                    type: object
+                    description: Comparison with other genomes or benchmarks
+                    properties:
+                      similarity_scores:
+                        type: object
+                        additionalProperties:
+                          type: number
+                          format: float
+                        description: Similarity scores (0.0-1.0) with comparison genomes
+                      benchmark_comparison:
+                        type: object
+                        description: Comparison against established benchmarks
+                      unique_characteristics:
+                        type: array
+                        items:
+                          type: string
+                        description: Traits that make this genome unique
+                  evolutionary_potential:
+                    type: object
+                    description: Assessment of further evolutionary potential
+                    properties:
+                      convergence_likelihood:
+                        type: number
+                        format: float
+                      trait_plasticity_scores:
+                        type: object
+                        additionalProperties:
+                          type: number
+                          format: float
+                        description: How adaptable each trait is to evolution
+                      recommended_mutation_targets:
+                        type: array
+                        items:
+                          type: string
+                        description: Traits most promising for evolutionary changes
+                required:
+                  - genome_id
+                  - analysis_timestamp
+              examples:
+                genome_analysis:
+                  value:
+                    genome_id: "customer_service_v2"
+                    analysis_timestamp: "2025-12-10T18:05:00Z"
+                    trait_balance:
+                      overall_balance_score: 0.87
+                      dominant_traits: [
+                        {"trait": "empathy", "value": 0.95, "rank": 1, "description": "Very high empathy"},
+                        {"trait": "context_awareness", "value": 0.90, "rank": 2, "description": "Strong memory retention"}
+                      ]
+                    optimization_suggestions: [
+                      {
+                        "suggestion_type": "trait_adjustment",
+                        "trait": "creativity",
+                        "suggested_value": 0.65,
+                        "reasoning": "Customer service often benefits from moderate creativity for problem-solving",
+                        "expected_impact": "Improve solution quality by ~15%"
+                      }
+                    ]
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Invalid analysis parameters or comparison genomes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  # === GENOME EXPORT/IMPORT ===
+
+  /genomes/{genomeId}/export:
+    post:
+      summary: Export Genome
+      description: Export a genome in various formats for backup, sharing, or external analysis.
+      operationId: exportGenome
+      tags:
+        - Genome Management
+      parameters:
+        - $ref: '#/components/parameters/genomeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                format:
+                  type: string
+                  enum: [json, yaml, csv, pickled, protobuf]
+                  default: "json"
+                  description: Export format
+                include_metadata:
+                  type: boolean
+                  default: true
+                  description: Include genome metadata
+                include_lineage:
+                  type: boolean
+                  default: true
+                  description: Include evolutionary lineage information
+                export_version:
+                  type: string
+                  description: Specific version to export (default: current)
+                anonymize:
+                  type: boolean
+                  default: false
+                  description: Remove sensitive metadata for public sharing
+              required:
+                - format
+      responses:
+        '200':
+          description: Genome exported successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            content-disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="genome_customer_service_v2.json"'
+            content-type:
+              schema:
+                type: string
+                example: application/json
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /genomes/import:
+    post:
+      summary: Import Genome
+      description: Import a genome from an exported file or JSON payload.
+      operationId: importGenome
+      tags:
+        - Genome Management
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Genome export file to import
+                genome_data:
+                  type: string
+                  description: JSON string containing genome data (alternative to file)
+                options:
+                  type: string
+                  description: JSON string with import options
+                  default: '{"validate_on_import": true, "generate_new_id_if_conflict": true}'
+          application/json:
+            schema:
+              type: object
+              properties:
+                genome:
+                  $ref: '#/components/schemas/ConversationalGenome'
+                import_options:
+                  type: object
+                  properties:
+                    generate_new_id:
+                      type: boolean
+                      default: false
+                      description: Generate new ID if existing ID conflicts
+                    validate_on_import:
+                      type: boolean
+                      default: true
+                      description: Validate genome data during import
+                    preserve_metadata:
+                      type: boolean
+                      default: true
+                      description: Keep original metadata if possible
+                    tags_to_add:
+                      type: array
+                      items:
+                        type: string
+                      description: Additional tags to add to imported genome
+              required:
+                - genome
+      responses:
+        '201':
+          description: Genome imported successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ConversationalGenome'
+                  - type: object
+                    properties:
+                      import_warnings:
+                        type: array
+                        items:
+                          type: string
+                        description: Any warnings during import process
+                      validation_errors:
+                        type: array
+                        items:
+                          type: string
+                        description: Validation issues that were corrected or ignored
+                examples:
+                  import_success:
+                    value:
+                      genome_id: "imported_genome_001"
+                      traits:
+                        empathy: 0.88
+                        engagement: 0.85
+                      generation: 0
+                      tags: ["imported", "customer-service"]
+                      created_at: "2025-12-10T18:10:00Z"
+                      import_warnings: ["Some lineage data was not preserved due to format differences"]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Genome with same ID already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Invalid genome data in import
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
