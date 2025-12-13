@@ -37,15 +37,18 @@ class TestKrakenDeterminism:
         # Instead, we test that initialization is deterministic and statistical
         # properties are preserved.
 
-        # Test initialization determinism (weights)
-        DeterministicRandom.seed(42)
-        lsm1 = LiquidStateMachine(reservoir_size=50, connectivity=0.1)
+        # Test initialization determinism (weights) with seeded random states
+        rng1 = np.random.RandomState(42)
+        lsm1 = LiquidStateMachine(reservoir_size=50, connectivity=0.1, random_state=rng1)
 
-        DeterministicRandom.seed(42)
-        lsm2 = LiquidStateMachine(reservoir_size=50, connectivity=0.1)
+        rng2 = np.random.RandomState(42)
+        lsm2 = LiquidStateMachine(reservoir_size=50, connectivity=0.1, random_state=rng2)
 
         # Same seed should produce same initial weights
         np.testing.assert_array_equal(lsm1.adaptive_weights.weights, lsm2.adaptive_weights.weights)
+
+        # Same connections should also match
+        np.testing.assert_array_equal(lsm1.connections, lsm2.connections)
 
         # Process same sequence
         sequence = [0.5, 0.3, 0.8, 0.2, 0.9]
@@ -63,7 +66,7 @@ class TestKrakenDeterminism:
 
         assert abs(mean1 - mean2) < abs(mean1) * 0.5, f"Means too different: {mean1} vs {mean2}"
         # Relaxed tolerance for liquid neural networks (allow up to 100% std dev difference due to state evolution)
-        assert abs(std1 - std2) < max(std1, std2) * 1.0, f"Std devs too different: {std1} vs {std2}"
+        assert abs(std1 - std2) < max(std1, std2) * 0.3, f"Std devs too different: {std1} vs {std2}"
 
         # Test passes with statistical closeness rather than exact equality
 
@@ -84,7 +87,7 @@ class TestKrakenDeterminism:
         assert not np.array_equal(outputs1, outputs2)
 
     @pytest.mark.asyncio
-    async def test_kraken_lnn_deterministic_processing(self, deterministic_lnn):
+    async def test_kraken_lnn_deterministic_processing(self):
         """Test that KrakenLNN initialization and memory operations are deterministic."""
         # This test has been modified for liquid neural network behavior.
         # Liquid neural networks are inherently stateful and adaptive,
@@ -95,14 +98,12 @@ class TestKrakenDeterminism:
         sequence1 = generate_test_sequence(20, seed=999)
         sequence2 = generate_test_sequence(15, seed=888)
 
-        # Reset deterministic random state and create two identical KrakenLNN instances
-        DeterministicRandom.reset()
-        DeterministicRandom.seed(999)
-        lnn1 = KrakenLNN(reservoir_size=50, connectivity=0.1)
+        # Create two identical KrakenLNN instances with seeded random states
+        rng1 = np.random.RandomState(999)
+        lnn1 = KrakenLNN(reservoir_size=50, connectivity=0.1, random_state=rng1)
 
-        DeterministicRandom.reset()
-        DeterministicRandom.seed(999)
-        lnn2 = KrakenLNN(reservoir_size=50, connectivity=0.1)
+        rng2 = np.random.RandomState(999)
+        lnn2 = KrakenLNN(reservoir_size=50, connectivity=0.1, random_state=rng2)
 
         # Process same sequence on both instances
         result1 = await lnn1.process_sequence(sequence1, memory_consolidation=False)
@@ -120,8 +121,8 @@ class TestKrakenDeterminism:
         mean2, std2 = np.mean(outputs2), np.std(outputs2)
 
         assert abs(mean1 - mean2) < abs(mean1) * 0.5, f"Means too different: {mean1} vs {mean2}"
-        # Allow up to 100% std dev difference due to liquid neural network adaptive nature
-        assert abs(std1 - std2) < max(std1, std2) * 1.0, f"Std devs too different: {std1} vs {std2}"
+        # Allow up to 50% std dev difference due to liquid neural network adaptive nature
+        assert abs(std1 - std2) < max(std1, std2) * 0.5, f"Std devs too different: {std1} vs {std2}"
 
         # Ensure outputs are in reasonable range and non-zero
         assert all(abs(o) > 1e-6 for o in outputs1), "All outputs should be non-zero"
@@ -328,19 +329,20 @@ class TestKrakenDeterminism:
     def test_weight_initialization_determinism(self):
         """Test that weight initialization is deterministic."""
         # Test that LiquidStateMachine with same global seed produces same weights
-        DeterministicRandom.seed(600)
-        lsm1 = LiquidStateMachine(reservoir_size=50, connectivity=0.1)
+        # Use same instance name to ensure shared random state
+        DeterministicRandom.seed(600, 'test_lsm_weights')
+        lsm1 = LiquidStateMachine(reservoir_size=50, connectivity=0.1, instance_name='test_lsm_weights')
         weights1 = lsm1.adaptive_weights.weights.copy()
 
-        DeterministicRandom.seed(600)
-        lsm2 = LiquidStateMachine(reservoir_size=50, connectivity=0.1)
+        DeterministicRandom.seed(600, 'test_lsm_weights')
+        lsm2 = LiquidStateMachine(reservoir_size=50, connectivity=0.1, instance_name='test_lsm_weights')
         weights2 = lsm2.adaptive_weights.weights.copy()
 
         np.testing.assert_array_equal(weights1, weights2)
 
         # Different seeds produce different weights
-        DeterministicRandom.seed(601)
-        lsm3 = LiquidStateMachine(reservoir_size=50, connectivity=0.1)
+        DeterministicRandom.seed(601, 'test_lsm_weights')
+        lsm3 = LiquidStateMachine(reservoir_size=50, connectivity=0.1, instance_name='test_lsm_weights')
         weights3 = lsm3.adaptive_weights.weights.copy()
 
         # Should be different
@@ -348,9 +350,10 @@ class TestKrakenDeterminism:
 
     def test_noise_generation_determinism(self):
         """Test that noise generation is deterministic."""
-        DeterministicRandom.reset()
-        DeterministicRandom.seed(700)
-        lsm1 = LiquidStateMachine(reservoir_size=30)
+        # Use same instance name to ensure shared random state
+        DeterministicRandom.reset('test_noise_gen')
+        DeterministicRandom.seed(700, 'test_noise_gen')
+        lsm1 = LiquidStateMachine(reservoir_size=30, instance_name='test_noise_gen')
 
         inputs = [0.2, 0.6, 0.8]
         noisy_outputs1 = []
@@ -360,9 +363,9 @@ class TestKrakenDeterminism:
             noisy_outputs1.append(noisy_out)
 
         # Same seed should produce same noise
-        DeterministicRandom.reset()
-        DeterministicRandom.seed(700)
-        lsm2 = LiquidStateMachine(reservoir_size=30)
+        DeterministicRandom.reset('test_noise_gen')
+        DeterministicRandom.seed(700, 'test_noise_gen')
+        lsm2 = LiquidStateMachine(reservoir_size=30, instance_name='test_noise_gen')
 
         noisy_outputs2 = []
         for inp in inputs:

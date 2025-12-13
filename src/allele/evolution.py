@@ -186,14 +186,14 @@ class EvolutionEngine:
     ) -> List[ConversationalGenome]:
         """Initialize population with diverse genomes.
 
+        Optimized for large populations using vectorized operations.
+
         Args:
             base_traits: Optional base traits to start from
 
         Returns:
             List of initialized genomes
         """
-        population = []
-
         # Default base traits
         if base_traits is None:
             base_traits = ConversationalGenome.DEFAULT_TRAITS.copy()
@@ -201,14 +201,18 @@ class EvolutionEngine:
         if self.config.population_size <= 0:
             raise ValueError("population_size must be > 0")
 
-        for i in range(self.config.population_size):
-            # Add genetic variation
-            individual_traits = {}
-            for trait, base_value in base_traits.items():
-                # Add random variation (±20%)
-                variation = np.random.uniform(-0.2, 0.2)
-                individual_traits[trait] = np.clip(base_value + variation, 0.0, 1.0)
+        trait_names = list(base_traits.keys())
+        base_values = np.array([base_traits[name] for name in trait_names])
 
+        # Vectorized generation: create all variations at once
+        # Shape: (population_size, num_traits)
+        variations = np.random.uniform(-0.2, 0.2, (self.config.population_size, len(trait_names)))
+        all_trait_values = np.clip(base_values + variations, 0.0, 1.0)
+
+        # Create population efficiently
+        population = []
+        for i in range(self.config.population_size):
+            individual_traits = dict(zip(trait_names, all_trait_values[i]))
             genome = ConversationalGenome(
                 genome_id=f"genome_{i:04d}",
                 traits=individual_traits

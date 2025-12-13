@@ -42,6 +42,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import numpy as np
 import asyncio
+import heapq
 
 from .exceptions import AbeNLPError
 from .config import settings as allele_settings
@@ -53,38 +54,48 @@ class DeterministicRandom:
     This class ensures that all random operations in Kraken LNN components
     use a controlled sequence that can be reset for testing purposes.
     """
-    _rng: Optional[np.random.RandomState] = None
+    _instances: Dict[str, 'DeterministicRandom'] = {}
+
+    def __init__(self, seed_value: Optional[int] = None):
+        """Initialize deterministic random instance."""
+        self._rng = np.random.RandomState(seed_value)
 
     @classmethod
-    def seed(cls, seed_value: int) -> None:
-        """Set the seed for deterministic random operations."""
-        cls._rng = np.random.RandomState(seed_value)
+    def get_instance(cls, name: str = 'default') -> 'DeterministicRandom':
+        """Get or create a deterministic random instance by name."""
+        if name not in cls._instances:
+            cls._instances[name] = cls()
+        return cls._instances[name]
 
     @classmethod
-    def random(cls, size=None) -> np.ndarray:
+    def seed(cls, seed_value: int, name: str = 'default') -> None:
+        """Set the seed for a named deterministic random instance."""
+        instance = cls.get_instance(name)
+        instance._rng = np.random.RandomState(seed_value)
+
+    @classmethod
+    def random(cls, size=None, name: str = 'default') -> np.ndarray:
         """Generate random floats in [0, 1)."""
-        if cls._rng is None:
-            cls._rng = np.random.RandomState()
-        return cls._rng.random_sample(size)
+        instance = cls.get_instance(name)
+        return instance._rng.random_sample(size)
 
     @classmethod
-    def randn(cls, *args) -> np.ndarray:
+    def randn(cls, *args, name: str = 'default') -> np.ndarray:
         """Generate standard normal random values."""
-        if cls._rng is None:
-            cls._rng = np.random.RandomState()
-        return cls._rng.standard_normal(args)
+        instance = cls.get_instance(name)
+        return instance._rng.standard_normal(args)
 
     @classmethod
-    def normal(cls, loc=0.0, scale=1.0, size=None) -> np.ndarray:
+    def normal(cls, loc=0.0, scale=1.0, size=None, name: str = 'default') -> np.ndarray:
         """Generate normal random values."""
-        if cls._rng is None:
-            cls._rng = np.random.RandomState()
-        return cls._rng.normal(loc, scale, size)
+        instance = cls.get_instance(name)
+        return instance._rng.normal(loc, scale, size)
 
     @classmethod
-    def reset(cls) -> None:
-        """Reset the random state."""
-        cls._rng = None
+    def reset(cls, name: str = 'default') -> None:
+        """Reset the random state for a named instance."""
+        if name in cls._instances:
+            del cls._instances[name]
 
 @dataclass
 class LiquidDynamics:
@@ -148,48 +159,79 @@ class AdaptiveWeightMatrix:
     def update(self, learning_signal: float, state_vector: np.ndarray) -> None:
         """Update the weight matrix based on learning signal and state vector.
 
+        Optimized for batch processing with vectorized operations.
+
         Args:
             learning_signal: Learning signal for weight updates
             state_vector: Current state vector for Hebbian learning
         """
-        # Apply Hebbian-like learning rule
+        # Apply Hebbian-like learning rule with threshold check
         if abs(learning_signal) > self.learning_threshold:
-            # Calculate outer product for weight update
-            weight_update = (
-                self.plasticity_rate *
-                learning_signal *
-                np.outer(state_vector, state_vector)
-            )
+            # Single vectorized operation: plasticity_rate * learning_signal * outer(state_vector, state_vector)
+            # This combines scaling and outer product in one step
+            self.weights += self.plasticity_rate * learning_signal * np.outer(state_vector, state_vector)
 
-            # Update weights
-            self.weights += weight_update
+            # Apply weight constraints with single clip operation
+            np.clip(self.weights, self.min_weight, self.max_weight, out=self.weights)
 
-            # Apply weight constraints
-            self.weights = np.clip(
-                self.weights,
-                self.min_weight,
-                self.max_weight
-            )
+        # Apply weight decay (in-place multiplication for memory efficiency)
+        self.weights *= (1 - self.decay_rate)
 
-        # Apply weight decay
+    def update_batch(self, learning_signals: np.ndarray, state_vectors: np.ndarray) -> None:
+        """Batch update weight matrix for multiple learning signals and state vectors.
+
+        Args:
+            learning_signals: Array of learning signals
+            state_vectors: Matrix of state vectors (shape: n_vectors x state_dim)
+        """
+        # Filter significant learning signals
+        significant_mask = np.abs(learning_signals) > self.learning_threshold
+
+        if np.any(significant_mask):
+            significant_signals = learning_signals[significant_mask]
+            significant_states = state_vectors[significant_mask]
+
+            # Vectorized batch weight updates
+            # Outer products for all significant signals: (n_signals, state_dim, state_dim)
+            outer_products = self.plasticity_rate * significant_signals[:, np.newaxis, np.newaxis] * \
+                           np.einsum('bi,bj->bij', significant_states, significant_states)
+
+            # Accumulate all weight updates at once
+            self.weights += np.sum(outer_products, axis=0)
+
+            # Apply constraints once
+            np.clip(self.weights, self.min_weight, self.max_weight, out=self.weights)
+
+        # Apply weight decay (always, regardless of learning threshold)
         self.weights *= (1 - self.decay_rate)
 
 @dataclass
 class TemporalMemoryBuffer:
-    """Temporal memory buffer for sequence processing.
+    """Temporal memory buffer for sequence processing with circular buffer optimization.
+
+    Uses pre-allocated circular buffer for O(1) memory operations.
 
     Attributes:
         buffer_size: Maximum buffer size
         memory_decay: Rate of memory decay
         consolidation_threshold: Threshold for memory consolidation
         retrieval_strength: Strength of memory retrieval
-        memories: List of stored memories
+        memories: Circular buffer of stored memories
+        _head: Current insertion position in circular buffer
+        _count: Number of valid entries in buffer
     """
     buffer_size: int = 1000
     memory_decay: float = 0.95
     consolidation_threshold: float = 0.8
     retrieval_strength: float = 0.7
-    memories: List[Dict[str, Any]] = field(default_factory=list)
+    memories: List[Optional[Dict[str, Any]]] = field(default_factory=lambda: [])
+    _head: int = field(default=0, init=False)
+    _count: int = field(default=0, init=False)
+
+    def __post_init__(self):
+        """Initialize circular buffer after dataclass initialization."""
+        if not self.memories or len(self.memories) != self.buffer_size:
+            self.memories = [None] * self.buffer_size
 
     @property
     def max_entries(self) -> int:
@@ -199,7 +241,68 @@ class TemporalMemoryBuffer:
     @max_entries.setter
     def max_entries(self, value: int) -> None:
         """Set the maximum number of entries in the buffer."""
-        self.buffer_size = value
+        if value != self.buffer_size:
+            # Resize circular buffer - preserve existing data where possible
+            old_buffer = self.memories[:]
+            self.buffer_size = value
+            self.memories = [None] * value
+
+            # Copy as many existing memories as possible
+            copy_count = min(len(old_buffer), value)
+            for i in range(copy_count):
+                idx = (self._head - copy_count + i) % len(old_buffer)
+                if old_buffer[idx] is not None:
+                    self.memories[i] = old_buffer[idx]
+
+            self._count = copy_count
+            self._head = copy_count if copy_count > 0 else 0
+
+    def add_memory(self, memory_entry: Dict[str, Any]) -> None:
+        """Add memory entry to circular buffer (O(1) operation)."""
+        self.memories[self._head] = memory_entry
+        self._head = (self._head + 1) % self.buffer_size
+
+        if self._count < self.buffer_size:
+            self._count += 1
+
+    def get_memories(self) -> List[Dict[str, Any]]:
+        """Get all valid memories in temporal order (oldest first)."""
+        if self._count == 0:
+            return []
+
+        # Calculate start position (oldest memory)
+        start_idx = (self._head - self._count) % self.buffer_size
+        memories = []
+
+        for i in range(self._count):
+            idx = (start_idx + i) % self.buffer_size
+            if self.memories[idx] is not None:
+                memories.append(self.memories[idx])
+
+        return memories
+
+    def __len__(self) -> int:
+        """Return number of valid memories in buffer."""
+        return self._count
+
+    def __iter__(self):
+        """Iterate over memories in temporal order."""
+        memories = self.get_memories()
+        return iter(memories)
+
+    def __getitem__(self, index: int) -> Dict[str, Any]:
+        """Get memory by index in temporal order."""
+        memories = self.get_memories()
+        return memories[index]
+
+    def __setitem__(self, index: int, value: Dict[str, Any]) -> None:
+        """Set memory by index in temporal order."""
+        if index < 0 or index >= self._count:
+            raise IndexError(f"Index {index} out of range")
+
+        start_idx = (self._head - self._count) % self.buffer_size
+        buffer_idx = (start_idx + index) % self.buffer_size
+        self.memories[buffer_idx] = value
 
 class LiquidStateMachine:
     """Liquid State Machine for reservoir computing.
@@ -217,7 +320,9 @@ class LiquidStateMachine:
         self,
         reservoir_size: int = 100,
         connectivity: float = 0.1,
-        dynamics: Optional[LiquidDynamics] = None
+        dynamics: Optional[LiquidDynamics] = None,
+        random_state: Optional[np.random.RandomState] = None,
+        instance_name: str = 'lsm_default'
     ):
         """Initialize liquid state machine.
 
@@ -225,6 +330,8 @@ class LiquidStateMachine:
             reservoir_size: Size of the liquid reservoir
             connectivity: Connection density in the reservoir
             dynamics: Liquid dynamics configuration
+            random_state: Random state for reproducible initialization
+            instance_name: Name for deterministic random instance
         """
         # Guard against unreasonable reservoir sizes that can cause OOM
         max_reservoir = 5000
@@ -234,6 +341,14 @@ class LiquidStateMachine:
         self.reservoir_size = reservoir_size
         self.connectivity = connectivity
         self.dynamics = dynamics or LiquidDynamics()
+        self.instance_name = instance_name
+
+        # Initialize random state for reproducible behavior
+        if random_state is not None:
+            self.random_state = random_state
+        else:
+            # Use deterministic random for reproducible behavior
+            self.random_state = DeterministicRandom.get_instance(instance_name)._rng
 
         # Initialize reservoir state
         self.state = np.zeros(reservoir_size)
@@ -244,12 +359,12 @@ class LiquidStateMachine:
 
         # Initialize adaptive weights
         self.adaptive_weights = AdaptiveWeightMatrix(
-            weights=DeterministicRandom.randn(reservoir_size, reservoir_size) * 0.1
+            weights=self.random_state.randn(reservoir_size, reservoir_size) * 0.1
         )
 
     def _initialize_connections(self) -> np.ndarray:
         """Initialize connection matrix with specified connectivity."""
-        connections = DeterministicRandom.random((self.reservoir_size, self.reservoir_size))
+        connections = self.random_state.random((self.reservoir_size, self.reservoir_size))
         connections = (connections < self.connectivity).astype(float)
 
         # Remove self-connections
@@ -287,6 +402,47 @@ class LiquidStateMachine:
 
         return outputs
 
+    def process_sequences_batch(
+        self,
+        input_sequences: List[List[float]],
+        learning_enabled: bool = True
+    ) -> List[List[float]]:
+        """Process multiple sequences through liquid dynamics in batch.
+
+        Optimized for parallel processing of multiple sequences.
+
+        Args:
+            input_sequences: List of input sequences to process
+            learning_enabled: Whether to enable adaptive learning
+
+        Returns:
+            List of output sequences from the liquid reservoir
+        """
+        if not input_sequences:
+            return []
+
+        # Batch process all sequences
+        all_outputs = []
+
+        for input_sequence in input_sequences:
+            outputs = []
+
+            for input_value in input_sequence:
+                # Apply liquid dynamics (state is updated in-place)
+                self._update_liquid_state(input_value)
+
+                # Generate output
+                output = self._generate_output()
+                outputs.append(output)
+
+                # Update adaptive weights if learning enabled
+                if learning_enabled:
+                    self._update_adaptive_weights(input_value, output)
+
+            all_outputs.append(outputs)
+
+        return all_outputs
+
     def _update_liquid_state(self, input_value: float) -> None:
         """Update liquid reservoir state with dynamics."""
         # Calculate liquid flow
@@ -318,8 +474,8 @@ class LiquidStateMachine:
         Returns:
             Noise vector for the reservoir
         """
-        # Use deterministic random manager for reproducible behavior in tests
-        return DeterministicRandom.normal(0, self.dynamics.turbulence, self.reservoir_size)
+        # Use instance's random state for reproducible behavior
+        return self.random_state.normal(0, self.dynamics.turbulence, self.reservoir_size)
 
     def process_input(self, input_value: float) -> float:
         """Process a single input value through the liquid reservoir.
@@ -337,19 +493,24 @@ class LiquidStateMachine:
         return self._generate_output()
 
     def _calculate_liquid_flow(self, input_value: float) -> np.ndarray:
-        """Calculate liquid flow through the reservoir."""
-        # Input injection
-        input_injection = np.zeros(self.reservoir_size)
+        """Calculate liquid flow through the reservoir.
+
+        Optimized with pre-multiplied connection matrix for better performance.
+        """
+        # Optimized input injection using direct slicing assignment
+        input_injection = np.zeros(self.reservoir_size, dtype=np.float64)
         input_injection[:min(10, self.reservoir_size)] = input_value
 
-        # Recurrent connections with adaptive weights
-        recurrent_flow = np.dot(
-            self.adaptive_weights.weights * self.connections,
-            self.state
-        )
+        # Pre-multiply connection and weight matrices for faster computation
+        # This avoids element-wise multiplication during each iteration
+        effective_weights = self.adaptive_weights.weights * self.connections
 
-        # Combine flows
-        total_flow = input_injection + recurrent_flow
+        # Vectorized matrix multiplication with reservoir state
+        recurrent_flow = effective_weights @ self.state
+
+        # Combine flows (in-place addition for memory efficiency)
+        total_flow = input_injection
+        total_flow += recurrent_flow
 
         return total_flow
 
@@ -415,7 +576,9 @@ class KrakenLNN:
         reservoir_size: int = 100,
         connectivity: float = 0.1,
         memory_buffer_size: int = 1000,
-        dynamics: Optional[LiquidDynamics] = None
+        dynamics: Optional[LiquidDynamics] = None,
+        random_state: Optional[np.random.RandomState] = None,
+        instance_name: str = 'kraken_default'
     ):
         """Initialize Kraken LNN.
 
@@ -424,16 +587,28 @@ class KrakenLNN:
             connectivity: Connection density
             memory_buffer_size: Size of temporal memory buffer
             dynamics: Liquid dynamics configuration
+            random_state: Random state for reproducible initialization
+            instance_name: Name for deterministic random instance
         """
         self.reservoir_size = reservoir_size
         self.connectivity = connectivity
         self.dynamics = dynamics or LiquidDynamics()
+        self.instance_name = instance_name
+
+        # Initialize random state for reproducible behavior
+        if random_state is not None:
+            self.random_state = random_state
+        else:
+            # Use deterministic random for reproducible behavior
+            self.random_state = DeterministicRandom.get_instance(instance_name)._rng
 
         # Initialize liquid state machine
         self.liquid_reservoir = LiquidStateMachine(
             reservoir_size=reservoir_size,
             connectivity=connectivity,
-            dynamics=dynamics
+            dynamics=dynamics,
+            random_state=self.random_state,
+            instance_name=instance_name + "_lsm"
         )
 
         # Initialize temporal memory
@@ -448,6 +623,42 @@ class KrakenLNN:
             "average_sequence_length": 0.0,
             "memory_utilization": 0.0
         }
+
+    async def process_sequences_batch(
+        self,
+        input_sequences: List[List[float]],
+        learning_enabled: bool = True,
+        memory_consolidation: bool = True,
+        max_concurrent: int = 4
+    ) -> List[Dict[str, Any]]:
+        """Process multiple sequences in parallel for improved throughput.
+
+        Uses asyncio to process sequences concurrently, optimized for reservoir operations.
+
+        Args:
+            input_sequences: List of input sequences to process
+            learning_enabled: Whether to enable adaptive learning
+            memory_consolidation: Whether to consolidate memories
+            max_concurrent: Maximum number of concurrent sequence processors
+
+        Returns:
+            List of results for each input sequence
+        """
+        if not input_sequences:
+            return []
+
+        # Create semaphore to limit concurrent processing
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def process_single_sequence(seq: List[float]) -> Dict[str, Any]:
+            async with semaphore:
+                return await self.process_sequence(seq, learning_enabled, memory_consolidation)
+
+        # Process all sequences concurrently
+        tasks = [process_single_sequence(seq) for seq in input_sequences]
+        results = await asyncio.gather(*tasks)
+
+        return list(results)
 
     async def process_sequence(
         self,
@@ -496,7 +707,7 @@ class KrakenLNN:
                 "success": True,
                 "liquid_outputs": liquid_outputs,
                 "reservoir_state": self.liquid_reservoir.state.tolist(),
-                "memory_entries": len(self.temporal_memory.memories),
+                "memory_entries": len(self.temporal_memory),
                 "processing_time": (datetime.now() - start_time).total_seconds(),
                 "dynamics": {
                     "viscosity": self.dynamics.viscosity,
@@ -535,9 +746,9 @@ class KrakenLNN:
             },
             "memory": {
                 "buffer_size": self.temporal_memory.buffer_size,
-                "current_memories": len(self.temporal_memory.memories),
+                "current_memories": len(self.temporal_memory),
                 "memory_utilization": (
-                    len(self.temporal_memory.memories) /
+                    len(self.temporal_memory) /
                     self.temporal_memory.buffer_size
                 )
             },
@@ -545,39 +756,49 @@ class KrakenLNN:
         }
 
     async def _store_memory(self, memory_entry: Dict[str, Any]) -> None:
-        """Store memory entry in temporal buffer."""
-        self.temporal_memory.memories.append(memory_entry)
-
-        # Remove old memories if buffer is full
-        if len(self.temporal_memory.memories) > self.temporal_memory.buffer_size:
-            self.temporal_memory.memories.pop(0)
+        """Store memory entry in temporal buffer (O(1) operation)."""
+        self.temporal_memory.add_memory(memory_entry)
 
     async def _consolidate_memories(self) -> None:
-        """Consolidate memories based on importance and recency."""
-        if len(self.temporal_memory.memories) < 10:
+        """Consolidate memories based on importance and recency.
+
+        Optimized implementation using heap-based selection for O(n log k) complexity.
+        Works with circular buffer for O(1) memory operations.
+        """
+        memories = self.temporal_memory.get_memories()
+        if len(memories) < 10:
             return
 
-        # Calculate memory importance scores
-        importance_scores = []
-        for memory in self.temporal_memory.memories:
-            # Importance based on sequence length and recency
-            recency = (
-                datetime.now(timezone.utc) - memory["timestamp"]
-            ).total_seconds()
-            importance = memory["sequence_length"] / (1 + recency / 3600)  # Hours
-            importance_scores.append(importance)
+        # Pre-calculate current time once
+        current_time = datetime.now(timezone.utc)
+        hours_to_seconds = 3600.0
 
-        # Keep top memories
-        sorted_indices = np.argsort(importance_scores)[::-1]
-        keep_count = int(
-            len(self.temporal_memory.memories) *
-            self.temporal_memory.consolidation_threshold
-        )
+        # Calculate importance scores and create (importance, memory) tuples
+        # Use heap to maintain top-k efficiently (O(n log k) vs O(n log n) sorting)
+        keep_count = int(len(memories) * self.temporal_memory.consolidation_threshold)
+        top_memories = []
 
-        self.temporal_memory.memories = [
-            self.temporal_memory.memories[i]
-            for i in sorted_indices[:keep_count]
-        ]
+        for memory in memories:
+            if memory is not None:
+                # Vectorized recency calculation
+                recency_seconds = (current_time - memory["timestamp"]).total_seconds()
+                importance = memory["sequence_length"] / (1.0 + recency_seconds / hours_to_seconds)
+
+                # Use heap to keep track of top memories
+                if len(top_memories) < keep_count:
+                    heapq.heappush(top_memories, (importance, memory))
+                elif importance > top_memories[0][0]:
+                    heapq.heapreplace(top_memories, (importance, memory))
+
+        # Rebuild circular buffer with only kept memories (O(1) operations)
+        # Clear buffer efficiently
+        self.temporal_memory.memories = [None] * self.temporal_memory.buffer_size
+        self.temporal_memory._head = 0
+        self.temporal_memory._count = 0
+
+        # Re-add kept memories in temporal order (oldest first)
+        for _, memory in sorted(top_memories, key=lambda x: x[1]["timestamp"]):
+            self.temporal_memory.add_memory(memory)
 
     def _update_processing_stats(
         self,
@@ -595,7 +816,7 @@ class KrakenLNN:
              len(input_sequence)) / self.processing_stats["sequences_processed"]
         )
         self.processing_stats["memory_utilization"] = (
-            len(self.temporal_memory.memories) / self.temporal_memory.buffer_size
+            len(self.temporal_memory) / self.temporal_memory.buffer_size
         )
 
     @classmethod

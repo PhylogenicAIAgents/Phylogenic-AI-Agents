@@ -261,34 +261,26 @@ class TestKrakenScalingBenchmarks:
         # Common validation that works for any size
         assert init_time > 0  # Should take some measurable time
 
-    @pytest.mark.benchmark
-    async def test_concurrent_processing_performance(self, benchmark):
-        """Benchmark concurrent processing capabilities."""
-        async def benchmark_concurrent_processing():
+    def test_concurrent_processing_performance(self):
+        """Test concurrent processing capabilities - removed benchmark decorator due to async incompatibility."""
+        async def run_concurrent_processing():
             lnn = KrakenLNN(reservoir_size=100, connectivity=0.1)
-            
+
             # Create multiple sequences
             sequences = [generate_test_sequence(50, seed=i) for i in range(5)]
-            
-            start_time = time.time()
-            
+
             # Process sequences concurrently
             tasks = [lnn.process_sequence(seq) for seq in sequences]
             results = await asyncio.gather(*tasks)
-            
-            total_time = time.time() - start_time
-            
-            # All should complete successfully
-            assert all(r['success'] for r in results)
-            
-            return total_time
-        
-        benchmark_result = benchmark.pedantic(benchmark_concurrent_processing, rounds=3)
-        concurrent_time = benchmark_result.avg  # Get average execution time
 
-        # Concurrent processing should be faster than sequential
-        sequential_time = concurrent_time * 1.5  # Allow some overhead
-        assert concurrent_time < sequential_time
+            return results
+
+        import asyncio
+        results = asyncio.run(run_concurrent_processing())
+
+        # All should complete successfully
+        assert len(results) == 5
+        assert all(r['success'] for r in results)
 
     @pytest.mark.benchmark
     def test_dynamics_calculation_performance(self, benchmark):

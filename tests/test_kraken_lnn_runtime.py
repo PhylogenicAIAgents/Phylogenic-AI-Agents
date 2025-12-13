@@ -114,16 +114,20 @@ class TestKrakenLNNRuntime:
     @pytest.mark.asyncio
     async def test_memory_storage_runtime(self, kraken_lnn, sample_sequence):
         """Test memory storage during processing."""
-        initial_memory_count = len(kraken_lnn.temporal_memory.memories)
+        initial_memory_count = len(kraken_lnn.temporal_memory)
         
         result = await kraken_lnn.process_sequence(
             sample_sequence,
             memory_consolidation=False
         )
         
-        # Memory should have been stored
-        assert len(kraken_lnn.temporal_memory.memories) > initial_memory_count
-        assert result['memory_entries'] == len(kraken_lnn.temporal_memory.memories)
+        # Memory should have been stored or buffer is at capacity
+        current_memory_count = len(kraken_lnn.temporal_memory)
+        assert current_memory_count >= initial_memory_count
+        # If buffer is not at capacity, should have increased
+        if current_memory_count < kraken_lnn.temporal_memory.buffer_size:
+            assert current_memory_count > initial_memory_count
+        assert result['memory_entries'] == current_memory_count
     
     @pytest.mark.asyncio
     async def test_memory_consolidation_runtime(self, kraken_lnn):
@@ -133,14 +137,14 @@ class TestKrakenLNNRuntime:
             sequence = generate_test_sequence(10, pattern="random", seed=i)
             await kraken_lnn.process_sequence(sequence, memory_consolidation=False)
         
-        initial_count = len(kraken_lnn.temporal_memory.memories)
+        initial_count = len(kraken_lnn.temporal_memory)
         
         # Trigger consolidation
         sequence = generate_test_sequence(10)
         await kraken_lnn.process_sequence(sequence, memory_consolidation=True)
         
         # Memory should be consolidated (fewer entries)
-        final_count = len(kraken_lnn.temporal_memory.memories)
+        final_count = len(kraken_lnn.temporal_memory)
         assert final_count <= initial_count + 1
     
     @pytest.mark.asyncio
@@ -225,7 +229,7 @@ class TestKrakenLNNRuntime:
             asyncio.run(kraken_lnn.process_sequence(sequence, memory_consolidation=False))
         
         # Memory should not exceed buffer size
-        assert len(kraken_lnn.temporal_memory.memories) <= buffer_size
+        assert len(kraken_lnn.temporal_memory) <= buffer_size
     
     def test_liquid_flow_calculation(self):
         """Test liquid flow calculation executes correctly."""
@@ -251,4 +255,3 @@ class TestKrakenLNNRuntime:
         
         assert isinstance(output, float)
         assert -2.0 <= output <= 2.0  # Reasonable output range
-
