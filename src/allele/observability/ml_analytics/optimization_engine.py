@@ -571,7 +571,11 @@ class PerformanceOptimizer:
                                 component_type=ComponentType(component_type),
                                 priority=3
                             ))
-                    except:
+                    except KeyError as e:
+                        logger.debug(f"Skipping unknown component value in optimization analysis: {e}")
+                        continue
+                    except AttributeError as e:
+                        logger.debug(f"Component attribute error in optimization analysis: {e}")
                         continue
         
         return recommendations

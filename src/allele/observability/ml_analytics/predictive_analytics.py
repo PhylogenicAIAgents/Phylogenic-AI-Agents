@@ -159,7 +159,14 @@ class TimeSeriesForecaster:
             if len(actual_values) > 0:
                 mae = np.mean(np.abs(actual_values - predictions[-len(actual_values):]))
                 mse = np.mean((actual_values - predictions[-len(actual_values):])**2)
-                accuracy = 1.0 / (1.0 + mae / np.mean(np.abs(actual_values)))
+
+                # Safe division: check for zero mean absolute values to avoid division by zero
+                mean_abs_values = np.mean(np.abs(actual_values))
+                if mean_abs_values > 0:
+                    accuracy = 1.0 / (1.0 + mae / mean_abs_values)
+                else:
+                    # Handle constant time series (all zeros) with fallback accuracy
+                    accuracy = 0.5  # Conservative accuracy for constant data
             else:
                 accuracy = 0.8  # Default for new models
             

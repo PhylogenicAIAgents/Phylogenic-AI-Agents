@@ -55,10 +55,10 @@ logger = logging.getLogger(__name__)
 
 class AlertCorrelator:
     """Alert correlation and clustering engine."""
-    
+
     def __init__(self, config: AlertIntelligenceConfig):
         """Initialize alert correlator.
-        
+
         Args:
             config: Alert intelligence configuration
         """
@@ -67,6 +67,17 @@ class AlertCorrelator:
         self.alert_history = []  # Recent alerts for correlation
         self.correlation_cache = {}
         self.similarity_threshold = config.similarity_threshold
+
+        # Stable component type encoding to ensure reproducible ML features
+        self.component_type_encoding = {
+            ComponentType.EVOLUTION_ENGINE.value: 10,
+            ComponentType.KRAKEN_LNN.value: 20,
+            ComponentType.NLP_AGENT.value: 30,
+            ComponentType.LLM_CLIENT.value: 40,
+            ComponentType.GENOME.value: 50,
+            ComponentType.SYSTEM.value: 60,
+            "unknown": 0  # Default for unrecognized types
+        }
         
     async def process_alert_batch(self, alerts: List[Dict[str, Any]]) -> List[AlertCluster]:
         """Process a batch of alerts and create clusters.
@@ -331,9 +342,9 @@ class AlertCorrelator:
             }
             feature_vector.append(severity_map.get(alert.get('severity', AlertSeverity.INFO.value), 1))
             
-            # Component type (hash)
+            # Component type (stable encoding)
             component_type = alert.get('component_type', 'unknown')
-            feature_vector.append(hash(component_type) % 100)
+            feature_vector.append(self.component_type_encoding.get(component_type, 0))
             
             # Anomaly score (if available)
             anomaly_score = alert.get('anomaly_score', 0.0)

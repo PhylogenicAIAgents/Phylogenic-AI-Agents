@@ -36,8 +36,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 import numpy as np
+import logging
 
 from ..types import BenchmarkResult
+
+logger = logging.getLogger(__name__)
 
 
 class BenchmarkType(str, Enum):
@@ -315,8 +318,8 @@ class BenchmarkComparison:
             )
         
         # Statistical test (simplified)
-        from scipy import stats
         try:
+            from scipy import stats
             t_stat, p_val = stats.ttest_ind(
                 self.baseline_result.execution_times,
                 self.comparison_result.execution_times
@@ -324,7 +327,14 @@ class BenchmarkComparison:
             self.t_statistic = float(t_stat)
             self.p_value = float(p_val)
             self.is_significant = self.p_value < self.confidence_level
-        except Exception:
+        except ImportError:
+            # scipy not available, skip statistical test
+            self.t_statistic = 0.0
+            self.p_value = 1.0
+            self.is_significant = False
+        except (ValueError, TypeError, AttributeError) as e:
+            # Invalid data for statistical test
+            logger.warning(f"Statistical test failed due to data issues: {e}")
             self.t_statistic = 0.0
             self.p_value = 1.0
             self.is_significant = False
