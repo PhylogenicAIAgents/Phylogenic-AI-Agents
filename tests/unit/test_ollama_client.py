@@ -236,7 +236,7 @@ class TestOllamaClientUnit:
         mock_response.json = AsyncMock(return_value={
             "response": "Test response",
             "done": True
-        }))
+        })
         mock_http_client.post.return_value.__aenter__ = AsyncMock(return_value=mock_response)
 
         await client.initialize()
@@ -337,7 +337,7 @@ class TestOllamaClientUnit:
         mock_response.json = AsyncMock(return_value={
             "response": "Understood",
             "done": True
-        }))
+        })
         mock_http_client.post.return_value.__aenter__ = AsyncMock(return_value=mock_response)
 
         await client.initialize()

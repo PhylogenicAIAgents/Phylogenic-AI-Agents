@@ -46,6 +46,46 @@ import asyncio
 from .exceptions import AbeNLPError
 from .config import settings as allele_settings
 
+
+class DeterministicRandom:
+    """Deterministic random state manager for reproducible tests.
+
+    This class ensures that all random operations in Kraken LNN components
+    use a controlled sequence that can be reset for testing purposes.
+    """
+    _rng: Optional[np.random.RandomState] = None
+
+    @classmethod
+    def seed(cls, seed_value: int) -> None:
+        """Set the seed for deterministic random operations."""
+        cls._rng = np.random.RandomState(seed_value)
+
+    @classmethod
+    def random(cls, size=None) -> np.ndarray:
+        """Generate random floats in [0, 1)."""
+        if cls._rng is None:
+            cls._rng = np.random.RandomState()
+        return cls._rng.random_sample(size)
+
+    @classmethod
+    def randn(cls, *args) -> np.ndarray:
+        """Generate standard normal random values."""
+        if cls._rng is None:
+            cls._rng = np.random.RandomState()
+        return cls._rng.standard_normal(args)
+
+    @classmethod
+    def normal(cls, loc=0.0, scale=1.0, size=None) -> np.ndarray:
+        """Generate normal random values."""
+        if cls._rng is None:
+            cls._rng = np.random.RandomState()
+        return cls._rng.normal(loc, scale, size)
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the random state."""
+        cls._rng = None
+
 @dataclass
 class LiquidDynamics:
     """Liquid dynamics configuration for Kraken LNN.
@@ -62,6 +102,29 @@ class LiquidDynamics:
     pressure: float = 1.0
     flow_rate: float = 0.5
     turbulence: float = 0.05
+
+    def calculate_perturbation(
+        self,
+        input_force: float,
+        random_vector: np.ndarray
+    ) -> float:
+        """Calculate perturbation based on input force and random dynamics.
+
+        Args:
+            input_force: Input force applied to the system
+            random_vector: Random noise vector
+
+        Returns:
+            Perturbation value
+        """
+        # Scale random noise by turbulence
+        noise = np.mean(random_vector) * self.turbulence
+
+        # Apply temperature and viscosity scaling
+        perturbation = input_force + noise * self.temperature
+        perturbation /= (1 + self.viscosity)  # Viscosity dampens perturbations
+
+        return float(perturbation)
 
 @dataclass
 class AdaptiveWeightMatrix:
@@ -82,6 +145,35 @@ class AdaptiveWeightMatrix:
     min_weight: float = -2.0
     learning_threshold: float = 0.1
 
+    def update(self, learning_signal: float, state_vector: np.ndarray) -> None:
+        """Update the weight matrix based on learning signal and state vector.
+
+        Args:
+            learning_signal: Learning signal for weight updates
+            state_vector: Current state vector for Hebbian learning
+        """
+        # Apply Hebbian-like learning rule
+        if abs(learning_signal) > self.learning_threshold:
+            # Calculate outer product for weight update
+            weight_update = (
+                self.plasticity_rate *
+                learning_signal *
+                np.outer(state_vector, state_vector)
+            )
+
+            # Update weights
+            self.weights += weight_update
+
+            # Apply weight constraints
+            self.weights = np.clip(
+                self.weights,
+                self.min_weight,
+                self.max_weight
+            )
+
+        # Apply weight decay
+        self.weights *= (1 - self.decay_rate)
+
 @dataclass
 class TemporalMemoryBuffer:
     """Temporal memory buffer for sequence processing.
@@ -98,6 +190,16 @@ class TemporalMemoryBuffer:
     consolidation_threshold: float = 0.8
     retrieval_strength: float = 0.7
     memories: List[Dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def max_entries(self) -> int:
+        """Maximum number of entries in the buffer (alias for buffer_size)."""
+        return self.buffer_size
+
+    @max_entries.setter
+    def max_entries(self, value: int) -> None:
+        """Set the maximum number of entries in the buffer."""
+        self.buffer_size = value
 
 class LiquidStateMachine:
     """Liquid State Machine for reservoir computing.
@@ -142,12 +244,12 @@ class LiquidStateMachine:
 
         # Initialize adaptive weights
         self.adaptive_weights = AdaptiveWeightMatrix(
-            weights=np.random.randn(reservoir_size, reservoir_size) * 0.1
+            weights=DeterministicRandom.randn(reservoir_size, reservoir_size) * 0.1
         )
 
     def _initialize_connections(self) -> np.ndarray:
         """Initialize connection matrix with specified connectivity."""
-        connections = np.random.random((self.reservoir_size, self.reservoir_size))
+        connections = DeterministicRandom.random((self.reservoir_size, self.reservoir_size))
         connections = (connections < self.connectivity).astype(float)
 
         # Remove self-connections
@@ -192,9 +294,7 @@ class LiquidStateMachine:
 
         # Apply viscosity and turbulence
         viscous_flow = flow * self.dynamics.viscosity
-        turbulent_flow = viscous_flow + np.random.normal(
-            0, self.dynamics.turbulence, self.reservoir_size
-        )
+        turbulent_flow = viscous_flow + self._add_liquid_noise()
 
         # Update state with liquid dynamics
         self.state = (
@@ -211,6 +311,30 @@ class LiquidStateMachine:
         # Limit history size
         if len(self.activation_history) > 100:
             self.activation_history.pop(0)
+
+    def _add_liquid_noise(self) -> np.ndarray:
+        """Add liquid turbulence noise to the system.
+
+        Returns:
+            Noise vector for the reservoir
+        """
+        # Use deterministic random manager for reproducible behavior in tests
+        return DeterministicRandom.normal(0, self.dynamics.turbulence, self.reservoir_size)
+
+    def process_input(self, input_value: float) -> float:
+        """Process a single input value through the liquid reservoir.
+
+        Args:
+            input_value: Single input value to process
+
+        Returns:
+            Output value from the reservoir
+        """
+        # Update reservoir state with the input
+        self._update_liquid_state(input_value)
+
+        # Generate and return output
+        return self._generate_output()
 
     def _calculate_liquid_flow(self, input_value: float) -> np.ndarray:
         """Calculate liquid flow through the reservoir."""
@@ -493,4 +617,3 @@ class KrakenLNN:
                 turbulence=dynamics.turbulence
             )
         )
-

@@ -139,21 +139,25 @@ class PerformanceMetrics:
     # Timestamp and correlation
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     correlation_id: Optional[str] = None
-    
+
     def update_latency(self, latency_ms: float) -> None:
         """Update latency metrics with a new measurement."""
         self.total_operations += 1
-        
+
         # Update latency statistics
-        latencies = [self.min_latency_ms, latency_ms, self.max_latency_ms]
         if self.min_latency_ms == 0.0 or latency_ms < self.min_latency_ms:
             self.min_latency_ms = latency_ms
         if latency_ms > self.max_latency_ms:
             self.max_latency_ms = latency_ms
-            
-        # Update average using exponential moving average
-        alpha = 0.1
-        self.average_latency_ms = alpha * latency_ms + (1 - alpha) * self.average_latency_ms
+
+        # Update average using simple moving average
+        if self.total_operations == 1:
+            self.average_latency_ms = latency_ms
+        else:
+            # Calculate running average: (sum + new_value) / count
+            old_sum = self.average_latency_ms * (self.total_operations - 1)
+            new_sum = old_sum + latency_ms
+            self.average_latency_ms = new_sum / self.total_operations
         
         # Store for percentile calculation
         if not hasattr(self, '_latency_history'):

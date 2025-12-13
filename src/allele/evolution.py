@@ -90,13 +90,15 @@ class GeneticOperators:
     @staticmethod
     def tournament_selection(
         population: List[ConversationalGenome],
-        tournament_size: int = 3
+        tournament_size: int = 3,
+        seed: Optional[int] = None
     ) -> ConversationalGenome:
         """Tournament selection for parent selection.
 
         Args:
             population: Population of genomes
             tournament_size: Number of genomes in tournament
+            seed: Random seed for deterministic results
 
         Returns:
             Selected genome
@@ -107,38 +109,47 @@ class GeneticOperators:
         actual_size = min(tournament_size, len(population))
         # If requested tournament size > population, allow replacement to avoid errors
         replace = actual_size > len(population)
-        tournament = np.random.choice(population, actual_size, replace=replace)
+
+        if seed is not None:
+            rng = np.random.RandomState(seed)
+            tournament = rng.choice(population, actual_size, replace=replace)
+        else:
+            tournament = np.random.choice(population, actual_size, replace=replace)
         return max(tournament, key=lambda g: g.fitness_score)
 
     @staticmethod
     def crossover(
         parent1: ConversationalGenome,
-        parent2: ConversationalGenome
+        parent2: ConversationalGenome,
+        seed: Optional[int] = None
     ) -> ConversationalGenome:
         """Perform crossover between two genomes.
 
         Args:
             parent1: First parent genome
             parent2: Second parent genome
+            seed: Random seed for deterministic results
 
         Returns:
             Offspring genome
         """
-        return parent1.crossover(parent2)
+        return parent1.crossover(parent2, seed=seed)
 
     @staticmethod
     def mutate(
         genome: ConversationalGenome,
-        mutation_rate: float = 0.1
+        mutation_rate: float = 0.1,
+        seed: Optional[int] = None
     ) -> None:
         """Apply mutation to genome.
 
         Args:
             genome: Genome to mutate
             mutation_rate: Probability of mutation
+            seed: Random seed for deterministic results
         """
         # mutate_all_traits guarantees at least one mutation when mutation_rate > 0
-        genome.mutate_all_traits(mutation_rate)
+        genome.mutate_all_traits(mutation_rate, seed=seed)
         return True if mutation_rate > 0 else False
 
 class EvolutionEngine:

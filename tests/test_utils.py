@@ -164,31 +164,33 @@ def calculate_population_statistics(
 
 
 def generate_fitness_function(
-    weights: Optional[Dict[str, float]] = None
+    weights: Optional[Dict[str, float]] = None,
+    seed: Optional[int] = None
 ):
     """Generate a fitness function with custom weights.
-    
+
     Args:
         weights: Optional dictionary mapping trait names to weights
-    
+        seed: Optional random seed for deterministic results
+
     Returns:
         Fitness function that takes a genome and returns a score
     """
     if weights is None:
         weights = {trait: 1.0 for trait in ConversationalGenome.DEFAULT_TRAITS.keys()}
-    
+
     def fitness(genome: ConversationalGenome) -> float:
         """Calculate fitness based on weighted traits."""
         score = 0.0
         total_weight = 0.0
-        
+
         for trait_name, weight in weights.items():
             trait_value = genome.get_trait_value(trait_name)
             score += trait_value * weight
             total_weight += weight
-        
+
         return score / total_weight if total_weight > 0 else 0.0
-    
+
     return fitness
 
 
@@ -314,4 +316,3 @@ def create_serialization_test_data() -> Dict[str, Any]:
             "tags": ["test", "serialization"]
         }
     }
-

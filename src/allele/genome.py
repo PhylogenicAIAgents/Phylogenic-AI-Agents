@@ -316,13 +316,15 @@ class ConversationalGenome(GenomeBase):
     def mutate_trait(
         self,
         trait_name: str,
-        mutation_strength: float = 0.1
+        mutation_strength: float = 0.1,
+        rng: Optional[Any] = None
     ) -> None:
         """Mutate a specific trait.
 
         Args:
             trait_name: Name of trait to mutate
             mutation_strength: Strength of mutation (standard deviation)
+            rng: Random number generator (for deterministic behavior)
 
         Raises:
             ValidationError: If trait name is invalid
@@ -331,45 +333,60 @@ class ConversationalGenome(GenomeBase):
             raise ValidationError(f"Unknown trait: {trait_name}")
 
         # Apply Gaussian noise
-        noise = np.random.normal(0, mutation_strength)
+        if rng is not None:
+            noise = rng.normal(0, mutation_strength)
+        else:
+            noise = np.random.normal(0, mutation_strength)
         new_value = np.clip(self.traits[trait_name] + noise, 0.0, 1.0)
         self.set_trait_value(trait_name, new_value)
 
-    def mutate_all_traits(self, mutation_rate: float = 0.1) -> None:
+    def mutate_all_traits(self, mutation_rate: float = 0.1, seed: Optional[int] = None) -> None:
         """Apply mutations to all conversational traits.
 
         Args:
             mutation_rate: Probability of each trait mutating
+            seed: Random seed for deterministic results
         """
+        if seed is not None:
+            rng = np.random.RandomState(seed)
+        else:
+            rng = np.random
+
         mutated = False
         trait_names = list(self.traits.keys())
         for trait_name in trait_names:
-            if np.random.random() < mutation_rate:
-                self.mutate_trait(trait_name)
+            if rng.random() < mutation_rate:
+                self.mutate_trait(trait_name, rng=rng)
                 mutated = True
 
         # Ensure at least one mutation occurs when mutation_rate > 0.0
         if not mutated and mutation_rate > 0.0 and trait_names:
             # Force a mutation on a random trait to guarantee evolutionary change
-            self.mutate_trait(np.random.choice(trait_names))
+            self.mutate_trait(rng.choice(trait_names), rng=rng)
 
         # Update metadata
         self.metadata.last_mutation = datetime.now(timezone.utc)
 
-    def crossover(self, other: 'ConversationalGenome') -> 'ConversationalGenome':
+    def crossover(self, other: 'ConversationalGenome', seed: Optional[int] = None) -> 'ConversationalGenome':
         """Create offspring through genome crossover.
 
         Args:
             other: The other genome to crossover with
+            seed: Random seed for deterministic results
 
         Returns:
             A new genome resulting from the crossover operation
         """
+        if seed is not None:
+            rng = np.random.RandomState(seed)
+        else:
+            rng = np.random
+
         # Blend traits from both parents
         child_traits = {}
         for trait_name in self.traits.keys():
             # Random blend
-            if np.random.random() < 0.5:
+            if rng.random() < 0.5:
                 child_traits[trait_name] = (
                     0.7 * self.traits[trait_name] +
                     0.3 * other.traits[trait_name]
@@ -381,7 +398,7 @@ class ConversationalGenome(GenomeBase):
                 )
 
             # Add small random variation
-            child_traits[trait_name] += np.random.normal(0, 0.05)
+            child_traits[trait_name] += rng.normal(0, 0.05)
             child_traits[trait_name] = np.clip(child_traits[trait_name], 0.0, 1.0)
 
         # Create child genome
@@ -522,4 +539,3 @@ class ConversationalGenome(GenomeBase):
         genome.generation = data.get("generation", 0)
 
         return genome
-

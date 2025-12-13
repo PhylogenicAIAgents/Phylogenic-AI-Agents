@@ -44,7 +44,7 @@ class LLMConfig:
     """Configuration for LLM client."""
     provider: str
     model: str
-    api_key: str
+    api_key: Optional[str] = None
     base_url: Optional[str] = None
     headers: Optional[Dict[str, str]] = None  # NEW: Custom headers for authentication
     temperature: float = 0.7
