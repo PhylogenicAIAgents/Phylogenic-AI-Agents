@@ -126,7 +126,7 @@ class TestPerformance:
         import sys
 
         genomes = []
-        initial_size = sys.getsizeof([])
+        sys.getsizeof([])
 
         # Create many genomes
         for i in range(100):

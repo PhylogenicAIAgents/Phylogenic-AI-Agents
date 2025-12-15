@@ -140,7 +140,7 @@ class TestKrakenMemoryBenchmarks:
 
         # Create and process multiple LNNs
         lnns = []
-        for i in range(5):
+        for _i in range(5):
             lnn = KrakenLNN(reservoir_size=100, connectivity=0.1)
             lnns.append(lnn)
 

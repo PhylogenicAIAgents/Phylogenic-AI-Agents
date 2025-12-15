@@ -99,7 +99,7 @@ class TestKrakenLNNRuntime:
         lsm.process_sequence(sequence, learning_enabled=True)
 
         # Weights should have changed (or at least be valid)
-        weights_changed = not np.array_equal(
+        not np.array_equal(
             lsm.adaptive_weights.weights,
             initial_weights
         )

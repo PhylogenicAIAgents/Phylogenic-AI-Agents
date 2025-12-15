@@ -9,16 +9,16 @@ Usage:
     python scripts/generate_figures.py
 """
 
+import json
 import os
 import sys
-import json
-import numpy as np
+from datetime import datetime
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
-from pathlib import Path
-from typing import Dict, List, Any
-from datetime import datetime
 
 # Add src to path for importing allele modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -219,7 +219,7 @@ def generate_benchmark_comparison_figure(save_path: str = None) -> str:
     ax2.tick_params(axis='x', rotation=45)
 
     # Add value labels on bars
-    for bar, value in zip(bars, df['Improvement %']):
+    for bar, _value in zip(bars, df['Improvement %']):
         ax2.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 1,
                 '.0f', ha='center', va='bottom', fontweight='bold')
 
@@ -351,5 +351,4 @@ if __name__ == '__main__':
         print(f"❌ Figure generation failed: {e}")
         sys.exit(1)
 
-    print("
-✅ All whitepaper figures are ready for inclusion!"
+    print("✅ All whitepaper figures are ready for inclusion!")

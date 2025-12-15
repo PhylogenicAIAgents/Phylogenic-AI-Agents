@@ -429,7 +429,7 @@ class TestLLMIntegration:
         assert 'gpt-3.5-turbo' in pricing
 
         # Check pricing structure
-        for model, prices in pricing.items():
+        for _model, prices in pricing.items():
             assert 'input' in prices
             assert 'output' in prices
             assert isinstance(prices['input'], float)

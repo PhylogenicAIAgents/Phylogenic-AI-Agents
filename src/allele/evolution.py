@@ -483,7 +483,7 @@ class EvolutionEngine:
             ]
 
         diversities = []
-        for trait, values in trait_values.items():
+        for _trait, values in trait_values.items():
             std_dev = np.std(values)
             diversities.append(std_dev)
 

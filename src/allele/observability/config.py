@@ -271,7 +271,7 @@ _observability_settings: Optional[ObservabilitySettings] = None
 
 def get_observability_settings() -> ObservabilitySettings:
     """Get the global observability settings instance.
-    
+
     Returns:
         Global ObservabilitySettings instance
     """
@@ -283,7 +283,7 @@ def get_observability_settings() -> ObservabilitySettings:
 
 def set_observability_settings(settings: ObservabilitySettings) -> None:
     """Set the global observability settings instance.
-    
+
     Args:
         settings: ObservabilitySettings instance to use
     """

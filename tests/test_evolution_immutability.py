@@ -19,9 +19,9 @@ async def test_evolution_inplace_default():
     population = _make_population(4)
     original_ids = [id(g) for g in population]
     original_traits = [g.traits.copy() for g in population]
-    original_objects = population.copy()
+    population.copy()
 
-    best = await engine.evolve(population, lambda g: 1.0)
+    await engine.evolve(population, lambda g: 1.0)
 
     # At least one original object reference should be retained in in-place mode
     new_ids = [id(g) for g in population]
@@ -40,7 +40,7 @@ async def test_evolution_immutable_mode():
     original_traits = [g.traits.copy() for g in population]
     original_objects = population.copy()
 
-    best = await engine.evolve(population, lambda g: 1.0)
+    await engine.evolve(population, lambda g: 1.0)
 
     new_ids = [id(g) for g in population]
     # No original objects should be in the new population (immutable mode creates clones)

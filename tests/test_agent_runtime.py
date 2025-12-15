@@ -8,6 +8,7 @@ Tests actual execution of agent initialization, chat, and integration.
 import pytest
 
 from allele import AgentConfig, ConversationalGenome, NLPAgent, create_agent
+from allele.exceptions import AgentError
 
 
 class TestAgentRuntime:
@@ -124,7 +125,7 @@ class TestAgentRuntime:
         agent = NLPAgent(custom_genome, agent_config)
 
         # Should raise error
-        with pytest.raises(Exception):  # AgentError expected
+        with pytest.raises(AgentError):
             async for _ in agent.chat("Test"):
                 pass
 
@@ -134,7 +135,7 @@ class TestAgentRuntime:
         agent = NLPAgent(custom_genome, agent_config)
         await agent.initialize()
 
-        initial_history_length = len(agent.conversation_history)
+        len(agent.conversation_history)
 
         # Send multiple messages
         messages = ["Hello", "How are you?", "Tell me about yourself"]

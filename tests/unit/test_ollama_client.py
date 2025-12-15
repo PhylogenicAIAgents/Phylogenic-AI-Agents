@@ -6,7 +6,11 @@ import aiohttp
 import pytest
 
 from allele.llm_client import LLMConfig
-from allele.llm_exceptions import LLMGenerationError, LLMModelNotAvailableError
+from allele.llm_exceptions import (
+    LLMGenerationError,
+    LLMInitializationError,
+    LLMModelNotAvailableError,
+)
 from allele.llm_ollama import OllamaClient
 
 
@@ -125,7 +129,7 @@ class TestOllamaClientUnit:
         # Mock HTTP error during model listing
         mock_http_client.get.side_effect = aiohttp.ClientError("Connection failed")
 
-        with pytest.raises(Exception):  # Should be LLMInitializationError
+        with pytest.raises(LLMInitializationError):
             await client.initialize()
 
     @pytest.mark.asyncio

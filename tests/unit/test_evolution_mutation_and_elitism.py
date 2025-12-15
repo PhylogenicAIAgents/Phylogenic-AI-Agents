@@ -52,7 +52,7 @@ class TestEvolutionMutationAndElitism:
         )
 
         original_traits1 = genome1.traits.copy()
-        original_traits2 = genome2.traits.copy()
+        genome2.traits.copy()
 
         # Apply mutation with same seed
         GeneticOperators.mutate(genome1, mutation_rate=0.5, seed=200)
@@ -136,7 +136,7 @@ class TestEvolutionMutationAndElitism:
 
         # Set specific fitness scores deterministically
         np.random.seed(500)
-        for i, genome in enumerate(deterministic_population):
+        for _i, genome in enumerate(deterministic_population):
             genome.fitness_score = deterministic_fitness_function(genome)
 
         # Sort population and identify elites
@@ -185,7 +185,7 @@ class TestEvolutionMutationAndElitism:
 
         # Set specific fitness scores
         np.random.seed(600)
-        for i, genome in enumerate(deterministic_population):
+        for _i, genome in enumerate(deterministic_population):
             genome.fitness_score = deterministic_fitness_function(genome)
 
         # Sort and identify elites
@@ -234,13 +234,13 @@ class TestEvolutionMutationAndElitism:
 
         # Set fitness scores
         np.random.seed(700)
-        for i, genome in enumerate(deterministic_population):
+        for _i, genome in enumerate(deterministic_population):
             genome.fitness_score = deterministic_fitness_function(genome)
 
         # Sort and identify elites vs non-elites
         sorted_pop = sorted(deterministic_population, key=lambda g: g.fitness_score, reverse=True)
         elitism_count = int(config.population_size * config.selection_pressure)
-        elite_genomes = set(sorted_pop[:elitism_count])
+        set(sorted_pop[:elitism_count])
         non_elite_genomes = sorted_pop[elitism_count:]
 
         # Store original traits for non-elites

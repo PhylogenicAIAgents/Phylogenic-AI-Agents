@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from allele.kraken_lnn import KrakenLNN, LiquidStateMachine
+from allele.kraken_lnn import KrakenLNN, LiquidDynamics, LiquidStateMachine
 from tests.test_utils import generate_test_sequence
 
 
@@ -55,8 +55,8 @@ class TestKrakenEdgeCases:
         lsm = LiquidStateMachine(reservoir_size=50, connectivity=0.1)
 
         # Initially get weight bounds
-        min_weight_before = np.min(lsm.adaptive_weights.weights)
-        max_weight_before = np.max(lsm.adaptive_weights.weights)
+        np.min(lsm.adaptive_weights.weights)
+        np.max(lsm.adaptive_weights.weights)
 
         # Process sequence that could cause weight explosion
         explosive_sequence = [1.0] * 100  # Same input repeatedly
@@ -197,7 +197,7 @@ class TestKrakenEdgeCases:
         # Process sequence that could cause state drift
         sequence = generate_test_sequence(50, pattern="random")
 
-        initial_state_norm = np.linalg.norm(lsm.state)
+        np.linalg.norm(lsm.state)
 
         lsm.process_sequence(sequence)
 

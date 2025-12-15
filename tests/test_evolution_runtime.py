@@ -62,7 +62,7 @@ class TestEvolutionRuntime:
             assert_genome_valid(selected)
 
         # Verify selection is working (should get different genomes)
-        unique_selections = len(set(g.genome_id for g in selected_genomes))
+        unique_selections = len({g.genome_id for g in selected_genomes})
         assert unique_selections > 1  # Should select different genomes
 
     def test_crossover_operator_runtime(self, custom_genome, technical_genome):
@@ -94,7 +94,7 @@ class TestEvolutionRuntime:
         """Test a complete evolution cycle executes correctly."""
         # Initialize population
         population = evolution_engine.initialize_population()
-        initial_size = len(population)
+        len(population)
 
         # Run evolution for a few generations
         best_genome = await evolution_engine.evolve(
@@ -244,7 +244,7 @@ class TestEvolutionRuntime:
         engine = EvolutionEngine(evolution_config)
 
         population = engine.initialize_population()
-        best_genome = await engine.evolve(population, fitness_function)
+        await engine.evolve(population, fitness_function)
 
         # Verify convergence (best fitness should improve)
         initial_fitness = engine.evolution_history[0]['best_fitness']

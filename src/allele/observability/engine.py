@@ -41,7 +41,7 @@ from typing import Any, Dict, List, Optional
 
 from .collector import ComponentMetricsCollector, MetricsCollector
 from .config import get_observability_settings
-from .types import Alert, ComponentType, SystemMetrics
+from .types import Alert, ComponentMetrics, ComponentType, SystemMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -49,14 +49,14 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ObservabilityEngine:
     """Central observability engine for Allele.
-    
+
     This engine coordinates all monitoring activities, metrics collection,
     alerting, and provides a unified interface for observability features.
     """
 
     def __init__(self, settings=None):
         """Initialize observability engine.
-        
+
         Args:
             settings: ObservabilitySettings instance (uses global if None)
         """
@@ -273,11 +273,11 @@ class ObservabilityEngine:
 
     def get_component_collector(self, component_type: ComponentType, component_id: str) -> Optional[ComponentMetricsCollector]:
         """Get a component metrics collector.
-        
+
         Args:
             component_type: Type of component
             component_id: Component instance ID
-            
+
         Returns:
             Component metrics collector if found
         """
@@ -287,10 +287,10 @@ class ObservabilityEngine:
 
     def register_evolution_engine(self, component_id: str) -> ComponentMetricsCollector:
         """Register an evolution engine for monitoring.
-        
+
         Args:
             component_id: Evolution engine instance ID
-            
+
         Returns:
             Component metrics collector
         """
@@ -300,10 +300,10 @@ class ObservabilityEngine:
 
     def register_kraken_lnn(self, component_id: str) -> ComponentMetricsCollector:
         """Register a Kraken LNN for monitoring.
-        
+
         Args:
             component_id: Kraken LNN instance ID
-            
+
         Returns:
             Component metrics collector
         """
@@ -313,10 +313,10 @@ class ObservabilityEngine:
 
     def register_nlp_agent(self, component_id: str) -> ComponentMetricsCollector:
         """Register an NLP agent for monitoring.
-        
+
         Args:
             component_id: NLP agent instance ID
-            
+
         Returns:
             Component metrics collector
         """
@@ -342,10 +342,10 @@ class ObservabilityEngine:
 
     def get_alert_history(self, limit: int = 100) -> List[Alert]:
         """Get alert history.
-        
+
         Args:
             limit: Maximum number of alerts to return
-            
+
         Returns:
             List of recent alerts
         """
@@ -357,11 +357,11 @@ class ObservabilityEngine:
 
     def acknowledge_alert(self, alert_id: str, acknowledged_by: str) -> bool:
         """Acknowledge an alert.
-        
+
         Args:
             alert_id: Alert ID to acknowledge
             acknowledged_by: User who acknowledged the alert
-            
+
         Returns:
             True if alert was acknowledged, False if not found
         """
@@ -377,10 +377,10 @@ class ObservabilityEngine:
 
     def resolve_alert(self, alert_id: str) -> bool:
         """Resolve an alert.
-        
+
         Args:
             alert_id: Alert ID to resolve
-            
+
         Returns:
             True if alert was resolved, False if not found
         """
@@ -395,11 +395,11 @@ class ObservabilityEngine:
 
     def export_metrics(self, format: str = "json", since: Optional[datetime] = None) -> str:
         """Export metrics.
-        
+
         Args:
             format: Export format ("json", "pickle")
             since: Only export metrics since this timestamp
-            
+
         Returns:
             Exported metrics as string
         """
@@ -440,7 +440,7 @@ _observability_engine: Optional[ObservabilityEngine] = None
 
 def get_observability_engine() -> ObservabilityEngine:
     """Get the global observability engine instance.
-    
+
     Returns:
         Global ObservabilityEngine instance
     """
@@ -452,7 +452,7 @@ def get_observability_engine() -> ObservabilityEngine:
 
 def set_observability_engine(engine: ObservabilityEngine) -> None:
     """Set the global observability engine instance.
-    
+
     Args:
         engine: ObservabilityEngine instance to use
     """

@@ -107,13 +107,13 @@ class OllamaClient(LLMClient):
                            base_url=self._base_url,
                            cloud_auth='ollama.com' in self._base_url)
 
-        except httpx.TimeoutException:
+        except httpx.TimeoutException as err:
             raise LLMTimeoutError(
                 f"Timeout connecting to Ollama server at {self._base_url}",
                 "ollama",
                 self.config.model,
                 timeout_seconds=self.config.timeout
-            )
+            ) from err
         except Exception as e:
             self.logger.error("Ollama client initialization failed", error=str(e))
             raise LLMInitializationError(
@@ -218,19 +218,19 @@ class OllamaClient(LLMClient):
                         yield content
                         self.metrics.total_tokens += len(content.split()) * 2  # Rough estimate
 
-            except httpx.TimeoutException:
+            except httpx.TimeoutException as err:
                 raise LLMTimeoutError(
                     f"Ollama request timeout after {self.config.timeout}s",
                     "ollama",
                     self.config.model,
                     timeout_seconds=self.config.timeout
-                )
-            except httpx.ConnectError:
+                ) from err
+            except httpx.ConnectError as err:
                 raise LLMInitializationError(
                     f"Cannot connect to Ollama server at {self._base_url}",
                     "ollama",
                     self.config.model
-                )
+                ) from err
             except Exception as e:
                 raise LLMGenerationError(
                     f"Ollama generation error: {e}",

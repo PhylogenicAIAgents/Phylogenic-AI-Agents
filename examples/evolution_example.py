@@ -20,7 +20,7 @@ from allele import (
 
 def simple_fitness_function(genome: ConversationalGenome) -> float:
     """Simple fitness function for demonstration.
-    
+
     In production, this would evaluate actual conversation quality.
     For this example, we reward balanced traits.
     """

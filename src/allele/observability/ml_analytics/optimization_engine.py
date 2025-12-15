@@ -57,7 +57,7 @@ class PerformanceOptimizer:
 
     def __init__(self, config: OptimizationEngineConfig):
         """Initialize performance optimizer.
-        
+
         Args:
             config: Optimization engine configuration
         """
@@ -69,7 +69,7 @@ class PerformanceOptimizer:
 
     def _load_optimization_rules(self) -> Dict[str, Any]:
         """Load optimization rules from file or create defaults.
-        
+
         Returns:
             Optimization rules dictionary
         """
@@ -86,7 +86,7 @@ class PerformanceOptimizer:
 
     def _create_default_rules(self) -> Dict[str, Any]:
         """Create default optimization rules.
-        
+
         Returns:
             Default optimization rules
         """
@@ -124,11 +124,11 @@ class PerformanceOptimizer:
     async def analyze_performance(self, metrics_history: Dict[str, List[MLMetric]],
                                 predictions: Dict[str, List[PredictionResult]]) -> List[OptimizationRecommendation]:
         """Analyze performance and generate optimization recommendations.
-        
+
         Args:
             metrics_history: Historical metrics by component
             predictions: Performance predictions by component
-            
+
         Returns:
             List of optimization recommendations
         """
@@ -171,12 +171,12 @@ class PerformanceOptimizer:
                                  metrics: List[MLMetric],
                                  predictions: List[PredictionResult]) -> List[OptimizationRecommendation]:
         """Perform rule-based optimization analysis.
-        
+
         Args:
             component_type: Type of component
             metrics: Historical metrics
             predictions: Performance predictions
-            
+
         Returns:
             List of rule-based recommendations
         """
@@ -207,11 +207,11 @@ class PerformanceOptimizer:
     async def _analyze_thresholds(self, component_type: str,
                                 metrics: List[MLMetric]) -> List[OptimizationRecommendation]:
         """Analyze performance thresholds and generate recommendations.
-        
+
         Args:
             component_type: Type of component
             metrics: Historical metrics
-            
+
         Returns:
             List of threshold-based recommendations
         """
@@ -231,7 +231,7 @@ class PerformanceOptimizer:
             values = [m.value for m in metric_list]
             avg_value = np.mean(values)
             max_value = np.max(values)
-            std_value = np.std(values)
+            np.std(values)
 
             # Check if metric exceeds thresholds
             threshold_key = metric_name.lower().replace(" ", "_")
@@ -286,11 +286,11 @@ class PerformanceOptimizer:
     async def _analyze_component_parameters(self, component_type: str,
                                           metrics: List[MLMetric]) -> List[OptimizationRecommendation]:
         """Analyze component-specific parameters.
-        
+
         Args:
             component_type: Type of component
             metrics: Historical metrics
-            
+
         Returns:
             List of parameter optimization recommendations
         """
@@ -300,7 +300,7 @@ class PerformanceOptimizer:
         if component_type not in component_rules:
             return recommendations
 
-        component_config = component_rules[component_type]
+        component_rules[component_type]
 
         # Analyze fitness/performance metrics for evolution
         if component_type == "evolution_engine":
@@ -368,11 +368,11 @@ class PerformanceOptimizer:
     async def _analyze_resource_allocation(self, component_type: str,
                                          metrics: List[MLMetric]) -> List[OptimizationRecommendation]:
         """Analyze resource allocation and generate recommendations.
-        
+
         Args:
             component_type: Type of component
             metrics: Historical metrics
-            
+
         Returns:
             List of resource allocation recommendations
         """
@@ -439,11 +439,11 @@ class PerformanceOptimizer:
     async def _analyze_predictions(self, component_type: str,
                                  predictions: List[PredictionResult]) -> List[OptimizationRecommendation]:
         """Analyze performance predictions for optimization.
-        
+
         Args:
             component_type: Type of component
             predictions: Performance predictions
-            
+
         Returns:
             List of prediction-based recommendations
         """
@@ -453,7 +453,6 @@ class PerformanceOptimizer:
             try:
                 # Check if predicted performance will degrade
                 predicted_value = prediction.predicted_value
-                confidence_interval = prediction.confidence_interval
 
                 # Simple heuristic: if predicted value is significantly worse
                 # than current trend, suggest optimization
@@ -489,12 +488,12 @@ class PerformanceOptimizer:
                                 metrics: List[MLMetric],
                                 predictions: List[PredictionResult]) -> List[OptimizationRecommendation]:
         """Perform ML-based optimization analysis.
-        
+
         Args:
             component_type: Type of component
             metrics: Historical metrics
             predictions: Performance predictions
-            
+
         Returns:
             List of ML-based recommendations
         """
@@ -519,11 +518,11 @@ class PerformanceOptimizer:
     async def _analyze_metric_correlations(self, component_type: str,
                                          metrics: List[MLMetric]) -> List[OptimizationRecommendation]:
         """Analyze correlations between metrics for optimization insights.
-        
+
         Args:
             component_type: Type of component
             metrics: Historical metrics
-            
+
         Returns:
             List of correlation-based recommendations
         """
@@ -581,11 +580,11 @@ class PerformanceOptimizer:
     async def _analyze_performance_patterns(self, component_type: str,
                                           metrics: List[MLMetric]) -> List[OptimizationRecommendation]:
         """Analyze performance patterns for optimization opportunities.
-        
+
         Args:
             component_type: Type of component
             metrics: Historical metrics
-            
+
         Returns:
             List of pattern-based recommendations
         """
@@ -625,15 +624,15 @@ class PerformanceOptimizer:
 
     async def _filter_recommendations(self, recommendations: List[OptimizationRecommendation]) -> List[OptimizationRecommendation]:
         """Filter and rank optimization recommendations.
-        
+
         Args:
             recommendations: Raw recommendations
-            
+
         Returns:
             Filtered and ranked recommendations
         """
         # Remove expired recommendations
-        current_time = datetime.now(timezone.utc)
+        datetime.now(timezone.utc)
         active_recommendations = [
             rec for rec in recommendations
             if not rec.is_expired()
@@ -668,7 +667,7 @@ class ConfigurationRecommender:
 
     def __init__(self, config: OptimizationEngineConfig):
         """Initialize configuration recommender.
-        
+
         Args:
             config: Optimization engine configuration
         """
@@ -680,12 +679,12 @@ class ConfigurationRecommender:
                                             current_config: Dict[str, Any],
                                             performance_metrics: List[MLMetric]) -> List[OptimizationRecommendation]:
         """Recommend configuration changes based on performance analysis.
-        
+
         Args:
             component_type: Type of component
             current_config: Current configuration
             performance_metrics: Performance metrics
-            
+
         Returns:
             List of configuration recommendations
         """
@@ -711,11 +710,11 @@ class ConfigurationRecommender:
     def _calculate_baseline_performance(self, component_type: str,
                                       metrics: List[MLMetric]) -> Dict[str, float]:
         """Calculate baseline performance metrics.
-        
+
         Args:
             component_type: Type of component
             metrics: Performance metrics
-            
+
         Returns:
             Baseline performance dictionary
         """
@@ -742,11 +741,11 @@ class ConfigurationRecommender:
     async def _recommend_evolution_config(self, current_config: Dict[str, Any],
                                         baseline: Dict[str, float]) -> List[OptimizationRecommendation]:
         """Recommend evolution engine configuration changes.
-        
+
         Args:
             current_config: Current configuration
             baseline: Baseline performance metrics
-            
+
         Returns:
             List of configuration recommendations
         """
@@ -803,11 +802,11 @@ class ConfigurationRecommender:
     async def _recommend_kraken_config(self, current_config: Dict[str, Any],
                                      baseline: Dict[str, float]) -> List[OptimizationRecommendation]:
         """Recommend Kraken LNN configuration changes.
-        
+
         Args:
             current_config: Current configuration
             baseline: Baseline performance metrics
-            
+
         Returns:
             List of configuration recommendations
         """
@@ -868,11 +867,11 @@ class ConfigurationRecommender:
     async def _recommend_nlp_config(self, current_config: Dict[str, Any],
                                   baseline: Dict[str, float]) -> List[OptimizationRecommendation]:
         """Recommend NLP agent configuration changes.
-        
+
         Args:
             current_config: Current configuration
             baseline: Baseline performance metrics
-            
+
         Returns:
             List of configuration recommendations
         """
@@ -936,7 +935,7 @@ class OptimizationEngine:
 
     def __init__(self, config: OptimizationEngineConfig):
         """Initialize optimization engine.
-        
+
         Args:
             config: Optimization engine configuration
         """
@@ -950,12 +949,12 @@ class OptimizationEngine:
                             predictions: Dict[str, List[PredictionResult]],
                             current_configs: Dict[str, Dict[str, Any]]) -> List[OptimizationRecommendation]:
         """Perform comprehensive system optimization.
-        
+
         Args:
             metrics_history: Historical metrics by component
             predictions: Performance predictions by component
             current_configs: Current configurations by component
-            
+
         Returns:
             List of optimization recommendations
         """
@@ -990,7 +989,7 @@ class OptimizationEngine:
 
     async def _cleanup_expired_recommendations(self) -> None:
         """Clean up expired recommendations."""
-        current_time = datetime.now(timezone.utc)
+        datetime.now(timezone.utc)
         self.recommendation_history = deque(
             [rec for rec in self.recommendation_history if not rec.is_expired()],
             maxlen=1000
@@ -998,7 +997,7 @@ class OptimizationEngine:
 
     async def get_optimization_summary(self) -> Dict[str, Any]:
         """Get optimization summary and statistics.
-        
+
         Returns:
             Optimization summary dictionary
         """
@@ -1031,7 +1030,7 @@ class OptimizationEngine:
 
     async def export_recommendations(self, filepath: Path) -> None:
         """Export recommendations to file.
-        
+
         Args:
             filepath: Path to export file
         """

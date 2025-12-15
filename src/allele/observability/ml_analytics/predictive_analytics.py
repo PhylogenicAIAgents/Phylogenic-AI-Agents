@@ -55,7 +55,7 @@ class TimeSeriesForecaster:
 
     def __init__(self, config: PredictiveAnalyticsConfig):
         """Initialize time series forecaster.
-        
+
         Args:
             config: Predictive analytics configuration
         """
@@ -68,10 +68,10 @@ class TimeSeriesForecaster:
 
     async def train(self, time_series_data: Dict[str, TimeSeriesData]) -> Dict[str, ModelMetrics]:
         """Train forecasting models for different components.
-        
+
         Args:
             time_series_data: Dictionary of component_type -> TimeSeriesData
-            
+
         Returns:
             Dictionary of component_type -> ModelMetrics
         """
@@ -109,11 +109,11 @@ class TimeSeriesForecaster:
 
     async def _train_arima(self, component_type: str, ts_data: TimeSeriesData) -> ModelMetrics:
         """Train ARIMA model for time series forecasting.
-        
+
         Args:
             component_type: Type of component
             ts_data: Time series data
-            
+
         Returns:
             Model training metrics
         """
@@ -182,27 +182,34 @@ class TimeSeriesForecaster:
             logger.info(f"ARIMA model trained for {component_type} with accuracy {accuracy:.3f}")
             return metrics
 
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "statsmodels is required for ARIMA forecasting. "
                 "Install with: pip install statsmodels"
-            )
+            ) from e
         except Exception as e:
             logger.error(f"ARIMA training failed for {component_type}: {e}")
             raise
 
     async def _train_lstm(self, component_type: str, ts_data: TimeSeriesData) -> ModelMetrics:
         """Train LSTM model for time series forecasting.
-        
+
         Args:
             component_type: Type of component
             ts_data: Time series data
-            
+
         Returns:
             Model training metrics
         """
+        # Prefer using importlib to check availability of optional heavy deps
+        import importlib.util
+
         try:
-            import tensorflow as tf
+            if importlib.util.find_spec("tensorflow") is None:
+                raise ImportError(
+                    "TensorFlow is required for LSTM forecasting. Install with: pip install tensorflow"
+                )
+
             from sklearn.preprocessing import MinMaxScaler
             from tensorflow.keras.layers import LSTM, Dense, Dropout
             from tensorflow.keras.models import Sequential
@@ -218,7 +225,7 @@ class TimeSeriesForecaster:
             sequence_length = self.config.lstm_sequence_length
             X, y = [], []
             for i in range(sequence_length, len(scaled_values)):
-                X.append(scaled_values[i-sequence_length:i, 0])
+                X.append(scaled_values[i - sequence_length:i, 0])
                 y.append(scaled_values[i, 0])
 
             if len(X) == 0:
@@ -234,26 +241,27 @@ class TimeSeriesForecaster:
                 LSTM(self.config.lstm_units, return_sequences=False),
                 Dropout(0.2),
                 Dense(25),
-                Dense(1)
+                Dense(1),
             ])
 
-            model.compile(optimizer='adam', loss='mse')
+            model.compile(optimizer="adam", loss="mse")
 
             # Train model
             history = model.fit(
-                X, y,
+                X,
+                y,
                 epochs=self.config.lstm_epochs,
                 batch_size=32,
                 validation_split=0.1,
-                verbose=0
+                verbose=0,
             )
 
             # Store model
             self.models[component_type] = {
-                'type': 'lstm',
-                'model': model,
-                'sequence_length': sequence_length,
-                'scaler': scaler
+                "type": "lstm",
+                "model": model,
+                "sequence_length": sequence_length,
+                "scaler": scaler,
             }
 
             self.is_trained[component_type] = True
@@ -261,7 +269,7 @@ class TimeSeriesForecaster:
             self.training_data[component_type] = ts_data
 
             # Calculate training metrics
-            final_loss = history.history['loss'][-1]
+            final_loss = history.history["loss"][-1]
             accuracy = max(0.0, min(1.0, 1.0 - final_loss))
 
             metrics = ModelMetrics(
@@ -273,28 +281,30 @@ class TimeSeriesForecaster:
                 accuracy=accuracy,
                 precision=accuracy,
                 total_predictions=0,
-                successful_predictions=0
+                successful_predictions=0,
             )
 
-            logger.info(f"LSTM model trained for {component_type} with accuracy {accuracy:.3f}")
+            logger.info(
+                f"LSTM model trained for {component_type} with accuracy {accuracy:.3f}"
+            )
             return metrics
 
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "TensorFlow is required for LSTM forecasting. "
                 "Install with: pip install tensorflow"
-            )
+            ) from e
         except Exception as e:
             logger.error(f"LSTM training failed for {component_type}: {e}")
             raise
 
     async def forecast(self, component_type: str, horizon_minutes: int) -> Optional[PredictionResult]:
         """Generate forecast for a component.
-        
+
         Args:
             component_type: Type of component
             horizon_minutes: Forecast horizon in minutes
-            
+
         Returns:
             Prediction result
         """
@@ -321,13 +331,13 @@ class TimeSeriesForecaster:
     async def _arima_forecast(self, component_type: str, model: Any, ts_data: TimeSeriesData,
                              horizon_minutes: int) -> PredictionResult:
         """Generate ARIMA forecast.
-        
+
         Args:
             component_type: Type of component
             model: Fitted ARIMA model
             ts_data: Time series data
             horizon_minutes: Forecast horizon in minutes
-            
+
         Returns:
             ARIMA prediction result
         """
@@ -341,7 +351,7 @@ class TimeSeriesForecaster:
             confidence_interval = model.get_forecast(steps=steps).conf_int()
 
             # Get the most recent value for context
-            recent_value = ts_data.values[-1]
+            ts_data.values[-1]
 
             # Calculate predicted value and confidence interval
             predicted_value = float(forecast.iloc[-1]) if hasattr(forecast, 'iloc') else float(forecast[-1])
@@ -377,13 +387,13 @@ class TimeSeriesForecaster:
     async def _lstm_forecast(self, component_type: str, model: Any, ts_data: TimeSeriesData,
                             horizon_minutes: int) -> PredictionResult:
         """Generate LSTM forecast.
-        
+
         Args:
             component_type: Type of component
             model: Trained LSTM model
             ts_data: Time series data
             horizon_minutes: Forecast horizon in minutes
-            
+
         Returns:
             LSTM prediction result
         """
@@ -456,7 +466,7 @@ class PerformancePredictor:
 
     def __init__(self, config: PredictiveAnalyticsConfig):
         """Initialize performance predictor.
-        
+
         Args:
             config: Predictive analytics configuration
         """
@@ -467,11 +477,11 @@ class PerformancePredictor:
     async def predict_component_performance(self, component_type: str,
                                           time_series_data: Dict[str, TimeSeriesData]) -> List[PredictionResult]:
         """Predict performance for a component across different horizons.
-        
+
         Args:
             component_type: Type of component
             time_series_data: Time series data for the component
-            
+
         Returns:
             List of prediction results for different horizons
         """
@@ -500,10 +510,10 @@ class PerformancePredictor:
 
     def _get_forecast_horizons(self, component_type: str) -> List[int]:
         """Get forecast horizons for a component type.
-        
+
         Args:
             component_type: Type of component
-            
+
         Returns:
             List of forecast horizons in minutes
         """
@@ -519,11 +529,11 @@ class PerformancePredictor:
     async def predict_resource_usage(self, component_type: str,
                                    current_metrics: List[MLMetric]) -> PredictionResult:
         """Predict future resource usage.
-        
+
         Args:
             component_type: Type of component
             current_metrics: Current metrics
-            
+
         Returns:
             Resource usage prediction
         """
@@ -545,11 +555,11 @@ class PerformancePredictor:
 
     def _metrics_to_time_series(self, component_type: str, metrics: List[MLMetric]) -> Optional[TimeSeriesData]:
         """Convert metrics to time series data.
-        
+
         Args:
             component_type: Type of component
             metrics: List of metrics
-            
+
         Returns:
             Time series data
         """
@@ -590,7 +600,7 @@ class PredictiveAnalyzer:
 
     def __init__(self, config: PredictiveAnalyticsConfig):
         """Initialize predictive analyzer.
-        
+
         Args:
             config: Predictive analytics configuration
         """
@@ -601,10 +611,10 @@ class PredictiveAnalyzer:
 
     async def analyze_and_predict(self, metrics_history: Dict[str, List[MLMetric]]) -> Dict[str, List[PredictionResult]]:
         """Analyze metrics history and generate predictions.
-        
+
         Args:
             metrics_history: Dictionary of component_type -> List[MLMetric]
-            
+
         Returns:
             Dictionary of component_type -> List[PredictionResult]
         """
@@ -632,11 +642,11 @@ class PredictiveAnalyzer:
 
     def _prepare_time_series(self, component_type: str, metrics: List[MLMetric]) -> Optional[TimeSeriesData]:
         """Prepare time series data from metrics.
-        
+
         Args:
             component_type: Type of component
             metrics: List of metrics
-            
+
         Returns:
             Time series data
         """
@@ -672,11 +682,11 @@ class PredictiveAnalyzer:
     async def get_performance_trends(self, component_type: str,
                                    metrics: List[MLMetric]) -> Dict[str, Any]:
         """Analyze performance trends.
-        
+
         Args:
             component_type: Type of component
             metrics: List of metrics
-            
+
         Returns:
             Performance trend analysis
         """
@@ -723,11 +733,11 @@ class PredictiveAnalyzer:
     async def detect_performance_patterns(self, component_type: str,
                                         metrics: List[MLMetric]) -> Dict[str, Any]:
         """Detect performance patterns and cycles.
-        
+
         Args:
             component_type: Type of component
             metrics: List of metrics
-            
+
         Returns:
             Pattern analysis results
         """

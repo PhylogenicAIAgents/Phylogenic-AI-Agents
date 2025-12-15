@@ -79,7 +79,7 @@ async def benchmark_reservoir_operations():
     for seq in sequences[:5]:  # Test first 5 sequences
         lsm_copy = LiquidStateMachine(reservoir_size=200, connectivity=0.1)
         start = time.perf_counter()
-        outputs = lsm_copy.process_sequence(seq)
+        lsm_copy.process_sequence(seq)
         end = time.perf_counter()
         times_single.append((end - start) / len(seq))  # Time per step
 
@@ -89,7 +89,7 @@ async def benchmark_reservoir_operations():
     batch_times = []
     for seq in sequences[:5]:
         start = time.perf_counter()
-        outputs = lsm.process_sequence(seq)  # Reuses same instance
+        lsm.process_sequence(seq)  # Reuses same instance
         end = time.perf_counter()
         batch_times.append((end - start) / len(seq))
 

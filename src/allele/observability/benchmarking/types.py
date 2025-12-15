@@ -111,7 +111,7 @@ class BenchmarkConfig:
 
     def generate_parameter_combinations(self) -> List[Dict[str, Any]]:
         """Generate all parameter combinations for matrix testing.
-        
+
         Returns:
             List of parameter dictionaries for each test combination
         """
@@ -136,7 +136,7 @@ class BenchmarkConfig:
 
     def get_test_count(self) -> int:
         """Get total number of test configurations.
-        
+
         Returns:
             Total number of test configurations
         """

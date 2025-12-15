@@ -94,8 +94,8 @@ class TestGenomeRuntime:
             parent2_value = parent2_traits[trait_name]
 
             # Offspring should be somewhere between parents (with variation)
-            min_parent = min(parent1_value, parent2_value)
-            max_parent = max(parent1_value, parent2_value)
+            min(parent1_value, parent2_value)
+            max(parent1_value, parent2_value)
 
             # Allow for variation in crossover
             assert -0.1 <= offspring_value <= 1.1  # Allow slight overflow due to variation

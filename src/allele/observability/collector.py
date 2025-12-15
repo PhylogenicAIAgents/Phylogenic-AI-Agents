@@ -96,7 +96,7 @@ class MetricsBuffer:
         """Retrieve metrics based on filters."""
         all_metrics = []
 
-        for metric_key, metric_list in self.metrics.items():
+        for _metric_key, metric_list in self.metrics.items():
             # Apply filters
             if component:
                 # Check if any metric in the list has the matching component
@@ -131,7 +131,7 @@ class MetricsCollector:
 
     def __init__(self, buffer_size: int = 10000, max_age_hours: int = 24):
         """Initialize metrics collector.
-        
+
         Args:
             buffer_size: Maximum number of metrics to store per type
             max_age_hours: Maximum age of metrics to retain
@@ -155,7 +155,7 @@ class MetricsCollector:
 
     def register_component(self, component: ComponentMetrics) -> None:
         """Register a component for monitoring.
-        
+
         Args:
             component: Component metrics instance
         """
@@ -175,7 +175,7 @@ class MetricsCollector:
                      tags: Optional[Dict[str, str]] = None,
                      correlation_id: Optional[str] = None) -> None:
         """Record a metric value.
-        
+
         Args:
             name: Metric name
             value: Metric value
@@ -316,7 +316,7 @@ class MetricsCollector:
         """Calculate aggregated system metrics."""
         with self._lock:
             # Get latest metrics
-            latest_metrics = self.buffer.get_latest_metrics()
+            self.buffer.get_latest_metrics()
 
             # Initialize system metrics
             sys_metrics = SystemMetrics()
@@ -383,12 +383,12 @@ class MetricsCollector:
                       since: Optional[datetime] = None,
                       component: Optional[ComponentType] = None) -> str:
         """Export metrics in specified format.
-        
+
         Args:
             format: Export format ("json", "pickle")
             since: Only export metrics since this timestamp
             component: Only export metrics for this component type
-            
+
         Returns:
             Exported metrics as string
         """
@@ -408,10 +408,10 @@ class MetricsCollector:
 
     def clear_metrics(self, older_than_hours: Optional[int] = None) -> int:
         """Clear old metrics from buffer.
-        
+
         Args:
             older_than_hours: Clear metrics older than this many hours (None = all)
-            
+
         Returns:
             Number of metrics cleared
         """
@@ -445,7 +445,7 @@ class ComponentMetricsCollector:
                  component_id: str,
                  metrics_collector: MetricsCollector):
         """Initialize component metrics collector.
-        
+
         Args:
             component_type: Type of component
             component_id: Component instance ID

@@ -72,10 +72,10 @@ class AlertCorrelator:
 
     async def process_alert_batch(self, alerts: List[Dict[str, Any]]) -> List[AlertCluster]:
         """Process a batch of alerts and create clusters.
-        
+
         Args:
             alerts: List of alert dictionaries
-            
+
         Returns:
             List of alert clusters
         """
@@ -107,10 +107,10 @@ class AlertCorrelator:
 
     async def _cluster_alerts(self, alerts: List[Dict[str, Any]]) -> List[AlertCluster]:
         """Cluster alerts using the specified algorithm.
-        
+
         Args:
             alerts: List of alert dictionaries
-            
+
         Returns:
             List of alert clusters
         """
@@ -126,10 +126,10 @@ class AlertCorrelator:
 
     async def _dbscan_clustering(self, alerts: List[Dict[str, Any]]) -> List[AlertCluster]:
         """Perform DBSCAN clustering on alerts.
-        
+
         Args:
             alerts: List of alert dictionaries
-            
+
         Returns:
             List of alert clusters
         """
@@ -174,10 +174,10 @@ class AlertCorrelator:
 
     async def _kmeans_clustering(self, alerts: List[Dict[str, Any]]) -> List[AlertCluster]:
         """Perform K-means clustering on alerts.
-        
+
         Args:
             alerts: List of alert dictionaries
-            
+
         Returns:
             List of alert clusters
         """
@@ -219,10 +219,10 @@ class AlertCorrelator:
 
     async def _hierarchical_clustering(self, alerts: List[Dict[str, Any]]) -> List[AlertCluster]:
         """Perform hierarchical clustering on alerts.
-        
+
         Args:
             alerts: List of alert dictionaries
-            
+
         Returns:
             List of alert clusters
         """
@@ -267,10 +267,10 @@ class AlertCorrelator:
 
     async def _simple_clustering(self, alerts: List[Dict[str, Any]]) -> List[AlertCluster]:
         """Simple clustering based on common attributes.
-        
+
         Args:
             alerts: List of alert dictionaries
-            
+
         Returns:
             List of alert clusters
         """
@@ -312,10 +312,10 @@ class AlertCorrelator:
 
     def _extract_alert_features(self, alerts: List[Dict[str, Any]]) -> np.ndarray:
         """Extract numerical features from alerts for clustering.
-        
+
         Args:
             alerts: List of alert dictionaries
-            
+
         Returns:
             Feature matrix
         """
@@ -346,7 +346,7 @@ class AlertCorrelator:
             try:
                 timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
                 feature_vector.append(timestamp.hour)
-            except:
+            except Exception:
                 feature_vector.append(12)  # Default to noon
 
             # Confidence (if available)
@@ -359,11 +359,11 @@ class AlertCorrelator:
 
     def _create_alert_cluster(self, alerts: List[Dict[str, Any]], cluster_id: str) -> AlertCluster:
         """Create an alert cluster from a list of alerts.
-        
+
         Args:
             alerts: List of alert dictionaries
             cluster_id: Unique cluster identifier
-            
+
         Returns:
             AlertCluster
         """
@@ -385,7 +385,7 @@ class AlertCorrelator:
             try:
                 ts = datetime.fromisoformat(alert.get('timestamp', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00'))
                 timestamps.append(ts)
-            except:
+            except Exception:
                 timestamps.append(datetime.now(timezone.utc))
 
         first_alert_time = min(timestamps) if timestamps else datetime.now(timezone.utc)
@@ -412,10 +412,10 @@ class AlertCorrelator:
 
     def _determine_cluster_type(self, alerts: List[Dict[str, Any]]) -> str:
         """Determine the type of alert cluster.
-        
+
         Args:
             alerts: List of alerts
-            
+
         Returns:
             Cluster type string
         """
@@ -423,12 +423,12 @@ class AlertCorrelator:
             return "independent"
 
         # Check for same component
-        components = set(alert.get('component_type', 'unknown') for alert in alerts)
+        components = {alert.get('component_type', 'unknown') for alert in alerts}
         if len(components) == 1:
             return "component_related"
 
         # Check for same metric
-        metrics = set(alert.get('metric_name', 'unknown') for alert in alerts)
+        metrics = {alert.get('metric_name', 'unknown') for alert in alerts}
         if len(metrics) == 1:
             return "metric_related"
 
@@ -438,7 +438,7 @@ class AlertCorrelator:
             try:
                 ts = datetime.fromisoformat(alert.get('timestamp', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00'))
                 timestamps.append(ts)
-            except:
+            except Exception:
                 pass
 
         if len(timestamps) > 1:
@@ -451,10 +451,10 @@ class AlertCorrelator:
 
     def _find_common_attributes(self, alerts: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Find common attributes across alerts.
-        
+
         Args:
             alerts: List of alerts
-            
+
         Returns:
             Dictionary of common attributes
         """
@@ -478,10 +478,10 @@ class AlertCorrelator:
 
     def _calculate_cluster_priority(self, alerts: List[Dict[str, Any]]) -> float:
         """Calculate priority score for alert cluster.
-        
+
         Args:
             alerts: List of alerts
-            
+
         Returns:
             Priority score between 0 and 1
         """
@@ -510,7 +510,7 @@ class AlertCorrelator:
             try:
                 ts = datetime.fromisoformat(alert.get('timestamp', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00'))
                 timestamps.append(ts)
-            except:
+            except Exception:
                 pass
 
         duration_score = 0.0
@@ -531,10 +531,10 @@ class AlertCorrelator:
 
     def _generate_root_cause_candidates(self, alerts: List[Dict[str, Any]]) -> List[str]:
         """Generate potential root cause candidates.
-        
+
         Args:
             alerts: List of alerts
-            
+
         Returns:
             List of root cause candidates
         """
@@ -569,10 +569,13 @@ class AlertCorrelator:
         timestamps = []
         for alert in alerts:
             try:
-                ts = datetime.fromisoformat(alert.get('timestamp', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00'))
+                ts = datetime.fromisoformat(
+                    alert.get('timestamp', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00')
+                )
                 timestamps.append(ts)
-            except:
-                pass
+            except Exception as e:
+                # Skip invalid timestamps but keep a debug log for diagnostics
+                logger.debug(f"Failed to parse alert timestamp: {e}", alert=alert)
 
         if len(timestamps) > 1:
             timestamps.sort()
@@ -588,10 +591,10 @@ class AlertCorrelator:
 
     def _assess_impact(self, alerts: List[Dict[str, Any]]) -> str:
         """Assess the impact of alert cluster.
-        
+
         Args:
             alerts: List of alerts
-            
+
         Returns:
             Impact assessment string
         """
@@ -614,7 +617,7 @@ class AlertCorrelator:
             return "Medium - Multiple warning conditions detected"
 
         # Component-specific impact
-        components = set(alert.get('component_type', 'unknown') for alert in alerts)
+        components = {alert.get('component_type', 'unknown') for alert in alerts}
         if len(components) == 1:
             component = list(components)[0]
             if component == "evolution_engine":
@@ -632,7 +635,7 @@ class AlertCorrelator:
 
     async def _update_clusters(self, new_clusters: List[AlertCluster]) -> None:
         """Update existing clusters with new information.
-        
+
         Args:
             new_clusters: List of new alert clusters
         """
@@ -664,7 +667,7 @@ class IntelligentAlertManager:
 
     def __init__(self, config: AlertIntelligenceConfig):
         """Initialize intelligent alert manager.
-        
+
         Args:
             config: Alert intelligence configuration
         """
@@ -676,10 +679,10 @@ class IntelligentAlertManager:
 
     async def process_alerts(self, anomalies: List[AnomalyResult]) -> List[Dict[str, Any]]:
         """Process anomalies and create intelligent alerts.
-        
+
         Args:
             anomalies: List of anomaly results
-            
+
         Returns:
             List of processed alerts with intelligence metadata
         """
@@ -707,10 +710,10 @@ class IntelligentAlertManager:
 
     def _anomaly_to_alert_dict(self, anomaly: AnomalyResult) -> Dict[str, Any]:
         """Convert anomaly result to alert dictionary.
-        
+
         Args:
             anomaly: Anomaly result
-            
+
         Returns:
             Alert dictionary
         """
@@ -733,10 +736,10 @@ class IntelligentAlertManager:
 
     async def _deduplicate_alerts(self, alerts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Remove duplicate alerts based on similarity.
-        
+
         Args:
             alerts: List of alert dictionaries
-            
+
         Returns:
             List of deduplicated alerts
         """
@@ -747,10 +750,10 @@ class IntelligentAlertManager:
 
     async def _smart_deduplication(self, alerts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Perform smart deduplication using similarity metrics.
-        
+
         Args:
             alerts: List of alert dictionaries
-            
+
         Returns:
             List of deduplicated alerts
         """
@@ -780,10 +783,10 @@ class IntelligentAlertManager:
 
     def _create_alert_signature(self, alert: Dict[str, Any]) -> str:
         """Create a signature for alert deduplication.
-        
+
         Args:
             alert: Alert dictionary
-            
+
         Returns:
             Alert signature string
         """
@@ -804,10 +807,10 @@ class IntelligentAlertManager:
 
     async def _find_similar_alerts(self, alert: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Find similar alerts in recent history.
-        
+
         Args:
             alert: Alert to compare
-            
+
         Returns:
             List of similar alerts
         """
@@ -825,18 +828,18 @@ class IntelligentAlertManager:
                     similarity = self._calculate_alert_similarity(alert, cached_alert)
                     if similarity >= self.config.similarity_threshold:
                         similar_alerts.append(cached_alert)
-            except:
+            except Exception:
                 continue
 
         return similar_alerts
 
     def _calculate_alert_similarity(self, alert1: Dict[str, Any], alert2: Dict[str, Any]) -> float:
         """Calculate similarity between two alerts.
-        
+
         Args:
             alert1: First alert
             alert2: Second alert
-            
+
         Returns:
             Similarity score between 0 and 1
         """
@@ -876,11 +879,11 @@ class IntelligentAlertManager:
 
     def _should_suppress_alert(self, current_alert: Dict[str, Any], similar_alert: Dict[str, Any]) -> bool:
         """Determine if current alert should be suppressed.
-        
+
         Args:
             current_alert: Current alert
             similar_alert: Similar alert from history
-            
+
         Returns:
             True if alert should be suppressed
         """
@@ -907,7 +910,7 @@ class IntelligentAlertManager:
             if severity_order.get(similar_severity, 0) >= severity_order.get(current_severity, 0):
                 return True
 
-        except:
+        except Exception:
             pass
 
         return False
@@ -915,16 +918,16 @@ class IntelligentAlertManager:
     async def _prioritize_alerts(self, alerts: List[Dict[str, Any]],
                                clusters: List[AlertCluster]) -> List[Dict[str, Any]]:
         """Prioritize alerts based on various factors.
-        
+
         Args:
             alerts: List of alerts
             clusters: Alert clusters
-            
+
         Returns:
             List of prioritized alerts
         """
         # Create cluster priority lookup
-        cluster_priorities = {cluster.cluster_id: cluster.priority_score for cluster in clusters}
+        {cluster.cluster_id: cluster.priority_score for cluster in clusters}
 
         for alert in alerts:
             # Calculate base priority
@@ -946,10 +949,10 @@ class IntelligentAlertManager:
 
     def _calculate_alert_priority(self, alert: Dict[str, Any]) -> float:
         """Calculate priority score for an alert.
-        
+
         Args:
             alert: Alert dictionary
-            
+
         Returns:
             Priority score between 0 and 1
         """
@@ -983,11 +986,11 @@ class IntelligentAlertManager:
 
     def _get_cluster_info(self, alert: Dict[str, Any], clusters: List[AlertCluster]) -> Dict[str, Any]:
         """Get cluster information for an alert.
-        
+
         Args:
             alert: Alert dictionary
             clusters: List of alert clusters
-            
+
         Returns:
             Cluster information dictionary
         """
@@ -1006,7 +1009,7 @@ class IntelligentAlertManager:
 
     async def _setup_escalation_timers(self, prioritized_alerts: List[Dict[str, Any]]) -> None:
         """Set up escalation timers for high-priority alerts.
-        
+
         Args:
             prioritized_alerts: List of prioritized alerts
         """
@@ -1019,7 +1022,7 @@ class IntelligentAlertManager:
 
     async def check_escalations(self) -> List[Dict[str, Any]]:
         """Check for alerts that need escalation.
-        
+
         Returns:
             List of alerts to escalate
         """

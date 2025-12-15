@@ -18,11 +18,11 @@ def generate_random_genome(
     seed: Optional[int] = None
 ) -> ConversationalGenome:
     """Generate a genome with random traits.
-    
+
     Args:
         genome_id: Unique identifier for the genome
         seed: Optional random seed for reproducibility
-    
+
     Returns:
         ConversationalGenome with random trait values
     """
@@ -42,12 +42,12 @@ def generate_population(
     seed: Optional[int] = None
 ) -> List[ConversationalGenome]:
     """Generate a population of genomes.
-    
+
     Args:
         size: Number of genomes to generate
         base_traits: Optional base traits to vary from
         seed: Optional random seed for reproducibility
-    
+
     Returns:
         List of ConversationalGenome instances
     """
@@ -78,11 +78,11 @@ def compare_genomes(
     genome2: ConversationalGenome
 ) -> Dict[str, Any]:
     """Compare two genomes and return differences.
-    
+
     Args:
         genome1: First genome to compare
         genome2: Second genome to compare
-    
+
     Returns:
         Dictionary with comparison metrics
     """
@@ -107,10 +107,10 @@ def calculate_population_diversity(
     population: List[ConversationalGenome]
 ) -> float:
     """Calculate genetic diversity in a population.
-    
+
     Args:
         population: List of genomes
-    
+
     Returns:
         Diversity score (0.0-1.0)
     """
@@ -124,7 +124,7 @@ def calculate_population_diversity(
         ]
 
     diversities = []
-    for trait, values in trait_values.items():
+    for _trait, values in trait_values.items():
         std_dev = np.std(values)
         diversities.append(std_dev)
 
@@ -135,10 +135,10 @@ def calculate_population_statistics(
     population: List[ConversationalGenome]
 ) -> Dict[str, Any]:
     """Calculate statistics for a population.
-    
+
     Args:
         population: List of genomes
-    
+
     Returns:
         Dictionary with population statistics
     """
@@ -197,10 +197,10 @@ def generate_fitness_function(
 
 def assert_genome_valid(genome: ConversationalGenome) -> None:
     """Assert that a genome is valid.
-    
+
     Args:
         genome: Genome to validate
-    
+
     Raises:
         AssertionError: If genome is invalid
     """
@@ -224,12 +224,12 @@ def generate_test_sequence(
     seed: Optional[int] = None
 ) -> List[float]:
     """Generate test sequences for LNN processing.
-    
+
     Args:
         length: Length of the sequence
         pattern: Pattern type ("random", "sine", "step", "noise")
         seed: Optional random seed
-    
+
     Returns:
         List of float values
     """
@@ -250,12 +250,12 @@ def generate_test_sequence(
 
 def measure_execution_time(func, *args, **kwargs) -> Tuple[Any, float]:
     """Measure execution time of a function.
-    
+
     Args:
         func: Function to measure
         *args: Positional arguments for function
         **kwargs: Keyword arguments for function
-    
+
     Returns:
         Tuple of (result, execution_time_seconds)
     """
@@ -270,12 +270,12 @@ def measure_execution_time(func, *args, **kwargs) -> Tuple[Any, float]:
 
 async def measure_async_execution_time(func, *args, **kwargs) -> Tuple[Any, float]:
     """Measure execution time of an async function.
-    
+
     Args:
         func: Async function to measure
         *args: Positional arguments for function
         **kwargs: Keyword arguments for function
-    
+
     Returns:
         Tuple of (result, execution_time_seconds)
     """
@@ -290,7 +290,7 @@ async def measure_async_execution_time(func, *args, **kwargs) -> Tuple[Any, floa
 
 def create_serialization_test_data() -> Dict[str, Any]:
     """Create test data for serialization tests.
-    
+
     Returns:
         Dictionary with test genome data
     """

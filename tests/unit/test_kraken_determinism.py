@@ -140,8 +140,8 @@ class TestKrakenDeterminism:
         assert mem1_len == mem2_len, f"Memory lengths differ: {mem1_len} vs {mem2_len}"
 
         # Process different sequences - results can be different due to state evolution
-        result1_diff = await lnn1.process_sequence(sequence2, memory_consolidation=True)
-        result2_diff = await lnn2.process_sequence(sequence2, memory_consolidation=True)
+        await lnn1.process_sequence(sequence2, memory_consolidation=True)
+        await lnn2.process_sequence(sequence2, memory_consolidation=True)
 
         # After memory consolidation, both should have reduced memory
         final_mem1_len = len(lnn1.temporal_memory.memories)
@@ -177,7 +177,7 @@ class TestKrakenDeterminism:
         sequence = [0.1, 0.5, 0.9, 0.2, 0.7]
 
         results = []
-        for i in range(3):
+        for _i in range(3):
             DeterministicRandom.reset()
             DeterministicRandom.seed(100)
             lsm = LiquidStateMachine(reservoir_size=50, connectivity=0.1)
@@ -364,7 +364,7 @@ class TestKrakenDeterminism:
         inputs = [0.2, 0.6, 0.8]
         noisy_outputs1 = []
 
-        for inp in inputs:
+        for _inp in inputs:
             noisy_out = lsm1._add_liquid_noise()
             noisy_outputs1.append(noisy_out)
 
@@ -374,7 +374,7 @@ class TestKrakenDeterminism:
         lsm2 = LiquidStateMachine(reservoir_size=30, instance_name='test_noise_gen')
 
         noisy_outputs2 = []
-        for inp in inputs:
+        for _inp in inputs:
             noisy_out = lsm2._add_liquid_noise()
             noisy_outputs2.append(noisy_out)
 

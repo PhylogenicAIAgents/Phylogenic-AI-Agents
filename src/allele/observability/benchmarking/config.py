@@ -180,7 +180,7 @@ class MatrixBenchmarkSettings:
 
     def create_matrix_combinations(self) -> List[Dict[str, Any]]:
         """Create matrix combinations from settings.
-        
+
         Returns:
             List of parameter combinations for matrix testing
         """
@@ -264,7 +264,7 @@ _matrix_benchmark_settings: Optional[MatrixBenchmarkSettings] = None
 
 def get_matrix_benchmark_settings() -> MatrixBenchmarkSettings:
     """Get the global matrix benchmark settings instance.
-    
+
     Returns:
         Global MatrixBenchmarkSettings instance
     """
@@ -276,7 +276,7 @@ def get_matrix_benchmark_settings() -> MatrixBenchmarkSettings:
 
 def set_matrix_benchmark_settings(settings: MatrixBenchmarkSettings) -> None:
     """Set the global matrix benchmark settings instance.
-    
+
     Args:
         settings: MatrixBenchmarkSettings instance to use
     """

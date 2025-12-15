@@ -98,7 +98,7 @@ class TestStress:
 
     def test_many_mutations(self, default_genome):
         """Test many consecutive mutations."""
-        original_traits = default_genome.traits.copy()
+        default_genome.traits.copy()
 
         # Perform many mutations
         for _ in range(1000):
@@ -115,7 +115,7 @@ class TestStress:
     def test_deep_crossover_chain(self):
         """Test crossover chain creating many generations."""
         parent1 = ConversationalGenome("p1")
-        parent2 = ConversationalGenome("p2")
+        ConversationalGenome("p2")
 
         current_gen = parent1
         for i in range(10):
@@ -202,7 +202,7 @@ class TestStress:
         engine = EvolutionEngine(config)
         population = engine.initialize_population()
 
-        initial_diversity = engine._calculate_diversity(population)
+        engine._calculate_diversity(population)
 
         # Evolve
         import asyncio
@@ -240,7 +240,7 @@ class TestStress:
         assert_genome_valid(default_genome)
 
         # Very low mutation rate (should still work)
-        original_traits = default_genome.traits.copy()
+        default_genome.traits.copy()
         default_genome.mutate_all_traits(mutation_rate=0.001)
         # May or may not mutate, but should remain valid
         assert_genome_valid(default_genome)

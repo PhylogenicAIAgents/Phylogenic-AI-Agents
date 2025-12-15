@@ -838,7 +838,7 @@ class TestMLAnalyticsIntegration:
     async def test_end_to_end_workflow(self):
         """Test complete ML analytics workflow."""
         # Create configurations
-        ml_config = MLAnalyticsConfig()
+        MLAnalyticsConfig()
 
         # Create sample data
         base_time = datetime.now(timezone.utc)

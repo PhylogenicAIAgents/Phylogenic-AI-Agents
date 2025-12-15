@@ -14,6 +14,7 @@ from allele import (
     EvolutionEngine,
     create_agent,
 )
+from allele.exceptions import AgentError
 from tests.test_utils import (
     assert_genome_valid,
     calculate_population_diversity,
@@ -99,7 +100,7 @@ class TestIntegration:
 
         # Initialize population
         population = engine.initialize_population()
-        initial_diversity = calculate_population_diversity(population)
+        calculate_population_diversity(population)
 
         # Evolve
         best_genome = await engine.evolve(population, fitness_function)
@@ -261,9 +262,9 @@ class TestIntegration:
     async def test_error_propagation(self):
         """Test error handling across components."""
         # Invalid genome should fail
-        with pytest.raises(Exception):
+        with pytest.raises(AgentError):
             invalid_genome = ConversationalGenome("test", {'invalid_trait': 0.5})
-            agent = await create_agent(invalid_genome)
+            await create_agent(invalid_genome)
 
     @pytest.mark.asyncio
     async def test_state_consistency_across_operations(self, custom_genome):

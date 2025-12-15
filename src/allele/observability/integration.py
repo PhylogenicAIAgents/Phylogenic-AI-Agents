@@ -34,7 +34,7 @@ Version: 1.0.0
 import gc
 import time
 import uuid
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 import psutil
 import structlog
@@ -53,7 +53,7 @@ class ObservableEvolutionEngine(EvolutionEngine):
 
     def __init__(self, config: EvolutionConfig, component_id: Optional[str] = None):
         """Initialize observable evolution engine.
-        
+
         Args:
             config: Evolution configuration
             component_id: Component ID for observability (auto-generated if None)
@@ -371,7 +371,7 @@ class ObservableKrakenLNN(KrakenLNN):
                  dynamics=None,
                  component_id: Optional[str] = None):
         """Initialize observable Kraken LNN.
-        
+
         Args:
             reservoir_size: Size of the liquid reservoir
             connectivity: Connection density
@@ -547,7 +547,9 @@ class ObservableKrakenLNN(KrakenLNN):
         # Update component performance metrics
         if self.metrics_collector.performance_metrics:
             perf = self.metrics_collector.performance_metrics
-            perf.reservoir_utilization = memory_utilization if 'memory_utilization' in locals() else 0
+            perf.reservoir_utilization = (
+                self._memory_utilization_history[-1] if self._memory_utilization_history else 0
+            )
             perf.learning_rate = self._estimate_learning_rate()
 
         logger.debug(f"Sequence processed: {processing_time:.3f}s, {len(input_sequence)} inputs",
@@ -612,7 +614,7 @@ class ObservableNLPAgent(NLPAgent):
                  config: AgentConfig,
                  component_id: Optional[str] = None):
         """Initialize observable NLP agent.
-        
+
         Args:
             genome: Conversational genome defining agent personality traits
             config: Comprehensive agent configuration
@@ -833,10 +835,10 @@ class ObservableNLPAgent(NLPAgent):
 
 def create_observable_evolution_engine(config: EvolutionConfig) -> ObservableEvolutionEngine:
     """Create an observable evolution engine.
-    
+
     Args:
         config: Evolution configuration
-        
+
     Returns:
         ObservableEvolutionEngine instance
     """
@@ -848,13 +850,13 @@ def create_observable_kraken_lnn(reservoir_size: int = 100,
                                 memory_buffer_size: int = 1000,
                                 dynamics=None) -> ObservableKrakenLNN:
     """Create an observable Kraken LNN.
-    
+
     Args:
         reservoir_size: Size of the liquid reservoir
         connectivity: Connection density
         memory_buffer_size: Size of temporal memory buffer
         dynamics: Liquid dynamics configuration
-        
+
     Returns:
         ObservableKrakenLNN instance
     """
@@ -864,11 +866,11 @@ def create_observable_kraken_lnn(reservoir_size: int = 100,
 def create_observable_agent(genome: ConversationalGenome,
                           config: AgentConfig) -> ObservableNLPAgent:
     """Create an observable NLP agent.
-    
+
     Args:
         genome: Conversational genome
         config: Agent configuration
-        
+
     Returns:
         ObservableNLPAgent instance
     """

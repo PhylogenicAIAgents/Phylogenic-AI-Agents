@@ -335,7 +335,7 @@ _ml_analytics_config: Optional[MLAnalyticsConfig] = None
 
 def get_ml_analytics_config() -> MLAnalyticsConfig:
     """Get the global ML analytics configuration instance.
-    
+
     Returns:
         Global MLAnalyticsConfig instance
     """
@@ -347,7 +347,7 @@ def get_ml_analytics_config() -> MLAnalyticsConfig:
 
 def set_ml_analytics_config(config: MLAnalyticsConfig) -> None:
     """Set the global ML analytics configuration instance.
-    
+
     Args:
         config: MLAnalyticsConfig instance to use
     """

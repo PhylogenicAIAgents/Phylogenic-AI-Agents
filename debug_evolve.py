@@ -1,3 +1,5 @@
+import asyncio
+
 from allele import EvolutionConfig, EvolutionEngine
 from tests.test_utils import generate_fitness_function
 
@@ -6,7 +8,6 @@ engine = EvolutionEngine(config)
 pop = engine.initialize_population()
 initial = {g.genome_id: g.traits.copy() for g in pop[:5]}
 print('initial_ids', list(initial.keys()))
-import asyncio
 
 best = asyncio.get_event_loop().run_until_complete(engine.evolve(pop, generate_fitness_function(), generations=3))
 print('\nFinal first 5:')

@@ -50,7 +50,7 @@ class AnomalyDetector:
 
     def __init__(self, config: AnomalyDetectionConfig):
         """Initialize anomaly detector.
-        
+
         Args:
             config: Anomaly detection configuration
         """
@@ -63,10 +63,10 @@ class AnomalyDetector:
 
     async def train(self, training_data: List[MLMetric]) -> ModelMetrics:
         """Train the anomaly detection model.
-        
+
         Args:
             training_data: List of ML metrics for training
-            
+
         Returns:
             Model training metrics
         """
@@ -74,10 +74,10 @@ class AnomalyDetector:
 
     async def detect_anomaly(self, metric: MLMetric) -> Optional[AnomalyResult]:
         """Detect anomaly in a single metric.
-        
+
         Args:
             metric: ML metric to analyze
-            
+
         Returns:
             Anomaly result if anomaly detected, None otherwise
         """
@@ -85,10 +85,10 @@ class AnomalyDetector:
 
     async def detect_anomalies_batch(self, metrics: List[MLMetric]) -> List[AnomalyResult]:
         """Detect anomalies in a batch of metrics.
-        
+
         Args:
             metrics: List of ML metrics to analyze
-            
+
         Returns:
             List of anomaly results
         """
@@ -101,7 +101,7 @@ class AnomalyDetector:
 
     def save_model(self, filepath: Path) -> None:
         """Save trained model to file.
-        
+
         Args:
             filepath: Path to save model
         """
@@ -121,10 +121,10 @@ class AnomalyDetector:
 
     def load_model(self, filepath: Path) -> bool:
         """Load trained model from file.
-        
+
         Args:
             filepath: Path to model file
-            
+
         Returns:
             True if model loaded successfully
         """
@@ -146,10 +146,10 @@ class AnomalyDetector:
 
     def _prepare_features(self, metrics: List[MLMetric]) -> np.ndarray:
         """Prepare feature matrix from metrics.
-        
+
         Args:
             metrics: List of ML metrics
-            
+
         Returns:
             Feature matrix
         """
@@ -162,10 +162,10 @@ class AnomalyDetector:
 
     def _scale_features(self, features: np.ndarray) -> np.ndarray:
         """Scale features using fitted scaler.
-        
+
         Args:
             features: Feature matrix
-            
+
         Returns:
             Scaled feature matrix
         """
@@ -179,10 +179,10 @@ class AnomalyDetector:
 
     def _calculate_anomaly_score(self, features: np.ndarray) -> np.ndarray:
         """Calculate anomaly scores using the model.
-        
+
         Args:
             features: Feature matrix
-            
+
         Returns:
             Anomaly scores
         """
@@ -201,11 +201,11 @@ class AnomalyDetector:
 
     def _determine_anomaly_type(self, metric_name: str, anomaly_score: float) -> AnomalyType:
         """Determine type of anomaly based on metric name and score.
-        
+
         Args:
             metric_name: Name of the metric
             anomaly_score: Anomaly score
-            
+
         Returns:
             Type of anomaly
         """
@@ -232,7 +232,7 @@ class IsolationForestDetector(AnomalyDetector):
 
     def __init__(self, config: AnomalyDetectionConfig):
         """Initialize Isolation Forest detector.
-        
+
         Args:
             config: Anomaly detection configuration
         """
@@ -242,10 +242,10 @@ class IsolationForestDetector(AnomalyDetector):
 
     async def train(self, training_data: List[MLMetric]) -> ModelMetrics:
         """Train Isolation Forest model.
-        
+
         Args:
             training_data: List of ML metrics for training
-            
+
         Returns:
             Model training metrics
         """
@@ -299,21 +299,21 @@ class IsolationForestDetector(AnomalyDetector):
 
             return training_metrics
 
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "scikit-learn is required for Isolation Forest anomaly detection. "
                 "Install with: pip install scikit-learn"
-            )
+            ) from e
         except Exception as e:
             logger.error(f"Isolation Forest training failed: {e}")
             raise
 
     async def detect_anomaly(self, metric: MLMetric) -> Optional[AnomalyResult]:
         """Detect anomaly using Isolation Forest.
-        
+
         Args:
             metric: ML metric to analyze
-            
+
         Returns:
             Anomaly result if anomaly detected, None otherwise
         """
@@ -367,10 +367,10 @@ class IsolationForestDetector(AnomalyDetector):
 
     def _calculate_anomaly_scores(self, features: np.ndarray) -> np.ndarray:
         """Calculate anomaly scores for features.
-        
+
         Args:
             features: Feature matrix
-            
+
         Returns:
             Anomaly scores
         """
@@ -378,10 +378,10 @@ class IsolationForestDetector(AnomalyDetector):
 
     def _calculate_expected_value(self, metric: MLMetric) -> float:
         """Calculate expected value for metric based on recent data.
-        
+
         Args:
             metric: ML metric
-            
+
         Returns:
             Expected value
         """
@@ -406,11 +406,11 @@ class IsolationForestDetector(AnomalyDetector):
 
     def _generate_recommendations(self, metric: MLMetric, anomaly_score: float) -> List[str]:
         """Generate recommendations based on anomaly.
-        
+
         Args:
             metric: Metric that triggered anomaly
             anomaly_score: Anomaly score
-            
+
         Returns:
             List of recommendations
         """
@@ -449,7 +449,7 @@ class OneClassSVMDetector(AnomalyDetector):
 
     def __init__(self, config: AnomalyDetectionConfig):
         """Initialize One-Class SVM detector.
-        
+
         Args:
             config: Anomaly detection configuration
         """
@@ -459,10 +459,10 @@ class OneClassSVMDetector(AnomalyDetector):
 
     async def train(self, training_data: List[MLMetric]) -> ModelMetrics:
         """Train One-Class SVM model.
-        
+
         Args:
             training_data: List of ML metrics for training
-            
+
         Returns:
             Model training metrics
         """
@@ -515,21 +515,21 @@ class OneClassSVMDetector(AnomalyDetector):
 
             return training_metrics
 
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "scikit-learn is required for One-Class SVM anomaly detection. "
                 "Install with: pip install scikit-learn"
-            )
+            ) from e
         except Exception as e:
             logger.error(f"One-Class SVM training failed: {e}")
             raise
 
     async def detect_anomaly(self, metric: MLMetric) -> Optional[AnomalyResult]:
         """Detect anomaly using One-Class SVM.
-        
+
         Args:
             metric: ML metric to analyze
-            
+
         Returns:
             Anomaly result if anomaly detected, None otherwise
         """
@@ -583,10 +583,10 @@ class OneClassSVMDetector(AnomalyDetector):
 
     def _calculate_anomaly_score(self, features: np.ndarray) -> np.ndarray:
         """Calculate anomaly scores for features.
-        
+
         Args:
             features: Feature matrix
-            
+
         Returns:
             Anomaly scores
         """
@@ -632,7 +632,7 @@ class EnsembleAnomalyDetector(AnomalyDetector):
 
     def __init__(self, config: AnomalyDetectionConfig):
         """Initialize ensemble anomaly detector.
-        
+
         Args:
             config: Anomaly detection configuration
         """
@@ -646,10 +646,10 @@ class EnsembleAnomalyDetector(AnomalyDetector):
 
     async def train(self, training_data: List[MLMetric]) -> ModelMetrics:
         """Train ensemble of anomaly detection models.
-        
+
         Args:
             training_data: List of ML metrics for training
-            
+
         Returns:
             Model training metrics
         """
@@ -674,10 +674,10 @@ class EnsembleAnomalyDetector(AnomalyDetector):
 
     async def detect_anomaly(self, metric: MLMetric) -> Optional[AnomalyResult]:
         """Detect anomaly using ensemble of detectors.
-        
+
         Args:
             metric: ML metric to analyze
-            
+
         Returns:
             Anomaly result if anomaly detected, None otherwise
         """
