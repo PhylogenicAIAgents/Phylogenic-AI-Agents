@@ -1,0 +1,52 @@
+name: Readout tests
+
+on:
+  push:
+    paths:
+      - 'tests/**'
+      - '.github/workflows/readout-integration.yml'
+  pull_request:
+    paths:
+      - 'tests/**'
+      - '.github/workflows/readout-integration.yml'
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [3.11, 3.12]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest numpy pytest-asyncio
+          python -m pip install -e .
+      - name: Run unit tests
+        run: pytest -q tests/unit
+
+  integration:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sklearn: [true, false]
+        python: ['3.11']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install base deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest numpy pytest-asyncio
+          python -m pip install -e .
+      - name: Optionally install scikit-learn
+        if: matrix.sklearn == 'true'
+        run: python -m pip install scikit-learn
+      - name: Run integration tests
+        run: pytest -q tests/integration
