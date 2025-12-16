@@ -283,4 +283,3 @@ class TestIntegration:
         # Genome should remain valid
         assert_genome_valid(agent.genome)
         assert agent.is_initialized is True
-
