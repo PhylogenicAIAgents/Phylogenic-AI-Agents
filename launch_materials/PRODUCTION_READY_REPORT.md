@@ -1,4 +1,4 @@
-# Allele Production Readiness Report
+# Phylogenic Production Readiness Report
 **Date**: December 2025
 **Version**: 1.0.2
 **Status**: ✅ PRODUCTION READY
@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-Allele is a **unique, first-to-market** genome-based conversational AI SDK with:
+Phylogenic is a **unique, first-to-market** genome-based conversational AI SDK with:
 - ✅ **95.5% test pass rate** (42/44 tests passing)
 - ✅ **8.83/10 code quality score** (pylint)
 - ✅ **100% Kraken determinism tests** (12/12 tests)
@@ -526,7 +526,7 @@ twine upload dist/*
 
 **Author**: Jimmy De Jesus
 **Email**: jimmydejesus1129@gmail.com
-**GitHub**: https://github.com/jimmyjdejesus-cmyk/allele-ai
+**GitHub**: https://github.com/jimmyjdejesus-cmyk/phylogenic-ai
 **License**: AGPL v3
 **Version**: 1.0.2
 **Python**: 3.9+

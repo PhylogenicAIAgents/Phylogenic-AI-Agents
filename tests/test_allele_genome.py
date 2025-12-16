@@ -7,8 +7,8 @@ Tests genome creation, mutation, crossover, and serialization.
 
 import pytest
 
-from allele import ConversationalGenome
-from allele.exceptions import ValidationError
+from phylogenic import ConversationalGenome
+from phylogenic.exceptions import ValidationError
 
 
 class TestConversationalGenome:

@@ -6,7 +6,7 @@ import time
 import numpy as np
 import pytest
 
-from allele.kraken_lnn import KrakenLNN, LiquidStateMachine
+from phylogenic.kraken_lnn import KrakenLNN, LiquidStateMachine
 from tests.test_utils import generate_test_sequence
 
 
@@ -286,7 +286,7 @@ class TestKrakenScalingBenchmarks:
     def test_dynamics_calculation_performance(self, benchmark):
         """Benchmark liquid dynamics calculation performance."""
         def benchmark_dynamics():
-            from allele.kraken_lnn import LiquidDynamics
+            from phylogenic.kraken_lnn import LiquidDynamics
 
             dynamics = LiquidDynamics(viscosity=0.2, temperature=1.0, pressure=1.0)
             reservoir_state = np.random.random(100)  # Random state

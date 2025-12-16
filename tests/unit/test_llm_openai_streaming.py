@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from allele.llm_client import LLMConfig
-from allele.llm_openai import OpenAIClient
+from phylogenic.llm_client import LLMConfig
+from phylogenic.llm_openai import OpenAIClient
 
 
 class TestOpenAIStreamingUnit:
@@ -35,7 +35,7 @@ class TestOpenAIStreamingUnit:
     @pytest.fixture
     def mock_openai_class(self, mock_openai_client):
         """Mock AsyncOpenAI class constructor."""
-        with patch('allele.llm_openai.AsyncOpenAI') as mock_class:
+        with patch('phylogenic.llm_openai.AsyncOpenAI') as mock_class:
             mock_class.return_value = mock_openai_client
             yield mock_class
 

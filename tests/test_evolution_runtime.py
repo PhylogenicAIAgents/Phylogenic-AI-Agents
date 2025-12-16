@@ -7,7 +7,7 @@ Tests actual execution of evolution cycles, selection, crossover, and mutation.
 
 import pytest
 
-from allele import (
+from phylogenic import (
     EvolutionConfig,
     EvolutionEngine,
     GeneticOperators,

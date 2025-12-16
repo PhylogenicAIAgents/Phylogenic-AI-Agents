@@ -5,12 +5,12 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from allele import ConversationalGenome
-from allele.agent import AgentConfig, NLPAgent
-from allele.llm_client import LLMClient, LLMConfig
-from allele.llm_exceptions import LLMAuthenticationError
-from allele.llm_ollama import OllamaClient
-from allele.llm_openai import OpenAIClient
+from phylogenic import ConversationalGenome
+from phylogenic.agent import AgentConfig, NLPAgent
+from phylogenic.llm_client import LLMClient, LLMConfig
+from phylogenic.llm_exceptions import LLMAuthenticationError
+from phylogenic.llm_ollama import OllamaClient
+from phylogenic.llm_openai import OpenAIClient
 
 
 class TestLLMIntegration:
@@ -129,7 +129,7 @@ class TestLLMIntegration:
     @pytest.mark.asyncio
     async def test_openai_client_estimates_cost(self, mock_llm_config):
         """Test cost estimation functionality."""
-        with patch('allele.llm_openai.AsyncOpenAI'):
+        with patch('phylogenic.llm_openai.AsyncOpenAI'):
             client = OpenAIClient(mock_llm_config)
 
             # Test GPT-4 cost estimation
@@ -277,7 +277,7 @@ class TestLLMIntegration:
         # Use a fake API key for agent creation, then clear environment for initialization
         config = AgentConfig(llm_provider="openai", api_key="sk-fake-key", fallback_to_mock=False)
 
-        with patch('allele.agent.NLPAgent._resolve_api_key', return_value="sk-fake-key"):
+        with patch('phylogenic.agent.NLPAgent._resolve_api_key', return_value="sk-fake-key"):
             agent = NLPAgent(genome, config)
 
         # Mock the environment to not have API keys during initialization
@@ -318,7 +318,7 @@ class TestLLMIntegration:
         agent = NLPAgent(mock_genome, config)
 
         # Initialize with mock setup
-        with patch('allele.llm_openai.AsyncOpenAI'):
+        with patch('phylogenic.llm_openai.AsyncOpenAI'):
             agent.llm_client = AsyncMock(spec=LLMClient)
             agent.llm_client.chat_completion.side_effect = Exception("LLM failure")
             agent.is_initialized = True
@@ -345,7 +345,7 @@ class TestLLMIntegration:
         agent = NLPAgent(genome, config)
 
         # Mock agent to be initialized for testing (use Ollama for simplicity)
-        with patch('allele.llm_ollama.AsyncOllama', create=True):
+        with patch('phylogenic.llm_ollama.AsyncOllama', create=True):
             agent.llm_client = AsyncMock(spec=LLMClient)
             agent.is_initialized = True
 
@@ -390,7 +390,7 @@ class TestLLMIntegration:
         config = AgentConfig(fallback_to_mock=True)
         agent = NLPAgent(mock_genome, config)
 
-        with patch('allele.llm_openai.AsyncOpenAI'):
+        with patch('phylogenic.llm_openai.AsyncOpenAI'):
             agent.llm_client = AsyncMock(spec=LLMClient)
             agent.llm_client.chat_completion = AsyncMock(return_value=iter(["Response"]))
             agent.is_initialized = True
@@ -444,7 +444,7 @@ class TestLLMIntegration:
             api_key="sk-test-key"
         )
 
-        with patch('allele.llm_openai.AsyncOpenAI') as mock_openai:
+        with patch('phylogenic.llm_openai.AsyncOpenAI') as mock_openai:
             mock_client = AsyncMock()
             mock_openai.return_value = mock_client
             mock_client.models.list.return_value = Mock(data=[Mock(id="gpt-4-turbo-preview")])
@@ -481,7 +481,7 @@ class TestLLMIntegration:
             api_key="sk-test-key"
         )
 
-        with patch('allele.llm_openai.AsyncOpenAI') as mock_openai:
+        with patch('phylogenic.llm_openai.AsyncOpenAI') as mock_openai:
             mock_client = AsyncMock()
             mock_openai.return_value = mock_client
 

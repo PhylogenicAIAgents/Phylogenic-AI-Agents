@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from allele.kraken_lnn import KrakenLNN, LiquidDynamics, LiquidStateMachine
+from phylogenic.kraken_lnn import KrakenLNN, LiquidDynamics, LiquidStateMachine
 from tests.test_utils import generate_test_sequence
 
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Bravetto AI Systems & Jimmy De Jesus
+# Copyright (C) 2025 Phylogenic AI Labs & Jimmy De Jesus
 #
 # This file is part of Allele.
 #
@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from allele.observability.types import (
+from phylogenic.observability.types import (
     Alert,
     AlertRule,
     AlertSeverity,

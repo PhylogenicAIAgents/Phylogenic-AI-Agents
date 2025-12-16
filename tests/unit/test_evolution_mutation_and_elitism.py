@@ -5,8 +5,8 @@ import copy
 import numpy as np
 import pytest
 
-from allele.evolution import EvolutionConfig, EvolutionEngine, GeneticOperators
-from allele.genome import ConversationalGenome
+from phylogenic.evolution import EvolutionConfig, EvolutionEngine, GeneticOperators
+from phylogenic.genome import ConversationalGenome
 from tests.test_utils import generate_fitness_function, generate_population
 
 

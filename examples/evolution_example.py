@@ -10,7 +10,7 @@ This example demonstrates:
 
 import asyncio
 
-from allele import (
+from phylogenic import (
     ConversationalGenome,
     EvolutionConfig,
     EvolutionEngine,

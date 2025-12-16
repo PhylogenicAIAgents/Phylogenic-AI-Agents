@@ -6,7 +6,7 @@ import tracemalloc
 
 import psutil
 
-from allele.kraken_lnn import KrakenLNN
+from phylogenic.kraken_lnn import KrakenLNN
 from tests.test_utils import generate_test_sequence
 
 

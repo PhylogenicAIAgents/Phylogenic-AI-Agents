@@ -15,7 +15,7 @@ Verify Pages is published
 - Notes & recommendations
 - The repository is set to use **GitHub Pages (free for public/open-source repos)**. I updated `mkdocs.yml` to use the Pages URL:
 
-	`https://jimmyjdejesus-cmyk.github.io/allele-ai/`
+	`https://jimmyjdejesus-cmyk.github.io/phylogenic-ai/`
 
 	This URL is free and automatically served by GitHub. You do not need a custom domain to publish.
 - If you have a custom domain, add a `CNAME` file with your domain name either to the repository root (preferred) or ensure it is present in the built `site/` artifact before deployment. Example CNAME contents:

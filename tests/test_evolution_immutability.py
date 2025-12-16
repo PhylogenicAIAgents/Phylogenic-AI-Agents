@@ -1,7 +1,7 @@
 import pytest
 
-from allele.evolution import EvolutionConfig, EvolutionEngine
-from allele.genome import ConversationalGenome
+from phylogenic.evolution import EvolutionConfig, EvolutionEngine
+from phylogenic.genome import ConversationalGenome
 
 
 def _make_population(size=4):

@@ -8,7 +8,7 @@ Tests actual execution of LNN processing, memory operations, and dynamics.
 import numpy as np
 import pytest
 
-from allele import (
+from phylogenic import (
     KrakenLNN,
     LiquidStateMachine,
 )

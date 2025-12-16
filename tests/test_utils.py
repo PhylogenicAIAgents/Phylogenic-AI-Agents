@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from allele import ConversationalGenome, TraitDict
+from phylogenic import ConversationalGenome, TraitDict
 
 
 def generate_random_genome(

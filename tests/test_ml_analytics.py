@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Bravetto AI Systems & Jimmy De Jesus
+# Copyright (C) 2025 Phylogenic AI Labs & Jimmy De Jesus
 #
 # This file is part of Allele.
 #
@@ -40,37 +40,37 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from src.allele.observability.ml_analytics.alert_intelligence import (
+from src.phylogenic.observability.ml_analytics.alert_intelligence import (
     AlertCorrelator,
     IntelligentAlertManager,
 )
 
 # Import ML analytics components
-from src.allele.observability.ml_analytics.anomaly_detection import (
+from src.phylogenic.observability.ml_analytics.anomaly_detection import (
     EnsembleAnomalyDetector,
     IsolationForestDetector,
     OneClassSVMDetector,
 )
-from src.allele.observability.ml_analytics.ml_config import (
+from src.phylogenic.observability.ml_analytics.ml_config import (
     AlertIntelligenceConfig,
     AnomalyDetectionConfig,
     MLAnalyticsConfig,
     OptimizationEngineConfig,
     PredictiveAnalyticsConfig,
 )
-from src.allele.observability.ml_analytics.optimization_engine import (
+from src.phylogenic.observability.ml_analytics.optimization_engine import (
     ConfigurationRecommender,
     OptimizationEngine,
     PerformanceOptimizer,
 )
-from src.allele.observability.ml_analytics.predictive_analytics import (
+from src.phylogenic.observability.ml_analytics.predictive_analytics import (
     PerformancePredictor,
     PredictiveAnalyzer,
     TimeSeriesForecaster,
 )
 
 # Import types and configuration
-from src.allele.observability.ml_analytics.types import (
+from src.phylogenic.observability.ml_analytics.types import (
     AlertCluster,
     AlertSeverity,
     AnomalyResult,
@@ -122,16 +122,16 @@ class TestMLAnalyticsConfig:
     def test_env_config_creation(self):
         """Test configuration from environment variables."""
         import os
-        os.environ["ALLELE_ML_ANOMALY_DETECTION"] = "false"
-        os.environ["ALLELE_ML_DEBUG"] = "true"
+        os.environ["PHYLOGENIC_ML_ANOMALY_DETECTION"] = "false"
+        os.environ["PHYLOGENIC_ML_DEBUG"] = "true"
 
         config = MLAnalyticsConfig.from_env()
         assert config.anomaly_detection.enabled is False
         assert config.debug_mode is True
 
         # Clean up
-        del os.environ["ALLELE_ML_ANOMALY_DETECTION"]
-        del os.environ["ALLELE_ML_DEBUG"]
+        del os.environ["PHYLOGENIC_ML_ANOMALY_DETECTION"]
+        del os.environ["PHYLOGENIC_ML_DEBUG"]
 
 
 class TestAnomalyDetection:

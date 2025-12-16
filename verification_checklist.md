@@ -40,10 +40,10 @@ Verifying all requested changes for repository cleanup and documentation updates
 - [ ] `c` - DELETED ✓
 
 ## ✅ Documentation Updates Verification
-### Whitepaper (`docs/whitepaper/allele_whitepaper.md`)
+### Whitepaper (`docs/whitepaper/phylogenic_whitepaper.md`)
 - [ ] License changed from MIT to AGPL v3
 - [ ] Author updated
-- [ ] Repository URL updated to `jimmyjdejesus-cmyk/allele-ai`
+- [ ] Repository URL updated to `jimmyjdejesus-cmyk/phylogenic-ai`
 
 ### README.md
 - [ ] GitHub links corrected throughout

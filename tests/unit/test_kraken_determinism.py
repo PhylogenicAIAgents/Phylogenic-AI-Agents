@@ -5,7 +5,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from allele.kraken_lnn import (
+from phylogenic.kraken_lnn import (
     DeterministicRandom,
     KrakenLNN,
     LiquidDynamics,

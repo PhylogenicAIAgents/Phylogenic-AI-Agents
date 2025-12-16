@@ -6,13 +6,13 @@ from unittest.mock import AsyncMock, Mock, patch
 import httpx
 import pytest
 
-from allele.llm_client import LLMConfig
-from allele.llm_exceptions import (
+from phylogenic.llm_client import LLMConfig
+from phylogenic.llm_exceptions import (
     LLMGenerationError,
     LLMInitializationError,
     LLMModelNotAvailableError,
 )
-from allele.llm_ollama import OllamaClient
+from phylogenic.llm_ollama import OllamaClient
 
 
 class TestOllamaClientUnit:

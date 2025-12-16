@@ -23,7 +23,7 @@ import seaborn as sns
 # Add src to path for importing allele modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from allele.kraken_lnn import KrakenLNN
+from phylogenic.kraken_lnn import KrakenLNN
 from tests.test_utils import generate_test_sequence
 
 

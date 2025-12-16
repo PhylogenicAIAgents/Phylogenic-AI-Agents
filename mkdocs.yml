@@ -1,10 +1,10 @@
-site_name: Allele Documentation
+site_name: Phylogenic Documentation
 site_description: Genome-Based Conversational AI Agents with Evolutionary Optimization
-site_author: Jimmy De Jesus, Bravetto AI Systems
-site_url: https://jimmyjdejesus-cmyk.github.io/allele-ai/
+site_author: Jimmy De Jesus, Phylogenic AI Labs
+site_url: https://jimmyjdejesus-cmyk.github.io/phylogenic-ai/
 
-repo_name: jimmyjdejesus-cmyk/allele
-repo_url: https://github.com/jimmyjdejesus-cmyk/allele
+repo_name: jimmyjdejesus-cmyk/phylogenic
+repo_url: https://github.com/jimmyjdejesus-cmyk/phylogenic
 edit_uri: edit/main/docs/
 
 nav:

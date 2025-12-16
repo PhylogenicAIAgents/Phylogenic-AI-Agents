@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from allele.llm_client import LLMConfig
-from allele.llm_exceptions import LLMAuthenticationError, LLMModelNotAvailableError
-from allele.llm_openai import OpenAIClient
+from phylogenic.llm_client import LLMConfig
+from phylogenic.llm_exceptions import LLMAuthenticationError, LLMModelNotAvailableError
+from phylogenic.llm_openai import OpenAIClient
 
 
 class TestOpenAIClientUnit:
@@ -42,7 +42,7 @@ class TestOpenAIClientUnit:
     @pytest.fixture
     def mock_openai_class(self, mock_openai_client):
         """Mock AsyncOpenAI class constructor."""
-        with patch('allele.llm_openai.AsyncOpenAI') as mock_class:
+        with patch('phylogenic.llm_openai.AsyncOpenAI') as mock_class:
             mock_class.return_value = mock_openai_client
             yield mock_class
 
@@ -216,7 +216,7 @@ class TestOpenAIClientUnit:
 
     def test_get_available_models_api_error_fallback(self, mock_config, mock_openai_class, mock_openai_client):
         """Test fallback to hardcoded models when API fails."""
-        from allele.llm_exceptions import LLMInitializationError
+        from phylogenic.llm_exceptions import LLMInitializationError
         
         # Make API call fail
         mock_openai_client.models.list.side_effect = Exception("API Error")

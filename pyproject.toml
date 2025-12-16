@@ -3,18 +3,18 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "allele"
+name = "phylogenic"
 version = "1.0.2"
 description = "Phylogenic AI Agents - Beyond Prompt Engineering. Evolve Genetically Optimized Personalities with Liquid Memory."
 readme = "README.md"
 license = {text = "AGPL-3.0"}
 authors = [
     { name = "Jimmy De Jesus", email = "jimmydejesus1129@gmail.com" },
-    { name = "Bravetto AI Systems" }
+    { name = "Phylogenic AI Labs" }
 ]
 maintainers = [
     { name = "Jimmy De Jesus", email = "jimmydejesus1129@gmail.com" },
-    { name = "Bravetto AI Systems" }
+    { name = "Phylogenic AI Labs" }
 ]
 keywords = [
     "ai",
@@ -106,7 +106,7 @@ Issues = "https://github.com/bravetto/allele/issues"
 Changelog = "https://github.com/bravetto/allele/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/allele"]
+packages = ["src/phylogenic"]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -127,7 +127,7 @@ python_functions = "test_*"
 addopts = [
     "--strict-markers",
     "--strict-config",
-    "--cov=allele",
+    "--cov=phylogenic",
     "--cov-report=term-missing",
 ]
 

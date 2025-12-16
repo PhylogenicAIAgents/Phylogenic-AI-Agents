@@ -10,7 +10,7 @@ This example demonstrates:
 
 import asyncio
 
-from allele import AgentConfig, ConversationalGenome, create_agent
+from phylogenic import AgentConfig, ConversationalGenome, create_agent
 
 
 async def main():

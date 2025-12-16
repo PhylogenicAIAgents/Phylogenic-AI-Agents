@@ -6,7 +6,7 @@ This example shows two ways to configure: environment variables and programmatic
 
 import os
 
-from allele import (
+from phylogenic import (
     AgentConfig,
     ConversationalGenome,
     KrakenLNN,
@@ -25,7 +25,7 @@ def main():
     print("\nOverride via environment variable (AGENT__MODEL_NAME)")
     os.environ['AGENT__MODEL_NAME'] = 'environment-gpt'
     # Recreate runtime settings so pydantic BaseSettings picks up the new env var
-    from allele.config import AlleleSettings
+    from phylogenic.config import AlleleSettings
     new_settings = AlleleSettings()
 
     agent_cfg_env = AgentConfig.from_settings(new_settings)

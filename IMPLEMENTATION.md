@@ -1,4 +1,4 @@
-# Allele Implementation Documentation
+# Phylogenic Implementation Documentation
 
 **Status**: ✅ Production-Ready  
 **Last Updated**: December 2025
@@ -7,7 +7,7 @@
 
 ## Overview
 
-Allele is a genome-based conversational AI framework featuring:
+Phylogenic is a genome-based conversational AI framework featuring:
 - **8-Trait Genetic Personality Encoding**
 - **Evolutionary Optimization Engine**
 - **Kraken Liquid Neural Networks (LNN)** for temporal memory
@@ -19,27 +19,27 @@ Allele is a genome-based conversational AI framework featuring:
 ## Core Components
 
 ### 1. Genome System
-- `src/allele/genome.py` - ConversationalGenome with 8 quantified traits
+- `src/phylogenic/genome.py` - ConversationalGenome with 8 quantified traits
 - Traits: Empathy, Engagement, Technical Knowledge, Creativity, Conciseness, Context Awareness, Adaptability, Personability
 
 ### 2. Evolution Engine
-- `src/allele/evolution.py` - Genetic algorithm implementation
+- `src/phylogenic/evolution.py` - Genetic algorithm implementation
 - Tournament selection, crossover, mutation operators
 - <5ms crossover latency, 400+ ops/second
 
 ### 3. Kraken LNN
-- `src/allele/kraken_lnn.py` - Liquid State Machine implementation
+- `src/phylogenic/kraken_lnn.py` - Liquid State Machine implementation
 - <10ms processing latency, adaptive temporal memory
 - 100% determinism test suite success (12/12 tests)
 
 ### 4. LLM Integration
-- `src/allele/llm_client.py` - Base client
-- `src/allele/llm_openai.py` - OpenAI GPT integration
-- `src/allele/llm_ollama.py` - Ollama local/cloud support
+- `src/phylogenic/llm_client.py` - Base client
+- `src/phylogenic/llm_openai.py` - OpenAI GPT integration
+- `src/phylogenic/llm_ollama.py` - Ollama local/cloud support
 - Genome-to-prompt translation for behavioral AI
 
 ### 5. NLP Agent
-- `src/allele/agent.py` - Genome-based personality injection
+- `src/phylogenic/agent.py` - Genome-based personality injection
 - Streaming responses, conversation memory
 - Kraken LNN enhancement for context
 
@@ -48,14 +48,14 @@ Allele is a genome-based conversational AI framework featuring:
 ## Observability System
 
 ### Phase 1: Core Infrastructure ✅
-- **Types** (`src/allele/observability/types.py`): MetricType, AlertSeverity, ComponentType, PerformanceMetrics
-- **Collector** (`src/allele/observability/collector.py`): MetricsBuffer, MetricsCollector, alert management
-- **Engine** (`src/allele/observability/engine.py`): Central coordination, background monitoring, component registration
-- **Integration** (`src/allele/observability/integration.py`): ObservableEvolutionEngine, ObservableKrakenLNN, ObservableNLPAgent
+- **Types** (`src/phylogenic/observability/types.py`): MetricType, AlertSeverity, ComponentType, PerformanceMetrics
+- **Collector** (`src/phylogenic/observability/collector.py`): MetricsBuffer, MetricsCollector, alert management
+- **Engine** (`src/phylogenic/observability/engine.py`): Central coordination, background monitoring, component registration
+- **Integration** (`src/phylogenic/observability/integration.py`): ObservableEvolutionEngine, ObservableKrakenLNN, ObservableNLPAgent
 
 ### Phase 2: Matrix Benchmarking ✅
-- **Types** (`src/allele/observability/benchmarking/types.py`): BenchmarkType, ParameterSet, PerformanceProfile
-- **Config** (`src/allele/observability/benchmarking/config.py`): Matrix combinations, regression testing
+- **Types** (`src/phylogenic/observability/benchmarking/types.py`): BenchmarkType, ParameterSet, PerformanceProfile
+- **Config** (`src/phylogenic/observability/benchmarking/config.py`): Matrix combinations, regression testing
 - Parameter matrix testing across 50-1000 population sizes
 
 ### Phase 3: ML Analytics ✅
@@ -96,13 +96,13 @@ Allele is a genome-based conversational AI framework featuring:
 
 ```bash
 # Monitoring
-ALLELE_MONITORING_ENABLED=true
-ALLELE_COLLECTION_INTERVAL=10
-ALLELE_RETENTION_HOURS=168
+PHYLOGENIC_MONITORING_ENABLED=true
+PHYLOGENIC_COLLECTION_INTERVAL=10
+PHYLOGENIC_RETENTION_HOURS=168
 
 # Benchmarking
-ALLELE_BENCHMARK_RUNS=3
-ALLELE_BENCHMARK_TIMEOUT=300
+PHYLOGENIC_BENCHMARK_RUNS=3
+PHYLOGENIC_BENCHMARK_TIMEOUT=300
 
 # LLM Providers
 OPENAI_API_KEY=sk-...
@@ -114,7 +114,7 @@ OLLAMA_API_KEY=...
 ## Quick Start
 
 ```python
-from allele import ConversationalGenome, create_agent, AgentConfig
+from phylogenic import ConversationalGenome, create_agent, AgentConfig
 
 # Define genome
 genome = ConversationalGenome(
@@ -149,7 +149,7 @@ async for response in agent.chat("Hello!"):
 - [Kraken LNN](docs/kraken_lnn.md)
 - [LLM Integration](docs/LLM_INTEGRATION.md)
 - [Testing Guide](docs/TESTING.md)
-- [Whitepaper](docs/whitepaper/allele_whitepaper.md)
+- [Whitepaper](docs/whitepaper/phylogenic_whitepaper.md)
 
 ---
 

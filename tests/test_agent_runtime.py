@@ -7,8 +7,8 @@ Tests actual execution of agent initialization, chat, and integration.
 
 import pytest
 
-from allele import AgentConfig, ConversationalGenome, NLPAgent, create_agent
-from allele.exceptions import AgentError
+from phylogenic import AgentConfig, ConversationalGenome, NLPAgent, create_agent
+from phylogenic.exceptions import AgentError
 
 
 class TestAgentRuntime:

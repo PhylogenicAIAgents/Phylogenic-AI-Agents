@@ -1,5 +1,5 @@
 """
-Performance tests and benchmarks for Allele system.
+Performance tests and benchmarks for Phylogenic system.
 
 Tests latency, throughput, memory usage, and scalability.
 """
@@ -9,7 +9,7 @@ import time
 
 import pytest
 
-from allele import (
+from phylogenic import (
     AgentConfig,
     ConversationalGenome,
     EvolutionConfig,

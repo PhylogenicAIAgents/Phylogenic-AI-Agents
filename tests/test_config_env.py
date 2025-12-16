@@ -6,7 +6,7 @@ def test_env_override_agent_model():
     os.environ['AGENT__MODEL_NAME'] = 'test-model-env'
 
     # Recreate settings to pick up environment change
-    from allele.config import AlleleSettings
+    from phylogenic.config import AlleleSettings
     config = AlleleSettings()
 
     assert config.agent.model_name == 'test-model-env'
@@ -19,7 +19,7 @@ def test_env_override_evolution_immutable_and_hpc_flags():
     os.environ['EVOLUTION__IMMUTABLE_EVOLUTION'] = 'true'
     os.environ['EVOLUTION__HPC_MODE'] = 'false'
 
-    from allele.config import AlleleSettings
+    from phylogenic.config import AlleleSettings
     config = AlleleSettings()
 
     assert config.evolution.immutable_evolution is True

@@ -1,5 +1,5 @@
 """
-Integration tests for Allele system.
+Integration tests for Phylogenic system.
 
 Tests end-to-end workflows involving multiple components.
 """
@@ -8,13 +8,13 @@ Tests end-to-end workflows involving multiple components.
 import numpy as np
 import pytest
 
-from allele import (
+from phylogenic import (
     AgentConfig,
     ConversationalGenome,
     EvolutionEngine,
     create_agent,
 )
-from allele.exceptions import AgentError
+from phylogenic.exceptions import AgentError
 from tests.test_utils import (
     assert_genome_valid,
     calculate_population_diversity,

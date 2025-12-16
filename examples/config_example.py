@@ -12,7 +12,7 @@ This example demonstrates different ways to use the central configuration system
 import asyncio
 import os
 
-from allele import (
+from phylogenic import (
     AgentConfig,
     ConversationalGenome,
     EvolutionConfig,
@@ -144,7 +144,7 @@ async def main():
     print_section("4. Programmatic Configuration")
 
     # Create custom settings instance
-    from allele.config import AgentSettings, AlleleSettings, EvolutionSettings
+    from phylogenic.config import AgentSettings, AlleleSettings, EvolutionSettings
 
     custom_settings = AlleleSettings(
         agent=AgentSettings(

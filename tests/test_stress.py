@@ -1,5 +1,5 @@
 """
-Stress tests for Allele system.
+Stress tests for Phylogenic system.
 
 Tests edge cases, resource limits, and failure modes.
 """
@@ -9,7 +9,7 @@ import asyncio
 import numpy as np
 import pytest
 
-from allele import (
+from phylogenic import (
     AgentConfig,
     ConversationalGenome,
     EvolutionConfig,
@@ -17,7 +17,7 @@ from allele import (
     KrakenLNN,
     create_agent,
 )
-from allele.exceptions import ValidationError
+from phylogenic.exceptions import ValidationError
 from tests.test_utils import (
     assert_genome_valid,
     generate_population,

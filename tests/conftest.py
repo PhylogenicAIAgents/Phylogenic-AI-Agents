@@ -70,7 +70,7 @@ async def local_ollama_config(ensure_gemma_models):
     """Configuration for local Ollama testing."""
     gemma_model = ensure_gemma_models
     if gemma_model and isinstance(gemma_model, str):
-        from allele.agent import AgentConfig
+        from phylogenic.agent import AgentConfig
         return AgentConfig(
             llm_provider="ollama",
             model_name=gemma_model,
@@ -85,7 +85,7 @@ async def local_ollama_config(ensure_gemma_models):
 @pytest.fixture
 def mock_genome():
     """Create a test genome for consistent testing."""
-    from allele.genome import ConversationalGenome
+    from phylogenic.genome import ConversationalGenome
     return ConversationalGenome(
         genome_id="test_genome",
         traits={
@@ -111,14 +111,14 @@ def custom_genome():
 @pytest.fixture
 def default_genome():
     """Default genome with library defaults."""
-    from allele import ConversationalGenome
+    from phylogenic import ConversationalGenome
     return ConversationalGenome(genome_id="default_genome")
 
 
 @pytest.fixture
 def technical_genome():
     """Genome skewed toward technical knowledge for targeted tests."""
-    from allele import ConversationalGenome
+    from phylogenic import ConversationalGenome
     return ConversationalGenome(
         genome_id="technical",
         traits={
@@ -144,7 +144,7 @@ def fitness_function():
 @pytest.fixture
 def evolution_config():
     """Lightweight evolution config for tests."""
-    from allele.evolution import EvolutionConfig
+    from phylogenic.evolution import EvolutionConfig
     return EvolutionConfig(population_size=20, generations=5, mutation_rate=0.1)
 
 
@@ -165,26 +165,26 @@ def sample_sequence():
 @pytest.fixture
 def kraken_lnn():
     """Instantiate a Kraken LNN for runtime tests."""
-    from allele.kraken_lnn import KrakenLNN
+    from phylogenic.kraken_lnn import KrakenLNN
     return KrakenLNN(reservoir_size=100, connectivity=0.1)
 
 
 @pytest.fixture
 def agent_config():
     """Default AgentConfig for runtime tests."""
-    from allele.agent import AgentConfig
+    from phylogenic.agent import AgentConfig
     return AgentConfig()
 
 
 @pytest.fixture
 def evolution_engine(evolution_config):
     """Instantiate an EvolutionEngine for runtime tests."""
-    from allele.evolution import EvolutionEngine
+    from phylogenic.evolution import EvolutionEngine
     return EvolutionEngine(evolution_config)
 
 
 @pytest.fixture
 def custom_liquid_dynamics():
     """Custom LiquidDynamics instance used in Kraken LNN tests."""
-    from allele.kraken_lnn import LiquidDynamics
+    from phylogenic.kraken_lnn import LiquidDynamics
     return LiquidDynamics(viscosity=0.15, temperature=1.2, pressure=0.9)

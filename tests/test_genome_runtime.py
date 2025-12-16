@@ -8,8 +8,8 @@ Tests actual execution paths, state transitions, and runtime behavior.
 import numpy as np
 import pytest
 
-from allele import ConversationalGenome
-from allele.exceptions import ValidationError
+from phylogenic import ConversationalGenome
+from phylogenic.exceptions import ValidationError
 from tests.test_utils import (
     assert_genome_valid,
 )
