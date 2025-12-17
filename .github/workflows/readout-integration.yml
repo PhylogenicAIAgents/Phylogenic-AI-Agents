@@ -35,9 +35,11 @@ jobs:
           python -m pip install aiohttp
           python -m pip install -e .
       - name: Run unit tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           mkdir -p reports
-          PYTHONPATH=$PWD pytest -q tests/unit --junitxml=reports/unit.xml
+          pytest -q tests/unit --junitxml=reports/unit.xml
       - name: Upload unit test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -64,7 +66,9 @@ jobs:
           python -m pip install aiohttp
           python -m pip install -e .
       - name: Run readout smoke tests
-        run: PYTHONPATH=$PWD pytest -q tests/unit/test_kraken_readout_fallback.py tests/integration/test_readout_pipeline.py -q --maxfail=1
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: pytest -q tests/unit/test_kraken_readout_fallback.py tests/integration/test_readout_pipeline.py -q --maxfail=1
 
   integration:
     runs-on: ubuntu-latest
@@ -91,6 +95,8 @@ jobs:
         if: matrix.sklearn == 'true'
         run: python -m pip install scikit-learn
       - name: Run integration tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           mkdir -p reports
           pytest -q tests/integration --junitxml=reports/integration-${{ matrix.sklearn }}.xml
