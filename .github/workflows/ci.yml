@@ -51,6 +51,14 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -v -e .[dev,docs,all] 2>&1 | tee pip-install-${{ matrix.python-version }}.log
+        # Install available typing stubs for third-party packages (best-effort)
+        # Use || true to avoid failing the job if a stub package is unavailable
+        python -m pip install types-tensorflow || true
+        python -m pip install types-tiktoken || true
+        python -m pip install types-scipy || true
+        python -m pip install types-scikit-learn || true
+        python -m pip install types-psutil || true
+        python -m pip install types-pandas || true
 
     - name: Upload pip install logs (TEMP DEBUG)
       uses: actions/upload-artifact@v4

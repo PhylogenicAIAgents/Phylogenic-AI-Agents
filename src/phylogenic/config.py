@@ -155,7 +155,7 @@ class AlleleSettings(BaseModel):
             env_file = ".env"
             env_file_encoding = "utf-8"
 
-    def __new__(cls, *args: Any, **kwargs: Any):
+    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         """If a pydantic BaseSettings implementation is available at
         runtime, instantiate and return a BaseSettings-backed instance so
         environment variable overrides are respected when callers use

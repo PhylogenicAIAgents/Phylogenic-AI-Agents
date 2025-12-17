@@ -173,13 +173,18 @@ ignore_missing_imports = true
 # we iteratively add type annotations. This allows CI to progress and
 # keeps the change small; remove this override once observability is
 # fully typed.
-module = "allele.observability.*"
+module = "phylogenic.observability.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
 # Ignore test files to avoid enforcing strict typing rules on tests.
 module = "tests.*"
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Short-term: avoid mypy failures on optional tokenizer import in llm wrapper
+module = "phylogenic.llm_openai"
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 # Ignore bench and other non-source top-level test-like modules.

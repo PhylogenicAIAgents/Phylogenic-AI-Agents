@@ -603,7 +603,7 @@ class LiquidStateMachine:
         # Append bias column for closed-form solution convenience
         if method == "ridge":
             try:
-                from sklearn.linear_model import Ridge  # type: ignore[import-untyped]
+                from sklearn.linear_model import Ridge  # type: ignore
 
                 model = Ridge(alpha=alpha, fit_intercept=True)
                 model.fit(X, y)

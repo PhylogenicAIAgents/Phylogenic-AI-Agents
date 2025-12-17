@@ -236,7 +236,7 @@ class ObservabilityEngine:
 
             # GPU usage (if available)
             try:
-                import GPUtil  # type: ignore[import-untyped]
+                import GPUtil  # type: ignore
 
                 gpus = GPUtil.getGPUs()
                 if gpus:

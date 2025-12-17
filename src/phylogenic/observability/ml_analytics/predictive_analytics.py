@@ -182,10 +182,10 @@ class TimeSeriesForecaster:
         """
         try:
             from statsmodels.tsa.arima.model import (
-                ARIMA,  # type: ignore[import-untyped]
+                ARIMA,  # type: ignore
             )
             from statsmodels.tsa.stattools import (
-                adfuller,  # type: ignore[import-untyped]
+                adfuller,  # type: ignore
             )
 
             values = np.array(ts_data.values)
@@ -368,15 +368,15 @@ class TimeSeriesForecaster:
                 )
 
             from sklearn.preprocessing import (
-                MinMaxScaler,  # type: ignore[import-untyped]
+                MinMaxScaler,  # type: ignore
             )
-            from tensorflow.keras.layers import (  # type: ignore[import-untyped]
+            from tensorflow.keras.layers import (  # type: ignore
                 LSTM,
                 Dense,
                 Dropout,
             )
             from tensorflow.keras.models import (
-                Sequential,  # type: ignore[import-untyped]
+                Sequential,  # type: ignore
             )
 
             values = np.array(ts_data.values).reshape(-1, 1)

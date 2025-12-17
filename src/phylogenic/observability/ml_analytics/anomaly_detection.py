@@ -272,7 +272,7 @@ class AnomalyDetector:
             # Create and fit scaler; fall back to a simple scaler if sklearn missing
             try:
                 from sklearn.preprocessing import (
-                    StandardScaler,  # type: ignore[import-untyped]
+                    StandardScaler,  # type: ignore
                 )
 
                 self.scaler = StandardScaler()
@@ -409,7 +409,7 @@ class IsolationForestDetector(AnomalyDetector):
             # Check if scikit-learn is available
             try:
                 from sklearn.ensemble import (
-                    IsolationForest,  # type: ignore[import-untyped]
+                    IsolationForest,  # type: ignore
                 )
             except Exception:
                 IsolationForest = _SimpleIsolationForest

@@ -149,7 +149,7 @@ class AlertCorrelator:
             List of alert clusters
         """
         try:
-            from sklearn.cluster import DBSCAN  # type: ignore[import-untyped]
+            from sklearn.cluster import DBSCAN  # type: ignore
 
             if len(alerts) < 2:
                 return []
