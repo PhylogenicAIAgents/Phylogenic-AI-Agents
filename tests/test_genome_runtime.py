@@ -4,7 +4,6 @@ Runtime tests for ConversationalGenome class.
 Tests actual execution paths, state transitions, and runtime behavior.
 """
 
-
 import numpy as np
 import pytest
 
@@ -28,42 +27,44 @@ class TestGenomeRuntime:
     def test_trait_access_runtime(self, custom_genome):
         """Test trait access operations at runtime."""
         # Test get operations
-        empathy = custom_genome.get_trait_value('empathy')
+        empathy = custom_genome.get_trait_value("empathy")
         assert isinstance(empathy, float)
         assert 0.0 <= empathy <= 1.0
 
         # Test set operations
-        original_value = custom_genome.get_trait_value('empathy')
-        custom_genome.set_trait_value('empathy', 0.95)
-        assert custom_genome.get_trait_value('empathy') == 0.95
+        original_value = custom_genome.get_trait_value("empathy")
+        custom_genome.set_trait_value("empathy", 0.95)
+        assert custom_genome.get_trait_value("empathy") == 0.95
 
         # Verify gene was updated
         empathy_gene = next(
-            g for g in custom_genome.genes
-            if g.metadata.get('optimization_target') == 'empathy'
+            g
+            for g in custom_genome.genes
+            if g.metadata.get("optimization_target") == "empathy"
         )
         assert empathy_gene.expression_level == 0.95
 
         # Restore original
-        custom_genome.set_trait_value('empathy', original_value)
+        custom_genome.set_trait_value("empathy", original_value)
 
     def test_mutation_runtime_behavior(self, default_genome):
         """Test mutation operations execute correctly at runtime."""
         initial_traits = default_genome.traits.copy()
 
         # Mutate single trait
-        default_genome.mutate_trait('empathy', mutation_strength=0.2)
+        default_genome.mutate_trait("empathy", mutation_strength=0.2)
 
         # Verify mutation occurred
-        assert default_genome.get_trait_value('empathy') != initial_traits['empathy']
-        assert 0.0 <= default_genome.get_trait_value('empathy') <= 1.0
+        assert default_genome.get_trait_value("empathy") != initial_traits["empathy"]
+        assert 0.0 <= default_genome.get_trait_value("empathy") <= 1.0
 
         # Mutate all traits
         default_genome.mutate_all_traits(mutation_rate=1.0)
 
         # Verify some traits changed
         changes = sum(
-            1 for trait in initial_traits
+            1
+            for trait in initial_traits
             if default_genome.traits[trait] != initial_traits[trait]
         )
         assert changes > 0
@@ -80,7 +81,10 @@ class TestGenomeRuntime:
         assert_genome_valid(offspring)
 
         # Verify generation increment
-        assert offspring.generation == max(custom_genome.generation, technical_genome.generation) + 1
+        assert (
+            offspring.generation
+            == max(custom_genome.generation, technical_genome.generation) + 1
+        )
 
         # Verify parent tracking
         assert len(offspring.metadata.parent_ids) == 2
@@ -98,7 +102,9 @@ class TestGenomeRuntime:
             max(parent1_value, parent2_value)
 
             # Allow for variation in crossover
-            assert -0.1 <= offspring_value <= 1.1  # Allow slight overflow due to variation
+            assert (
+                -0.1 <= offspring_value <= 1.1
+            )  # Allow slight overflow due to variation
 
     def test_adaptation_runtime(self, default_genome):
         """Test adaptation from feedback executes correctly."""
@@ -109,7 +115,8 @@ class TestGenomeRuntime:
 
         # Verify adaptation occurred
         changes = sum(
-            1 for trait in initial_traits
+            1
+            for trait in initial_traits
             if abs(default_genome.traits[trait] - initial_traits[trait]) > 1e-6
         )
         assert changes > 0
@@ -128,11 +135,11 @@ class TestGenomeRuntime:
 
         # Verify serialization structure
         assert isinstance(data, dict)
-        assert 'genome_id' in data
-        assert 'traits' in data
-        assert 'fitness_score' in data
-        assert 'generation' in data
-        assert 'metadata' in data
+        assert "genome_id" in data
+        assert "traits" in data
+        assert "fitness_score" in data
+        assert "generation" in data
+        assert "metadata" in data
 
         # Deserialize
         restored = ConversationalGenome.from_dict(data)
@@ -158,7 +165,7 @@ class TestGenomeRuntime:
             results.append(default_genome.get_trait_value(trait_name))
 
         threads = []
-        for trait_name in ['empathy', 'engagement', 'creativity']:
+        for trait_name in ["empathy", "engagement", "creativity"]:
             thread = threading.Thread(target=mutate_trait, args=(trait_name,))
             threads.append(thread)
             thread.start()
@@ -174,38 +181,39 @@ class TestGenomeRuntime:
         """Test trait validation at runtime."""
         # Invalid trait value (too high)
         with pytest.raises(ValidationError):
-            ConversationalGenome("invalid", {'empathy': 1.5})
+            ConversationalGenome("invalid", {"empathy": 1.5})
 
         # Invalid trait value (negative)
         with pytest.raises(ValidationError):
-            ConversationalGenome("invalid", {'empathy': -0.1})
+            ConversationalGenome("invalid", {"empathy": -0.1})
 
         # Invalid trait name
         with pytest.raises(ValidationError):
-            ConversationalGenome("invalid", {'invalid_trait': 0.5})
+            ConversationalGenome("invalid", {"invalid_trait": 0.5})
 
         # Valid genome should work
-        valid_genome = ConversationalGenome("valid", {'empathy': 0.8})
+        valid_genome = ConversationalGenome("valid", {"empathy": 0.8})
         assert_genome_valid(valid_genome)
 
     def test_gene_expression_sync(self, default_genome):
         """Test gene expression levels sync with traits at runtime."""
         # Set trait value
-        default_genome.set_trait_value('empathy', 0.9)
+        default_genome.set_trait_value("empathy", 0.9)
 
         # Verify corresponding gene updated
         empathy_gene = next(
-            g for g in default_genome.genes
-            if g.metadata.get('optimization_target') == 'empathy'
+            g
+            for g in default_genome.genes
+            if g.metadata.get("optimization_target") == "empathy"
         )
         assert empathy_gene.expression_level == 0.9
 
         # Mutate trait
-        original_value = default_genome.get_trait_value('empathy')
-        default_genome.mutate_trait('empathy', mutation_strength=0.2)
+        original_value = default_genome.get_trait_value("empathy")
+        default_genome.mutate_trait("empathy", mutation_strength=0.2)
 
         # Verify gene updated
-        new_value = default_genome.get_trait_value('empathy')
+        new_value = default_genome.get_trait_value("empathy")
         assert empathy_gene.expression_level == new_value
         assert abs(empathy_gene.expression_level - original_value) > 0.01
 
@@ -258,4 +266,3 @@ class TestGenomeRuntime:
         # Verify all traits in valid range
         for trait_value in genome.traits.values():
             assert 0.0 <= trait_value <= 1.0
-

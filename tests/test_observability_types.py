@@ -87,9 +87,7 @@ class TestMetricValue:
     def test_metric_value_creation(self):
         """Test basic MetricValue creation."""
         metric = MetricValue(
-            name="test_metric",
-            value=42.0,
-            metric_type=MetricType.GAUGE
+            name="test_metric", value=42.0, metric_type=MetricType.GAUGE
         )
 
         assert metric.name == "test_metric"
@@ -112,7 +110,7 @@ class TestMetricValue:
             tags={"env": "test", "region": "us-east-1"},
             unit="requests",
             component=ComponentType.EVOLUTION_ENGINE,
-            correlation_id="req-12345"
+            correlation_id="req-12345",
         )
 
         assert metric.name == "test_metric"
@@ -128,18 +126,12 @@ class TestMetricValue:
         """Test MetricValue validation."""
         # Test None value
         with pytest.raises(ValueError, match="Metric value cannot be None"):
-            MetricValue(
-                name="test_metric",
-                value=None,
-                metric_type=MetricType.GAUGE
-            )
+            MetricValue(name="test_metric", value=None, metric_type=MetricType.GAUGE)
 
         # Test non-numeric value
         with pytest.raises(ValueError, match="Metric value must be numeric"):
             MetricValue(
-                name="test_metric",
-                value="not a number",
-                metric_type=MetricType.GAUGE
+                name="test_metric", value="not a number", metric_type=MetricType.GAUGE
             )
 
 
@@ -149,8 +141,7 @@ class TestPerformanceMetrics:
     def test_performance_metrics_creation(self):
         """Test basic PerformanceMetrics creation."""
         metrics = PerformanceMetrics(
-            component_type=ComponentType.EVOLUTION_ENGINE,
-            component_id="test-engine-1"
+            component_type=ComponentType.EVOLUTION_ENGINE, component_id="test-engine-1"
         )
 
         assert metrics.component_type == ComponentType.EVOLUTION_ENGINE
@@ -164,8 +155,7 @@ class TestPerformanceMetrics:
     def test_latency_updates(self):
         """Test latency measurement updates."""
         metrics = PerformanceMetrics(
-            component_type=ComponentType.KRAKEN_LNN,
-            component_id="test-kraken-1"
+            component_type=ComponentType.KRAKEN_LNN, component_id="test-kraken-1"
         )
 
         # Record first latency
@@ -185,8 +175,7 @@ class TestPerformanceMetrics:
     def test_success_updates(self):
         """Test success/failure updates."""
         metrics = PerformanceMetrics(
-            component_type=ComponentType.NLP_AGENT,
-            component_id="test-agent-1"
+            component_type=ComponentType.NLP_AGENT, component_id="test-agent-1"
         )
 
         # Record success
@@ -206,15 +195,12 @@ class TestPerformanceMetrics:
     def test_resource_usage_updates(self):
         """Test resource usage updates."""
         metrics = PerformanceMetrics(
-            component_type=ComponentType.SYSTEM,
-            component_id="test-system-1"
+            component_type=ComponentType.SYSTEM, component_id="test-system-1"
         )
 
         # Update resource usage
         metrics.update_resource_usage(
-            memory_usage_mb=1024.0,
-            cpu_usage_percent=75.5,
-            gpu_usage_percent=50.0
+            memory_usage_mb=1024.0, cpu_usage_percent=75.5, gpu_usage_percent=50.0
         )
 
         assert metrics.memory_usage_mb == 1024.0
@@ -245,7 +231,7 @@ class TestBenchmarkResult:
             total_runs=10,
             successful_runs=10,
             failed_runs=0,
-            error_rate=0.0
+            error_rate=0.0,
         )
 
         assert result.benchmark_id == "bench-123"
@@ -274,7 +260,7 @@ class TestBenchmarkResult:
             total_runs=10,
             successful_runs=8,
             failed_runs=2,
-            error_rate=0.2
+            error_rate=0.2,
         )
 
         assert result.success_rate == 0.8  # 8/10 successful
@@ -297,7 +283,7 @@ class TestBenchmarkResult:
             total_runs=0,
             successful_runs=0,
             failed_runs=0,
-            error_rate=0.0
+            error_rate=0.0,
         )
 
         assert result_no_runs.success_rate == 0.0
@@ -321,7 +307,7 @@ class TestBenchmarkResult:
             total_runs=5,
             successful_runs=5,
             failed_runs=0,
-            error_rate=0.0
+            error_rate=0.0,
         )
 
         result_dict = result.to_dict()
@@ -375,8 +361,7 @@ class TestComponentMetrics:
     def test_component_metrics_creation(self):
         """Test basic ComponentMetrics creation."""
         metrics = ComponentMetrics(
-            component_type=ComponentType.EVOLUTION_ENGINE,
-            component_id="engine-1"
+            component_type=ComponentType.EVOLUTION_ENGINE, component_id="engine-1"
         )
 
         assert metrics.component_type == ComponentType.EVOLUTION_ENGINE
@@ -392,14 +377,14 @@ class TestComponentMetrics:
     def test_heartbeat_update(self):
         """Test heartbeat updates."""
         metrics = ComponentMetrics(
-            component_type=ComponentType.KRAKEN_LNN,
-            component_id="kraken-1"
+            component_type=ComponentType.KRAKEN_LNN, component_id="kraken-1"
         )
 
         original_updated = metrics.updated_at
 
         # Small delay to ensure timestamp changes
         import time
+
         time.sleep(0.001)
 
         metrics.update_heartbeat()
@@ -421,7 +406,7 @@ class TestAlertRule:
             metric_name="average_latency_ms",
             threshold=5000.0,
             condition="gt",
-            severity=AlertSeverity.WARNING
+            severity=AlertSeverity.WARNING,
         )
 
         assert rule.rule_id == "test-rule"
@@ -446,7 +431,7 @@ class TestAlertRule:
             threshold=80.0,
             condition="gt",
             severity=AlertSeverity.WARNING,
-            minimum_samples=3
+            minimum_samples=3,
         )
 
         # Should not trigger with insufficient samples
@@ -467,7 +452,7 @@ class TestAlertRule:
             metric_name="memory_usage_mb",
             threshold=1000.0,
             condition="lt",
-            severity=AlertSeverity.WARNING
+            severity=AlertSeverity.WARNING,
         )
 
         assert rule_lt.evaluate(500.0, 5)  # Value < threshold
@@ -488,7 +473,7 @@ class TestAlert:
             component_id="engine-1",
             metric_name="average_latency_ms",
             current_value=6000.0,
-            threshold=5000.0
+            threshold=5000.0,
         )
 
         assert alert.rule_id == "test-rule"
@@ -595,11 +580,7 @@ class TestUtilityFunctions:
         """Test proper datetime handling in metrics."""
         before = datetime.now(timezone.utc)
 
-        metric = MetricValue(
-            name="test",
-            value=42.0,
-            metric_type=MetricType.GAUGE
-        )
+        metric = MetricValue(name="test", value=42.0, metric_type=MetricType.GAUGE)
 
         after = datetime.now(timezone.utc)
 
@@ -609,27 +590,27 @@ class TestUtilityFunctions:
         """Test relationships between nested dataclasses."""
         # Create a performance metrics instance
         perf_metrics = PerformanceMetrics(
-            component_type=ComponentType.EVOLUTION_ENGINE,
-            component_id="test-engine"
+            component_type=ComponentType.EVOLUTION_ENGINE, component_id="test-engine"
         )
 
         # Create component metrics with performance metrics
         component_metrics = ComponentMetrics(
             component_type=ComponentType.EVOLUTION_ENGINE,
             component_id="test-engine",
-            performance_metrics=perf_metrics
+            performance_metrics=perf_metrics,
         )
 
         assert component_metrics.performance_metrics is perf_metrics
-        assert component_metrics.performance_metrics.component_type == ComponentType.EVOLUTION_ENGINE
+        assert (
+            component_metrics.performance_metrics.component_type
+            == ComponentType.EVOLUTION_ENGINE
+        )
 
     def test_config_validation(self):
         """Test configuration validation."""
         # Test valid configuration
         config = MonitoringConfig(
-            enabled=True,
-            collection_interval_seconds=5,
-            retention_hours=24
+            enabled=True, collection_interval_seconds=5, retention_hours=24
         )
 
         assert config.enabled is True

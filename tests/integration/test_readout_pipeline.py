@@ -6,7 +6,9 @@ from phylogenic.kraken_lnn import KrakenLNN
 def test_readout_pipeline_train_save_load(tmp_path):
     rng = np.random.RandomState(0)
     reservoir_size = 5
-    kraken = KrakenLNN(reservoir_size=reservoir_size, memory_buffer_size=50, random_state=rng)
+    kraken = KrakenLNN(
+        reservoir_size=reservoir_size, memory_buffer_size=50, random_state=rng
+    )
 
     n_samples = 12
     true_w = np.array([0.7, -0.4, 1.1, -0.2, 0.9])
@@ -17,7 +19,9 @@ def test_readout_pipeline_train_save_load(tmp_path):
         label = float(state @ true_w + true_bias)
         kraken.temporal_memory.add_memory({"reservoir_state": state, "label": label})
 
-    res = kraken.train_readout_from_memory(lambda m: m["label"], min_samples=10, method="ridge", alpha=1e-6)
+    res = kraken.train_readout_from_memory(
+        lambda m: m["label"], min_samples=10, method="ridge", alpha=1e-6
+    )
     assert res["n_samples"] == n_samples
     assert np.allclose(kraken.readout_weights, true_w, atol=1e-5)
     assert abs(kraken.readout_bias - true_bias) < 1e-5

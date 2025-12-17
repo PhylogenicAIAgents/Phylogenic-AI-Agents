@@ -37,15 +37,16 @@ TraitDict = Dict[str, float]
 
 # Trait names (8 core traits)
 TraitName = Literal[
-    'empathy',
-    'engagement',
-    'technical_knowledge',
-    'creativity',
-    'conciseness',
-    'context_awareness',
-    'adaptability',
-    'personability'
+    "empathy",
+    "engagement",
+    "technical_knowledge",
+    "creativity",
+    "conciseness",
+    "context_awareness",
+    "adaptability",
+    "personability",
 ]
+
 
 @dataclass
 class ConversationTurn:
@@ -59,12 +60,14 @@ class ConversationTurn:
         response_quality_score: Quality score from 0.0 to 1.0
         evolutionary_adaptations: List of adaptations made during this turn
     """
+
     user_input: str
     agent_response: str
     timestamp: str
     context_embedding: Optional[List[float]] = None
     response_quality_score: float = 0.0
     evolutionary_adaptations: Optional[List[str]] = None
+
 
 @dataclass
 class AgentResponse:
@@ -78,12 +81,14 @@ class AgentResponse:
         generation_time: Time taken to generate response (seconds)
         metadata: Additional response metadata
     """
+
     content: str
     genome_id: str
     traits_used: TraitDict
     quality_score: float
     generation_time: float
     metadata: Dict[str, Any]
+
 
 class AgentConfigDict(TypedDict, total=False):
     """Configuration dictionary for agent creation.
@@ -96,12 +101,14 @@ class AgentConfigDict(TypedDict, total=False):
         memory_enabled: Whether to enable conversation memory
         evolution_enabled: Whether to enable evolutionary adaptation
     """
+
     model_name: str
     temperature: float
     max_tokens: int
     streaming: bool
     memory_enabled: bool
     evolution_enabled: bool
+
 
 class EvolutionConfigDict(TypedDict, total=False):
     """Configuration dictionary for evolution engine.
@@ -114,12 +121,14 @@ class EvolutionConfigDict(TypedDict, total=False):
         selection_pressure: Fraction of best individuals to keep (0.0-1.0)
         elitism_enabled: Whether to preserve best genomes
     """
+
     population_size: int
     generations: int
     mutation_rate: float
     crossover_rate: float
     selection_pressure: float
     elitism_enabled: bool
+
 
 @dataclass
 class FitnessMetrics:
@@ -135,6 +144,7 @@ class FitnessMetrics:
         empathy: Empathy score (0.0-1.0)
         overall_fitness: Overall fitness score (0.0-1.0)
     """
+
     relevance: float
     coherence: float
     engagement: float
@@ -143,6 +153,7 @@ class FitnessMetrics:
     creativity: float
     empathy: float
     overall_fitness: float
+
 
 @dataclass
 class GenomeMetadata:
@@ -156,10 +167,10 @@ class GenomeMetadata:
         lineage: Complete lineage trace
         tags: User-defined tags for organization
     """
+
     creation_timestamp: datetime
     last_mutation: Optional[datetime] = None
     generation: int = 0
     parent_ids: Optional[List[str]] = None
     lineage: Optional[List[str]] = None
     tags: Optional[List[str]] = None
-

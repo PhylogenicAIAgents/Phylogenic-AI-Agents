@@ -22,7 +22,7 @@
 # from: https://gumroad.com/l/[YOUR_LINK]
 # =============================================================================
 
-from typing import Any, Dict
+from typing import Dict
 
 try:
     # Pydantic v1 or v2 - use BaseModel for compatibility
@@ -34,11 +34,13 @@ except Exception:
 try:
     # Pydantic v2 settings
     from pydantic_settings import BaseSettings, SettingsConfigDict
+
     _HAS_SETTINGS = True
 except ImportError:
     # Fallback or older version
     try:
         from pydantic import BaseSettings
+
         _HAS_SETTINGS = True
     except ImportError:
         _HAS_SETTINGS = False
@@ -47,15 +49,16 @@ except ImportError:
 # Central configuration definitions using pydantic
 
 DEFAULT_TRAITS: Dict[str, float] = {
-    'empathy': 0.5,
-    'engagement': 0.5,
-    'technical_knowledge': 0.5,
-    'creativity': 0.5,
-    'conciseness': 0.5,
-    'context_awareness': 0.5,
-    'adaptability': 0.5,
-    'personability': 0.5
+    "empathy": 0.5,
+    "engagement": 0.5,
+    "technical_knowledge": 0.5,
+    "creativity": 0.5,
+    "conciseness": 0.5,
+    "context_awareness": 0.5,
+    "adaptability": 0.5,
+    "personability": 0.5,
 }
+
 
 class AgentSettings(BaseModel):
     model_name: str = Field("gpt-4", description="Name of the LLM to use")
@@ -65,6 +68,7 @@ class AgentSettings(BaseModel):
     memory_enabled: bool = True
     evolution_enabled: bool = True
     kraken_enabled: bool = True
+
 
 class EvolutionSettings(BaseModel):
     population_size: int = 100
@@ -85,10 +89,12 @@ class EvolutionSettings(BaseModel):
     # respect the immutable flag first and fall back to the hpc_mode setting
     # only when immutable_evolution is False.
 
+
 class KrakenSettings(BaseModel):
     reservoir_size: int = 100
     connectivity: float = 0.1
     memory_buffer_size: int = 1000
+
 
 class LiquidDynamicsSettings(BaseModel):
     viscosity: float = 0.1
@@ -96,6 +102,7 @@ class LiquidDynamicsSettings(BaseModel):
     pressure: float = 1.0
     flow_rate: float = 0.5
     turbulence: float = 0.05
+
 
 class AlleleSettings(BaseSettings if _HAS_SETTINGS else BaseModel):
     """Application settings loaded from environment variables or .env files.
@@ -115,14 +122,15 @@ class AlleleSettings(BaseSettings if _HAS_SETTINGS else BaseModel):
             env_nested_delimiter="__",
             env_file=".env",
             env_file_encoding="utf-8",
-            extra="ignore"
+            extra="ignore",
         )
     else:
+
         class Config:
             env_nested_delimiter = "__"
             env_file = ".env"
             env_file_encoding = "utf-8"
 
+
 # Singleton instance to use across the package
 settings = AlleleSettings()
-

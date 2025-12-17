@@ -35,6 +35,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
+from numpy.typing import NDArray
 
 import numpy as np
 
@@ -43,6 +44,7 @@ from ..types import AlertSeverity, ComponentType
 
 class AnomalyType(str, Enum):
     """Types of anomalies that can be detected."""
+
     PERFORMANCE_DEGRADATION = "performance_degradation"
     RESOURCE_SPIKE = "resource_spike"
     MEMORY_LEAK = "memory_leak"
@@ -55,6 +57,7 @@ class AnomalyType(str, Enum):
 
 class PredictionType(str, Enum):
     """Types of predictions that can be made."""
+
     PERFORMANCE_FORECAST = "performance_forecast"
     RESOURCE_USAGE = "resource_usage"
     ERROR_PROBABILITY = "error_probability"
@@ -65,6 +68,7 @@ class PredictionType(str, Enum):
 
 class OptimizationCategory(str, Enum):
     """Categories of optimization recommendations."""
+
     CONFIGURATION_TUNING = "configuration_tuning"
     RESOURCE_ALLOCATION = "resource_allocation"
     PERFORMANCE_TUNING = "performance_tuning"
@@ -75,6 +79,7 @@ class OptimizationCategory(str, Enum):
 
 class ModelStatus(str, Enum):
     """Status of ML models."""
+
     TRAINING = "training"
     READY = "ready"
     DEGRADED = "degraded"
@@ -85,6 +90,7 @@ class ModelStatus(str, Enum):
 @dataclass
 class MLMetric:
     """ML metric with timestamp and component information."""
+
     timestamp: datetime
     component_type: ComponentType
     component_id: str
@@ -92,14 +98,14 @@ class MLMetric:
     value: float
     metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def to_vector(self) -> np.ndarray:
+    def to_vector(self) -> NDArray[Any]:
         """Convert to numerical vector for ML models."""
         # Create a feature vector from the metric
         features = [
             self.value,
             self.timestamp.timestamp(),
             hash(self.component_type.value) % 1000,
-            hash(self.metric_name) % 1000
+            hash(self.metric_name) % 1000,
         ]
         return np.array(features, dtype=float)
 
@@ -111,13 +117,14 @@ class MLMetric:
             "component_id": self.component_id,
             "metric_name": self.metric_name,
             "value": self.value,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
 
 @dataclass
 class AnomalyResult:
     """Result from anomaly detection."""
+
     timestamp: datetime
     component_type: ComponentType
     component_id: str
@@ -141,7 +148,7 @@ class AnomalyResult:
     model_name: str = ""
     model_version: str = ""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Calculate derived fields."""
         self.deviation = self.actual_value - self.expected_value
         self.severity = self._calculate_severity()
@@ -177,13 +184,14 @@ class AnomalyResult:
             "context": self.context,
             "recommendations": self.recommendations,
             "model_name": self.model_name,
-            "model_version": self.model_version
+            "model_version": self.model_version,
         }
 
 
 @dataclass
 class PredictionResult:
     """Result from predictive analytics."""
+
     timestamp: datetime
     prediction_type: PredictionType
     component_type: ComponentType
@@ -219,13 +227,14 @@ class PredictionResult:
             "model_version": self.model_version,
             "model_accuracy": self.model_accuracy,
             "feature_importance": self.feature_importance,
-            "prediction_explanation": self.prediction_explanation
+            "prediction_explanation": self.prediction_explanation,
         }
 
 
 @dataclass
 class AlertCluster:
     """Cluster of related alerts."""
+
     cluster_id: str
     cluster_type: str  # "root_cause", "cascading", "independent"
 
@@ -240,8 +249,12 @@ class AlertCluster:
     impact_assessment: str = ""
 
     # Timing information
-    first_alert_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    last_alert_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    first_alert_time: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+    last_alert_time: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
     duration_minutes: float = 0.0
 
     def update_cluster(self, alert_data: Dict[str, Any]) -> None:
@@ -268,7 +281,7 @@ class AlertCluster:
             AlertSeverity.CRITICAL: 1.0,
             AlertSeverity.ERROR: 0.8,
             AlertSeverity.WARNING: 0.5,
-            AlertSeverity.INFO: 0.2
+            AlertSeverity.INFO: 0.2,
         }
 
         severity_score = 0.0
@@ -282,9 +295,7 @@ class AlertCluster:
 
         # Combined score
         self.priority_score = (
-            alert_count_score * 0.3 +
-            severity_score * 0.5 +
-            duration_score * 0.2
+            alert_count_score * 0.3 + severity_score * 0.5 + duration_score * 0.2
         )
 
         return self.priority_score
@@ -302,13 +313,14 @@ class AlertCluster:
             "impact_assessment": self.impact_assessment,
             "first_alert_time": self.first_alert_time.isoformat(),
             "last_alert_time": self.last_alert_time.isoformat(),
-            "duration_minutes": self.duration_minutes
+            "duration_minutes": self.duration_minutes,
         }
 
 
 @dataclass
 class OptimizationRecommendation:
     """Recommendation from optimization engine."""
+
     recommendation_id: str
     category: OptimizationCategory
     title: str
@@ -361,13 +373,14 @@ class OptimizationRecommendation:
             "created_at": self.created_at.isoformat(),
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
             "priority": self.priority,
-            "is_expired": self.is_expired()
+            "is_expired": self.is_expired(),
         }
 
 
 @dataclass
 class ModelMetrics:
     """Metrics for ML models."""
+
     model_name: str
     model_version: str
     status: ModelStatus
@@ -408,16 +421,17 @@ class ModelMetrics:
     def is_healthy(self) -> bool:
         """Check if model is healthy."""
         return (
-            self.status == ModelStatus.READY and
-            self.accuracy > 0.7 and
-            self.calculate_success_rate() > 0.9 and
-            self.data_drift_score < 0.5
+            self.status == ModelStatus.READY
+            and self.accuracy > 0.7
+            and self.calculate_success_rate() > 0.9
+            and self.data_drift_score < 0.5
         )
 
 
 @dataclass
 class TimeSeriesData:
     """Time series data for ML models."""
+
     timestamps: List[datetime]
     values: List[float]
     component_type: ComponentType
@@ -429,7 +443,7 @@ class TimeSeriesData:
     missing_values: List[int] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate time series data."""
         if len(self.timestamps) != len(self.values):
             raise ValueError("Timestamps and values must have same length")
@@ -437,7 +451,7 @@ class TimeSeriesData:
         if len(self.timestamps) < 10:
             raise ValueError("Time series must have at least 10 data points")
 
-    def to_numpy_arrays(self) -> Tuple[np.ndarray, np.ndarray]:
+    def to_numpy_arrays(self) -> Tuple[NDArray[Any], NDArray[Any]]:
         """Convert to numpy arrays for ML models."""
         timestamps_float = np.array([ts.timestamp() for ts in self.timestamps])
         values_array = np.array(self.values)
@@ -457,5 +471,5 @@ class TimeSeriesData:
             "median": float(np.median(values_array)),
             "count": len(self.values),
             "missing_count": len(self.missing_values),
-            "frequency_minutes": self.frequency_minutes
+            "frequency_minutes": self.frequency_minutes,
         }

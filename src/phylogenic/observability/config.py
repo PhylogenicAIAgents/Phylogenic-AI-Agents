@@ -53,13 +53,15 @@ class ObservabilitySettings:
     # Core monitoring settings
     monitoring: MonitoringConfig = field(default_factory=MonitoringConfig)
     dashboard: DashboardConfig = field(default_factory=DashboardConfig)
-    matrix_benchmark: MatrixBenchmarkConfig = field(default_factory=MatrixBenchmarkConfig)
+    matrix_benchmark: MatrixBenchmarkConfig = field(
+        default_factory=MatrixBenchmarkConfig
+    )
     mlflow: MLflowConfig = field(default_factory=MLflowConfig)
 
     # Default alert rules
     default_alert_rules: List[AlertRule] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize default settings and validate configuration."""
         self._setup_default_alert_rules()
         self._validate_settings()
@@ -79,7 +81,7 @@ class ObservabilitySettings:
                     condition="gt",
                     severity=AlertSeverity.WARNING,
                     notification_channels=["log"],
-                    cooldown_seconds=300
+                    cooldown_seconds=300,
                 ),
                 AlertRule(
                     rule_id="evolution_error_rate_high",
@@ -91,9 +93,8 @@ class ObservabilitySettings:
                     condition="gt",
                     severity=AlertSeverity.ERROR,
                     notification_channels=["log"],
-                    cooldown_seconds=600
+                    cooldown_seconds=600,
                 ),
-
                 # Kraken LNN alerts
                 AlertRule(
                     rule_id="kraken_memory_high",
@@ -105,7 +106,7 @@ class ObservabilitySettings:
                     condition="gt",
                     severity=AlertSeverity.WARNING,
                     notification_channels=["log"],
-                    cooldown_seconds=300
+                    cooldown_seconds=300,
                 ),
                 AlertRule(
                     rule_id="kraken_latency_high",
@@ -117,9 +118,8 @@ class ObservabilitySettings:
                     condition="gt",
                     severity=AlertSeverity.WARNING,
                     notification_channels=["log"],
-                    cooldown_seconds=300
+                    cooldown_seconds=300,
                 ),
-
                 # NLP Agent alerts
                 AlertRule(
                     rule_id="agent_latency_high",
@@ -131,7 +131,7 @@ class ObservabilitySettings:
                     condition="gt",
                     severity=AlertSeverity.WARNING,
                     notification_channels=["log"],
-                    cooldown_seconds=300
+                    cooldown_seconds=300,
                 ),
                 AlertRule(
                     rule_id="agent_error_rate_high",
@@ -143,9 +143,8 @@ class ObservabilitySettings:
                     condition="gt",
                     severity=AlertSeverity.ERROR,
                     notification_channels=["log"],
-                    cooldown_seconds=600
+                    cooldown_seconds=600,
                 ),
-
                 # System alerts
                 AlertRule(
                     rule_id="system_memory_high",
@@ -157,7 +156,7 @@ class ObservabilitySettings:
                     condition="gt",
                     severity=AlertSeverity.WARNING,
                     notification_channels=["log"],
-                    cooldown_seconds=300
+                    cooldown_seconds=300,
                 ),
                 AlertRule(
                     rule_id="system_cpu_high",
@@ -169,7 +168,7 @@ class ObservabilitySettings:
                     condition="gt",
                     severity=AlertSeverity.WARNING,
                     notification_channels=["log"],
-                    cooldown_seconds=300
+                    cooldown_seconds=300,
                 ),
                 AlertRule(
                     rule_id="system_health_degraded",
@@ -181,8 +180,8 @@ class ObservabilitySettings:
                     condition="lt",
                     severity=AlertSeverity.ERROR,
                     notification_channels=["log"],
-                    cooldown_seconds=600
-                )
+                    cooldown_seconds=600,
+                ),
             ]
 
     def _validate_settings(self) -> None:
@@ -201,67 +200,160 @@ class ObservabilitySettings:
         # Validate MLflow settings
         if self.mlflow.enabled:
             if not self.mlflow.tracking_uri:
-                raise ValueError("MLflow tracking URI is required when MLflow is enabled")
+                raise ValueError(
+                    "MLflow tracking URI is required when MLflow is enabled"
+                )
 
     @classmethod
     def from_env(cls) -> "ObservabilitySettings":
         """Create settings from environment variables."""
         return cls(
             monitoring=MonitoringConfig(
-                enabled=os.getenv("PHYLOGENIC_MONITORING_ENABLED", "true").lower() == "true",
-                collection_interval_seconds=int(os.getenv("PHYLOGENIC_COLLECTION_INTERVAL", "10")),
+                enabled=os.getenv("PHYLOGENIC_MONITORING_ENABLED", "true").lower()
+                == "true",
+                collection_interval_seconds=int(
+                    os.getenv("PHYLOGENIC_COLLECTION_INTERVAL", "10")
+                ),
                 retention_hours=int(os.getenv("PHYLOGENIC_RETENTION_HOURS", "168")),
-                monitor_evolution=os.getenv("PHYLOGENIC_MONITOR_EVOLUTION", "true").lower() == "true",
-                monitor_kraken=os.getenv("PHYLOGENIC_MONITOR_KRAKEN", "true").lower() == "true",
-                monitor_agents=os.getenv("PHYLOGENIC_MONITOR_AGENTS", "true").lower() == "true",
-                monitor_system=os.getenv("PHYLOGENIC_MONITOR_SYSTEM", "true").lower() == "true",
-                alerting_enabled=os.getenv("PHYLOGENIC_ALERTING_ENABLED", "true").lower() == "true",
-                dashboard_enabled=os.getenv("PHYLOGENIC_DASHBOARD_ENABLED", "true").lower() == "true",
+                monitor_evolution=os.getenv(
+                    "PHYLOGENIC_MONITOR_EVOLUTION", "true"
+                ).lower()
+                == "true",
+                monitor_kraken=os.getenv("PHYLOGENIC_MONITOR_KRAKEN", "true").lower()
+                == "true",
+                monitor_agents=os.getenv("PHYLOGENIC_MONITOR_AGENTS", "true").lower()
+                == "true",
+                monitor_system=os.getenv("PHYLOGENIC_MONITOR_SYSTEM", "true").lower()
+                == "true",
+                alerting_enabled=os.getenv(
+                    "PHYLOGENIC_ALERTING_ENABLED", "true"
+                ).lower()
+                == "true",
+                dashboard_enabled=os.getenv(
+                    "PHYLOGENIC_DASHBOARD_ENABLED", "true"
+                ).lower()
+                == "true",
                 dashboard_port=int(os.getenv("PHYLOGENIC_DASHBOARD_PORT", "8080")),
                 dashboard_host=os.getenv("PHYLOGENIC_DASHBOARD_HOST", "localhost"),
-                mlflow_enabled=os.getenv("PHYLOGENIC_MLFLOW_ENABLED", "true").lower() == "true",
-                mlflow_tracking_uri=os.getenv("PHYLOGENIC_MLFLOW_TRACKING_URI", "sqlite:///mlflow.db"),
-                mlflow_experiment_name=os.getenv("PHYLOGENIC_MLFLOW_EXPERIMENT_NAME", "allele_benchmarks")
+                mlflow_enabled=os.getenv("PHYLOGENIC_MLFLOW_ENABLED", "true").lower()
+                == "true",
+                mlflow_tracking_uri=os.getenv(
+                    "PHYLOGENIC_MLFLOW_TRACKING_URI", "sqlite:///mlflow.db"
+                ),
+                mlflow_experiment_name=os.getenv(
+                    "PHYLOGENIC_MLFLOW_EXPERIMENT_NAME", "allele_benchmarks"
+                ),
             ),
             dashboard=DashboardConfig(
-                enabled=os.getenv("PHYLOGENIC_DASHBOARD_ENABLED", "true").lower() == "true",
+                enabled=os.getenv("PHYLOGENIC_DASHBOARD_ENABLED", "true").lower()
+                == "true",
                 host=os.getenv("PHYLOGENIC_DASHBOARD_HOST", "localhost"),
                 port=int(os.getenv("PHYLOGENIC_DASHBOARD_PORT", "8080")),
-                title=os.getenv("PHYLOGENIC_DASHBOARD_TITLE", "Allele Monitoring Dashboard"),
-                refresh_interval_seconds=int(os.getenv("PHYLOGENIC_DASHBOARD_REFRESH", "30")),
-                auto_refresh=os.getenv("PHYLOGENIC_DASHBOARD_AUTO_REFRESH", "true").lower() == "true",
-                show_evolution_metrics=os.getenv("PHYLOGENIC_SHOW_EVOLUTION_METRICS", "true").lower() == "true",
-                show_kraken_metrics=os.getenv("PHYLOGENIC_SHOW_KRAKEN_METRICS", "true").lower() == "true",
-                show_agent_metrics=os.getenv("PHYLOGENIC_SHOW_AGENT_METRICS", "true").lower() == "true",
-                show_system_metrics=os.getenv("PHYLOGENIC_SHOW_SYSTEM_METRICS", "true").lower() == "true",
-                show_active_alerts=os.getenv("PHYLOGENIC_SHOW_ACTIVE_ALERTS", "true").lower() == "true",
-                export_enabled=os.getenv("PHYLOGENIC_DASHBOARD_EXPORT_ENABLED", "true").lower() == "true"
+                title=os.getenv(
+                    "PHYLOGENIC_DASHBOARD_TITLE", "Allele Monitoring Dashboard"
+                ),
+                refresh_interval_seconds=int(
+                    os.getenv("PHYLOGENIC_DASHBOARD_REFRESH", "30")
+                ),
+                auto_refresh=os.getenv(
+                    "PHYLOGENIC_DASHBOARD_AUTO_REFRESH", "true"
+                ).lower()
+                == "true",
+                show_evolution_metrics=os.getenv(
+                    "PHYLOGENIC_SHOW_EVOLUTION_METRICS", "true"
+                ).lower()
+                == "true",
+                show_kraken_metrics=os.getenv(
+                    "PHYLOGENIC_SHOW_KRAKEN_METRICS", "true"
+                ).lower()
+                == "true",
+                show_agent_metrics=os.getenv(
+                    "PHYLOGENIC_SHOW_AGENT_METRICS", "true"
+                ).lower()
+                == "true",
+                show_system_metrics=os.getenv(
+                    "PHYLOGENIC_SHOW_SYSTEM_METRICS", "true"
+                ).lower()
+                == "true",
+                show_active_alerts=os.getenv(
+                    "PHYLOGENIC_SHOW_ACTIVE_ALERTS", "true"
+                ).lower()
+                == "true",
+                export_enabled=os.getenv(
+                    "PHYLOGENIC_DASHBOARD_EXPORT_ENABLED", "true"
+                ).lower()
+                == "true",
             ),
             matrix_benchmark=MatrixBenchmarkConfig(
-                enabled=os.getenv("PHYLOGENIC_MATRIX_BENCHMARK_ENABLED", "true").lower() == "true",
-                runs_per_config=int(os.getenv("PHYLOGENIC_BENCHMARK_RUNS_PER_CONFIG", "3")),
+                enabled=os.getenv("PHYLOGENIC_MATRIX_BENCHMARK_ENABLED", "true").lower()
+                == "true",
+                runs_per_config=int(
+                    os.getenv("PHYLOGENIC_BENCHMARK_RUNS_PER_CONFIG", "3")
+                ),
                 timeout_seconds=int(os.getenv("PHYLOGENIC_BENCHMARK_TIMEOUT", "300")),
-                parallel_workers=int(os.getenv("PHYLOGENIC_BENCHMARK_PARALLEL_WORKERS", "1")),
-                max_concurrent_tests=int(os.getenv("PHYLOGENIC_BENCHMARK_MAX_CONCURRENT", "4")),
-                save_results=os.getenv("PHYLOGENIC_BENCHMARK_SAVE_RESULTS", "true").lower() == "true",
-                results_path=os.getenv("PHYLOGENIC_BENCHMARK_RESULTS_PATH", "benchmark_results"),
-                generate_report=os.getenv("PHYLOGENIC_BENCHMARK_GENERATE_REPORT", "true").lower() == "true",
-                measure_memory=os.getenv("PHYLOGENIC_BENCHMARK_MEASURE_MEMORY", "true").lower() == "true",
-                measure_cpu=os.getenv("PHYLOGENIC_BENCHMARK_MEASURE_CPU", "true").lower() == "true"
+                parallel_workers=int(
+                    os.getenv("PHYLOGENIC_BENCHMARK_PARALLEL_WORKERS", "1")
+                ),
+                max_concurrent_tests=int(
+                    os.getenv("PHYLOGENIC_BENCHMARK_MAX_CONCURRENT", "4")
+                ),
+                save_results=os.getenv(
+                    "PHYLOGENIC_BENCHMARK_SAVE_RESULTS", "true"
+                ).lower()
+                == "true",
+                results_path=os.getenv(
+                    "PHYLOGENIC_BENCHMARK_RESULTS_PATH", "benchmark_results"
+                ),
+                generate_report=os.getenv(
+                    "PHYLOGENIC_BENCHMARK_GENERATE_REPORT", "true"
+                ).lower()
+                == "true",
+                measure_memory=os.getenv(
+                    "PHYLOGENIC_BENCHMARK_MEASURE_MEMORY", "true"
+                ).lower()
+                == "true",
+                measure_cpu=os.getenv(
+                    "PHYLOGENIC_BENCHMARK_MEASURE_CPU", "true"
+                ).lower()
+                == "true",
             ),
             mlflow=MLflowConfig(
-                enabled=os.getenv("PHYLOGENIC_MLFLOW_ENABLED", "true").lower() == "true",
-                tracking_uri=os.getenv("PHYLOGENIC_MLFLOW_TRACKING_URI", "sqlite:///mlflow.db"),
-                experiment_name=os.getenv("PHYLOGENIC_MLFLOW_EXPERIMENT_NAME", "allele_observability"),
-                model_registry_enabled=os.getenv("PHYLOGENIC_MLFLOW_MODEL_REGISTRY", "true").lower() == "true",
-                artifact_location=os.getenv("PHYLOGENIC_MLFLOW_ARTIFACT_LOCATION", "./mlflow_artifacts"),
-                auto_log_evolution=os.getenv("ALlELE_MLFLOW_AUTO_LOG_EVOLUTION", "true").lower() == "true",
-                auto_log_kraken=os.getenv("PHYLOGENIC_MLFLOW_AUTO_LOG_KRAKEN", "true").lower() == "true",
-                auto_log_agents=os.getenv("PHYLOGENIC_MLFLOW_AUTO_LOG_AGENTS", "true").lower() == "true",
-                batch_logging=os.getenv("PHYLOGENIC_MLFLOW_BATCH_LOGGING", "true").lower() == "true",
+                enabled=os.getenv("PHYLOGENIC_MLFLOW_ENABLED", "true").lower()
+                == "true",
+                tracking_uri=os.getenv(
+                    "PHYLOGENIC_MLFLOW_TRACKING_URI", "sqlite:///mlflow.db"
+                ),
+                experiment_name=os.getenv(
+                    "PHYLOGENIC_MLFLOW_EXPERIMENT_NAME", "allele_observability"
+                ),
+                model_registry_enabled=os.getenv(
+                    "PHYLOGENIC_MLFLOW_MODEL_REGISTRY", "true"
+                ).lower()
+                == "true",
+                artifact_location=os.getenv(
+                    "PHYLOGENIC_MLFLOW_ARTIFACT_LOCATION", "./mlflow_artifacts"
+                ),
+                auto_log_evolution=os.getenv(
+                    "ALlELE_MLFLOW_AUTO_LOG_EVOLUTION", "true"
+                ).lower()
+                == "true",
+                auto_log_kraken=os.getenv(
+                    "PHYLOGENIC_MLFLOW_AUTO_LOG_KRAKEN", "true"
+                ).lower()
+                == "true",
+                auto_log_agents=os.getenv(
+                    "PHYLOGENIC_MLFLOW_AUTO_LOG_AGENTS", "true"
+                ).lower()
+                == "true",
+                batch_logging=os.getenv(
+                    "PHYLOGENIC_MLFLOW_BATCH_LOGGING", "true"
+                ).lower()
+                == "true",
                 batch_size=int(os.getenv("PHYLOGENIC_MLFLOW_BATCH_SIZE", "100")),
-                log_interval_seconds=int(os.getenv("PHYLOGENIC_MLFLOW_LOG_INTERVAL", "30"))
-            )
+                log_interval_seconds=int(
+                    os.getenv("PHYLOGENIC_MLFLOW_LOG_INTERVAL", "30")
+                ),
+            ),
         )
 
 

@@ -39,12 +39,12 @@ from .profiler import PerformanceProfiler
 from .types import BenchmarkConfig, BenchmarkResult, PerformanceProfile
 
 __all__ = [
-    'MatrixBenchmarkRunner',
-    'PerformanceProfiler',
-    'BenchmarkComparator',
-    'PytestBenchmarkIntegration',
-    'MatrixBenchmarkSettings',
-    'BenchmarkConfig',
-    'BenchmarkResult',
-    'PerformanceProfile'
+    "MatrixBenchmarkRunner",
+    "PerformanceProfiler",
+    "BenchmarkComparator",
+    "PytestBenchmarkIntegration",
+    "MatrixBenchmarkSettings",
+    "BenchmarkConfig",
+    "BenchmarkResult",
+    "PerformanceProfile",
 ]

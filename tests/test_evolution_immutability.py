@@ -14,7 +14,14 @@ def _make_population(size=4):
 
 @pytest.mark.asyncio
 async def test_evolution_inplace_default():
-    config = EvolutionConfig(population_size=4, generations=1, mutation_rate=1.0, crossover_rate=0.0, immutable_evolution=False, hpc_mode=True)
+    config = EvolutionConfig(
+        population_size=4,
+        generations=1,
+        mutation_rate=1.0,
+        crossover_rate=0.0,
+        immutable_evolution=False,
+        hpc_mode=True,
+    )
     engine = EvolutionEngine(config)
     population = _make_population(4)
     original_ids = [id(g) for g in population]
@@ -28,12 +35,21 @@ async def test_evolution_inplace_default():
     assert any(o == n for o in original_ids for n in new_ids)
 
     # Expect traits to have mutated in-place for at least one preserved object
-    assert any(population[i].traits != original_traits[i] for i in range(len(population)))
+    assert any(
+        population[i].traits != original_traits[i] for i in range(len(population))
+    )
 
 
 @pytest.mark.asyncio
 async def test_evolution_immutable_mode():
-    config = EvolutionConfig(population_size=4, generations=1, mutation_rate=1.0, crossover_rate=0.0, immutable_evolution=True, hpc_mode=False)
+    config = EvolutionConfig(
+        population_size=4,
+        generations=1,
+        mutation_rate=1.0,
+        crossover_rate=0.0,
+        immutable_evolution=True,
+        hpc_mode=False,
+    )
     engine = EvolutionEngine(config)
     population = _make_population(4)
     original_ids = [id(g) for g in population]
@@ -43,9 +59,13 @@ async def test_evolution_immutable_mode():
     await engine.evolve(population, lambda g: 1.0)
 
     new_ids = [id(g) for g in population]
-    # No original objects should be in the new population (immutable mode creates clones)
+    # No original objects should be in the new population
+    # (immutable mode creates clones)
     assert not any(o == n for o in original_ids for n in new_ids)
 
     # Original objects should remain unchanged
     # Verify original objects kept by caller remained unchanged
-    assert all(original_objects[i].traits == original_traits[i] for i in range(len(original_objects)))
+    assert all(
+        original_objects[i].traits == original_traits[i]
+        for i in range(len(original_objects))
+    )

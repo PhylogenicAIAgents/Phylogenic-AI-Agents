@@ -40,6 +40,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 
 class MetricType(str, Enum):
     """Types of metrics that can be collected."""
+
     COUNTER = "counter"
     GAUGE = "gauge"
     HISTOGRAM = "histogram"
@@ -49,6 +50,7 @@ class MetricType(str, Enum):
 
 class AlertSeverity(str, Enum):
     """Alert severity levels."""
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -57,6 +59,7 @@ class AlertSeverity(str, Enum):
 
 class ComponentType(str, Enum):
     """Types of components that can be monitored."""
+
     EVOLUTION_ENGINE = "evolution_engine"
     KRAKEN_LNN = "kraken_lnn"
     NLP_AGENT = "nlp_agent"
@@ -68,6 +71,7 @@ class ComponentType(str, Enum):
 @dataclass
 class MetricValue:
     """Represents a single metric value with metadata."""
+
     name: str
     value: Union[int, float]
     metric_type: MetricType
@@ -77,7 +81,7 @@ class MetricValue:
     component: Optional[ComponentType] = None
     correlation_id: Optional[str] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate metric value."""
         if self.value is None:
             raise ValueError("Metric value cannot be None")
@@ -88,6 +92,7 @@ class MetricValue:
 @dataclass
 class PerformanceMetrics:
     """Comprehensive performance metrics for a component."""
+
     component_type: ComponentType
     component_id: str
 
@@ -158,7 +163,7 @@ class PerformanceMetrics:
             self.average_latency_ms = new_sum / self.total_operations
 
         # Store for percentile calculation
-        if not hasattr(self, '_latency_history'):
+        if not hasattr(self, "_latency_history"):
             self._latency_history = []
         self._latency_history.append(latency_ms)
 
@@ -170,7 +175,7 @@ class PerformanceMetrics:
 
     def _update_percentiles(self) -> None:
         """Update percentile metrics from latency history."""
-        if hasattr(self, '_latency_history') and self._latency_history:
+        if hasattr(self, "_latency_history") and self._latency_history:
             latencies = sorted(self._latency_history)
             n = len(latencies)
 
@@ -196,7 +201,7 @@ class PerformanceMetrics:
         if time_delta_seconds > 0:
             self.throughput_per_second = operations / time_delta_seconds
 
-    def update_resource_usage(self, **kwargs) -> None:
+    def update_resource_usage(self, **kwargs: Any) -> None:
         """Update resource usage metrics."""
         for metric, value in kwargs.items():
             if hasattr(self, metric):
@@ -206,6 +211,7 @@ class PerformanceMetrics:
 @dataclass
 class BenchmarkResult:
     """Results from a matrix benchmark run."""
+
     benchmark_id: str
     test_name: str
     parameters: Dict[str, Any]
@@ -251,37 +257,38 @@ class BenchmarkResult:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
-            'benchmark_id': self.benchmark_id,
-            'test_name': self.test_name,
-            'parameters': self.parameters,
-            'mean_execution_time': self.mean_execution_time,
-            'std_execution_time': self.std_execution_time,
-            'min_execution_time': self.min_execution_time,
-            'max_execution_time': self.max_execution_time,
-            'p50_execution_time': self.p50_execution_time,
-            'p95_execution_time': self.p95_execution_time,
-            'p99_execution_time': self.p99_execution_time,
-            'operations_per_second': self.operations_per_second,
-            'throughput_mb_per_second': self.throughput_mb_per_second,
-            'peak_memory_mb': self.peak_memory_mb,
-            'average_memory_mb': self.average_memory_mb,
-            'cpu_utilization_percent': self.cpu_utilization_percent,
-            'gpu_utilization_percent': self.gpu_utilization_percent,
-            'total_runs': self.total_runs,
-            'successful_runs': self.successful_runs,
-            'failed_runs': self.failed_runs,
-            'error_rate': self.error_rate,
-            'success_rate': self.success_rate,
-            'environment': self.environment,
-            'component_info': self.component_info,
-            'timestamp': self.timestamp.isoformat(),
-            'correlation_id': self.correlation_id
+            "benchmark_id": self.benchmark_id,
+            "test_name": self.test_name,
+            "parameters": self.parameters,
+            "mean_execution_time": self.mean_execution_time,
+            "std_execution_time": self.std_execution_time,
+            "min_execution_time": self.min_execution_time,
+            "max_execution_time": self.max_execution_time,
+            "p50_execution_time": self.p50_execution_time,
+            "p95_execution_time": self.p95_execution_time,
+            "p99_execution_time": self.p99_execution_time,
+            "operations_per_second": self.operations_per_second,
+            "throughput_mb_per_second": self.throughput_mb_per_second,
+            "peak_memory_mb": self.peak_memory_mb,
+            "average_memory_mb": self.average_memory_mb,
+            "cpu_utilization_percent": self.cpu_utilization_percent,
+            "gpu_utilization_percent": self.gpu_utilization_percent,
+            "total_runs": self.total_runs,
+            "successful_runs": self.successful_runs,
+            "failed_runs": self.failed_runs,
+            "error_rate": self.error_rate,
+            "success_rate": self.success_rate,
+            "environment": self.environment,
+            "component_info": self.component_info,
+            "timestamp": self.timestamp.isoformat(),
+            "correlation_id": self.correlation_id,
         }
 
 
 @dataclass
 class SystemMetrics:
     """System-level metrics across all components."""
+
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     # System resource metrics
@@ -323,6 +330,7 @@ class SystemMetrics:
 @dataclass
 class ComponentMetrics:
     """Metrics for a specific component instance."""
+
     component_type: ComponentType
     component_id: str
     instance_id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -352,6 +360,7 @@ class ComponentMetrics:
 @dataclass
 class AlertRule:
     """Rule definition for generating alerts."""
+
     rule_id: str
     name: str
     description: str
@@ -392,6 +401,7 @@ class AlertRule:
 @dataclass
 class Alert:
     """Alert instance generated by monitoring system."""
+
     alert_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     rule_id: Optional[str] = None
     name: str = ""
@@ -420,6 +430,7 @@ class Alert:
 @dataclass
 class MonitoringConfig:
     """Configuration for the monitoring system."""
+
     enabled: bool = True
     collection_interval_seconds: int = 10
     retention_hours: int = 168  # 1 week
@@ -460,6 +471,7 @@ class MonitoringConfig:
 @dataclass
 class DashboardConfig:
     """Configuration for monitoring dashboard."""
+
     enabled: bool = True
     host: str = "localhost"
     port: int = 8080
@@ -490,10 +502,13 @@ class DashboardConfig:
 @dataclass
 class MatrixBenchmarkConfig:
     """Configuration for matrix benchmarking."""
+
     enabled: bool = True
 
     # Test parameters to vary
-    population_sizes: List[int] = field(default_factory=lambda: [50, 100, 200, 500, 1000])
+    population_sizes: List[int] = field(
+        default_factory=lambda: [50, 100, 200, 500, 1000]
+    )
     mutation_rates: List[float] = field(default_factory=lambda: [0.05, 0.1, 0.2, 0.3])
     reservoir_sizes: List[int] = field(default_factory=lambda: [50, 100, 200, 500])
     temperatures: List[float] = field(default_factory=lambda: [0.1, 0.3, 0.7, 1.0])
@@ -525,6 +540,7 @@ class MatrixBenchmarkConfig:
 @dataclass
 class MLflowConfig:
     """Configuration for MLflow integration."""
+
     enabled: bool = True
     tracking_uri: str = "sqlite:///mlflow.db"
     experiment_name: str = "allele_observability"

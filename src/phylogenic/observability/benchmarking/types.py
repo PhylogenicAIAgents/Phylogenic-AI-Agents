@@ -46,6 +46,7 @@ logger = logging.getLogger(__name__)
 
 class BenchmarkType(str, Enum):
     """Types of benchmarks that can be run."""
+
     EVOLUTION = "evolution"
     KRAKEN_PROCESSING = "kraken_processing"
     AGENT_CHAT = "agent_chat"
@@ -58,6 +59,7 @@ class BenchmarkType(str, Enum):
 
 class ComponentUnderTest(str, Enum):
     """Components that can be benchmarked."""
+
     EVOLUTION_ENGINE = "evolution_engine"
     KRAKEN_LNN = "kraken_lnn"
     NLP_AGENT = "nlp_agent"
@@ -69,11 +71,12 @@ class ComponentUnderTest(str, Enum):
 @dataclass
 class ParameterSet:
     """A set of parameters for a benchmark configuration."""
+
     name: str
     parameters: Dict[str, Any]
     description: Optional[str] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate parameter set."""
         if not self.name:
             raise ValueError("Parameter set name cannot be empty")
@@ -84,6 +87,7 @@ class ParameterSet:
 @dataclass
 class BenchmarkConfig:
     """Configuration for a single benchmark run."""
+
     benchmark_id: str
     benchmark_type: BenchmarkType
     component: ComponentUnderTest
@@ -146,6 +150,7 @@ class BenchmarkConfig:
 @dataclass
 class PerformanceProfile:
     """Detailed performance profile from benchmark execution."""
+
     benchmark_id: str
     test_name: str
     parameters: Dict[str, Any]
@@ -174,11 +179,11 @@ class PerformanceProfile:
     throughput_mb_per_second: float = 0.0
 
     # Quality metrics
-    success_rate: float
-    error_rate: float
-    total_operations: int
-    successful_operations: int
-    failed_operations: int
+    success_rate: float = 0.0
+    error_rate: float = 0.0
+    total_operations: int = 0
+    successful_operations: int = 0
+    failed_operations: int = 0
 
     # System environment
     environment: Dict[str, Any] = field(default_factory=dict)
@@ -187,7 +192,7 @@ class PerformanceProfile:
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     duration_seconds: float = 0.0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Calculate derived metrics from raw data."""
         if self.execution_times:
             times = np.array(self.execution_times)
@@ -236,13 +241,14 @@ class PerformanceProfile:
             failed_runs=self.failed_operations,
             error_rate=self.error_rate,
             environment=self.environment,
-            timestamp=self.timestamp
+            timestamp=self.timestamp,
         )
 
 
 @dataclass
 class BenchmarkSuite:
     """Collection of related benchmarks."""
+
     suite_id: str
     name: str
     description: str
@@ -262,7 +268,9 @@ class BenchmarkSuite:
         """Get total number of tests across all benchmarks."""
         return sum(benchmark.get_test_count() for benchmark in self.benchmarks)
 
-    def get_benchmark_by_type(self, benchmark_type: BenchmarkType) -> Optional[BenchmarkConfig]:
+    def get_benchmark_by_type(
+        self, benchmark_type: BenchmarkType
+    ) -> Optional[BenchmarkConfig]:
         """Find a benchmark of specific type."""
         for benchmark in self.benchmarks:
             if benchmark.benchmark_type == benchmark_type:
@@ -273,6 +281,7 @@ class BenchmarkSuite:
 @dataclass
 class BenchmarkComparison:
     """Comparison between two benchmark results."""
+
     comparison_id: str
     baseline_result: PerformanceProfile
     comparison_result: PerformanceProfile
@@ -293,37 +302,49 @@ class BenchmarkComparison:
     improvement_summary: str
     recommendations: List[str] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Calculate comparison metrics."""
         # Performance ratio (baseline / comparison)
         if self.comparison_result.mean_time > 0:
-            self.performance_ratio = self.baseline_result.mean_time / self.comparison_result.mean_time
+            self.performance_ratio = (
+                self.baseline_result.mean_time / self.comparison_result.mean_time
+            )
 
         # Time improvement (negative means slower)
         self.time_improvement = (
-            (self.baseline_result.mean_time - self.comparison_result.mean_time) /
-            self.baseline_result.mean_time * 100
+            (self.baseline_result.mean_time - self.comparison_result.mean_time)
+            / self.baseline_result.mean_time
+            * 100
         )
 
         # Memory improvement (negative means more memory used)
         self.memory_improvement = (
-            (self.baseline_result.peak_memory_mb - self.comparison_result.peak_memory_mb) /
-            max(self.baseline_result.peak_memory_mb, 1) * 100
+            (
+                self.baseline_result.peak_memory_mb
+                - self.comparison_result.peak_memory_mb
+            )
+            / max(self.baseline_result.peak_memory_mb, 1)
+            * 100
         )
 
         # Throughput improvement
         if self.baseline_result.operations_per_second > 0:
             self.throughput_improvement = (
-                (self.comparison_result.operations_per_second - self.baseline_result.operations_per_second) /
-                self.baseline_result.operations_per_second * 100
+                (
+                    self.comparison_result.operations_per_second
+                    - self.baseline_result.operations_per_second
+                )
+                / self.baseline_result.operations_per_second
+                * 100
             )
 
         # Statistical test (simplified)
         try:
             from scipy import stats
+
             t_stat, p_val = stats.ttest_ind(
                 self.baseline_result.execution_times,
-                self.comparison_result.execution_times
+                self.comparison_result.execution_times,
             )
             self.t_statistic = float(t_stat)
             self.p_value = float(p_val)
@@ -350,17 +371,25 @@ class BenchmarkComparison:
 
         # Performance summary
         if self.time_improvement > 5:
-            summary_parts.append(f"Performance improved by {self.time_improvement:.1f}%")
+            summary_parts.append(
+                f"Performance improved by {self.time_improvement:.1f}%"
+            )
         elif self.time_improvement < -5:
-            summary_parts.append(f"Performance degraded by {abs(self.time_improvement):.1f}%")
+            summary_parts.append(
+                f"Performance degraded by {abs(self.time_improvement):.1f}%"
+            )
         else:
             summary_parts.append("Performance change is minimal")
 
         # Memory summary
         if self.memory_improvement > 5:
-            summary_parts.append(f"Memory usage reduced by {self.memory_improvement:.1f}%")
+            summary_parts.append(
+                f"Memory usage reduced by {self.memory_improvement:.1f}%"
+            )
         elif self.memory_improvement < -5:
-            summary_parts.append(f"Memory usage increased by {abs(self.memory_improvement):.1f}%")
+            summary_parts.append(
+                f"Memory usage increased by {abs(self.memory_improvement):.1f}%"
+            )
 
         # Statistical significance
         if self.is_significant:
@@ -372,13 +401,22 @@ class BenchmarkComparison:
 
         # Generate recommendations
         if self.time_improvement < -10:
-            recommendations.append("Consider optimizing performance - significant slowdown detected")
+            recommendations.append(
+                "Consider optimizing performance - significant slowdown detected"
+            )
 
         if self.memory_improvement < -20:
-            recommendations.append("Memory usage increased significantly - review memory management")
+            recommendations.append(
+                "Memory usage increased significantly - review memory management"
+            )
 
         if not self.is_significant and abs(self.time_improvement) > 5:
-            recommendations.append("Performance change detected but not statistically significant - increase sample size")
+            recommendations.append(
+                (
+                    "Performance change detected but not statistically"
+                    " significant - increase sample size"
+                )
+            )
 
         self.recommendations = recommendations
 
@@ -386,6 +424,7 @@ class BenchmarkComparison:
 @dataclass
 class BenchmarkReport:
     """Comprehensive benchmark report."""
+
     report_id: str
     suite_name: str
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -424,7 +463,9 @@ class BenchmarkReport:
             return
 
         self.total_tests_run = len(self.profiles)
-        self.total_tests_passed = sum(1 for p in self.profiles if p.success_rate >= 0.95)
+        self.total_tests_passed = sum(
+            1 for p in self.profiles if p.success_rate >= 0.95
+        )
         self.total_tests_failed = sum(1 for p in self.profiles if p.success_rate < 0.95)
 
         if self.total_tests_run > 0:
@@ -439,14 +480,14 @@ class BenchmarkReport:
                 "test_name": fastest.test_name,
                 "parameters": fastest.parameters,
                 "mean_time": fastest.mean_time,
-                "throughput": fastest.operations_per_second
+                "throughput": fastest.operations_per_second,
             }
 
             self.worst_performing_config = {
                 "test_name": slowest.test_name,
                 "parameters": slowest.parameters,
                 "mean_time": slowest.mean_time,
-                "throughput": slowest.operations_per_second
+                "throughput": slowest.operations_per_second,
             }
 
     def get_summary(self) -> Dict[str, Any]:
@@ -461,13 +502,14 @@ class BenchmarkReport:
             "success_rate": self.overall_success_rate,
             "best_config": self.best_performing_config,
             "worst_config": self.worst_performing_config,
-            "performance_trends": self.performance_trends
+            "performance_trends": self.performance_trends,
         }
 
 
 @dataclass
 class ResourceMeasurement:
     """Resource usage measurement during benchmark execution."""
+
     timestamp: datetime
     cpu_percent: float
     memory_mb: float
@@ -491,5 +533,5 @@ class ResourceMeasurement:
             "disk_io_read": self.disk_io_read,
             "disk_io_write": self.disk_io_write,
             "network_bytes_sent": self.network_bytes_sent,
-            "network_bytes_recv": self.network_bytes_recv
+            "network_bytes_recv": self.network_bytes_recv,
         }

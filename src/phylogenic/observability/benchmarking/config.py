@@ -44,7 +44,9 @@ class MatrixBenchmarkSettings:
     """Global matrix benchmarking settings."""
 
     # Matrix configuration
-    population_sizes: List[int] = field(default_factory=lambda: [50, 100, 200, 500, 1000])
+    population_sizes: List[int] = field(
+        default_factory=lambda: [50, 100, 200, 500, 1000]
+    )
     mutation_rates: List[float] = field(default_factory=lambda: [0.05, 0.1, 0.2, 0.3])
     reservoir_sizes: List[int] = field(default_factory=lambda: [50, 100, 200, 500])
     temperatures: List[float] = field(default_factory=lambda: [0.1, 0.3, 0.7, 1.0])
@@ -101,8 +103,8 @@ class MatrixBenchmarkSettings:
                         "population_size": 100,
                         "generations": 50,
                         "mutation_rate": 0.1,
-                        "crossover_rate": 0.8
-                    }
+                        "crossover_rate": 0.8,
+                    },
                 ),
                 ParameterSet(
                     name="mutation_rate_variation",
@@ -110,14 +112,14 @@ class MatrixBenchmarkSettings:
                         "population_size": 100,
                         "generations": 50,
                         "mutation_rate": 0.2,
-                        "crossover_rate": 0.8
-                    }
-                )
+                        "crossover_rate": 0.8,
+                    },
+                ),
             ],
             "runs_per_config": self.runs_per_config,
             "timeout_seconds": self.timeout_seconds,
             "measure_memory": self.measure_memory,
-            "measure_cpu": self.measure_cpu
+            "measure_cpu": self.measure_cpu,
         }
 
     def get_default_kraken_config(self) -> Dict[str, Any]:
@@ -131,22 +133,22 @@ class MatrixBenchmarkSettings:
                     parameters={
                         "reservoir_size": 100,
                         "connectivity": 0.1,
-                        "memory_buffer_size": 1000
-                    }
+                        "memory_buffer_size": 1000,
+                    },
                 ),
                 ParameterSet(
                     name="connectivity_variation",
                     parameters={
                         "reservoir_size": 100,
                         "connectivity": 0.2,
-                        "memory_buffer_size": 1000
-                    }
-                )
+                        "memory_buffer_size": 1000,
+                    },
+                ),
             ],
             "runs_per_config": self.runs_per_config,
             "timeout_seconds": self.timeout_seconds,
             "measure_memory": self.measure_memory,
-            "measure_cpu": self.measure_cpu
+            "measure_cpu": self.measure_cpu,
         }
 
     def get_default_agent_config(self) -> Dict[str, Any]:
@@ -160,22 +162,22 @@ class MatrixBenchmarkSettings:
                     parameters={
                         "temperature": 0.7,
                         "max_tokens": 2048,
-                        "streaming": True
-                    }
+                        "streaming": True,
+                    },
                 ),
                 ParameterSet(
                     name="streaming_variation",
                     parameters={
                         "temperature": 0.7,
                         "max_tokens": 2048,
-                        "streaming": False
-                    }
-                )
+                        "streaming": False,
+                    },
+                ),
             ],
             "runs_per_config": self.runs_per_config,
             "timeout_seconds": self.timeout_seconds,
             "measure_memory": self.measure_memory,
-            "measure_cpu": self.measure_cpu
+            "measure_cpu": self.measure_cpu,
         }
 
     def create_matrix_combinations(self) -> List[Dict[str, Any]]:
@@ -189,40 +191,46 @@ class MatrixBenchmarkSettings:
         # Evolution matrix combinations
         for pop_size in self.population_sizes:
             for mutation_rate in self.mutation_rates:
-                combinations.append({
-                    "component": ComponentUnderTest.EVOLUTION_ENGINE,
-                    "benchmark_type": BenchmarkType.EVOLUTION,
-                    "population_size": pop_size,
-                    "generations": 50,
-                    "mutation_rate": mutation_rate,
-                    "crossover_rate": 0.8,
-                    "test_category": "evolution_matrix"
-                })
+                combinations.append(
+                    {
+                        "component": ComponentUnderTest.EVOLUTION_ENGINE,
+                        "benchmark_type": BenchmarkType.EVOLUTION,
+                        "population_size": pop_size,
+                        "generations": 50,
+                        "mutation_rate": mutation_rate,
+                        "crossover_rate": 0.8,
+                        "test_category": "evolution_matrix",
+                    }
+                )
 
         # Kraken matrix combinations
         for reservoir_size in self.reservoir_sizes:
             for connectivity in [0.1, 0.2, 0.3]:
-                combinations.append({
-                    "component": ComponentUnderTest.KRAKEN_LNN,
-                    "benchmark_type": BenchmarkType.KRAKEN_PROCESSING,
-                    "reservoir_size": reservoir_size,
-                    "connectivity": connectivity,
-                    "memory_buffer_size": 1000,
-                    "test_category": "kraken_matrix"
-                })
+                combinations.append(
+                    {
+                        "component": ComponentUnderTest.KRAKEN_LNN,
+                        "benchmark_type": BenchmarkType.KRAKEN_PROCESSING,
+                        "reservoir_size": reservoir_size,
+                        "connectivity": connectivity,
+                        "memory_buffer_size": 1000,
+                        "test_category": "kraken_matrix",
+                    }
+                )
 
         # Agent matrix combinations
         for temperature in self.temperatures:
             for provider in self.llm_providers:
-                combinations.append({
-                    "component": ComponentUnderTest.NLP_AGENT,
-                    "benchmark_type": BenchmarkType.AGENT_CHAT,
-                    "temperature": temperature,
-                    "llm_provider": provider,
-                    "max_tokens": 2048,
-                    "streaming": True,
-                    "test_category": "agent_matrix"
-                })
+                combinations.append(
+                    {
+                        "component": ComponentUnderTest.NLP_AGENT,
+                        "benchmark_type": BenchmarkType.AGENT_CHAT,
+                        "temperature": temperature,
+                        "llm_provider": provider,
+                        "max_tokens": 2048,
+                        "streaming": True,
+                        "test_category": "agent_matrix",
+                    }
+                )
 
         return combinations
 
@@ -234,7 +242,7 @@ class MatrixBenchmarkSettings:
             "agent_response_ms": 10000.0,
             "memory_usage_mb": 1024.0,
             "cpu_usage_percent": 80.0,
-            "error_rate": 0.05
+            "error_rate": 0.05,
         }
 
     @classmethod
@@ -244,17 +252,37 @@ class MatrixBenchmarkSettings:
             runs_per_config=int(os.getenv("PHYLOGENIC_BENCHMARK_RUNS", "3")),
             timeout_seconds=int(os.getenv("PHYLOGENIC_BENCHMARK_TIMEOUT", "300")),
             parallel_workers=int(os.getenv("PHYLOGENIC_BENCHMARK_WORKERS", "1")),
-            max_concurrent_tests=int(os.getenv("PHYLOGENIC_BENCHMARK_MAX_CONCURRENT", "4")),
-            measure_memory=os.getenv("PHYLOGENIC_BENCHMARK_MEASURE_MEMORY", "true").lower() == "true",
-            measure_cpu=os.getenv("PHYLOGENIC_BENCHMARK_MEASURE_CPU", "true").lower() == "true",
-            measure_gpu=os.getenv("PHYLOGENIC_BENCHMARK_MEASURE_GPU", "false").lower() == "true",
-            save_results=os.getenv("PHYLOGENIC_BENCHMARK_SAVE_RESULTS", "true").lower() == "true",
-            results_path=os.getenv("PHYLOGENIC_BENCHMARK_RESULTS_PATH", "benchmark_results"),
-            generate_report=os.getenv("PHYLOGENIC_BENCHMARK_GENERATE_REPORT", "true").lower() == "true",
+            max_concurrent_tests=int(
+                os.getenv("PHYLOGENIC_BENCHMARK_MAX_CONCURRENT", "4")
+            ),
+            measure_memory=os.getenv(
+                "PHYLOGENIC_BENCHMARK_MEASURE_MEMORY", "true"
+            ).lower()
+            == "true",
+            measure_cpu=os.getenv("PHYLOGENIC_BENCHMARK_MEASURE_CPU", "true").lower()
+            == "true",
+            measure_gpu=os.getenv("PHYLOGENIC_BENCHMARK_MEASURE_GPU", "false").lower()
+            == "true",
+            save_results=os.getenv("PHYLOGENIC_BENCHMARK_SAVE_RESULTS", "true").lower()
+            == "true",
+            results_path=os.getenv(
+                "PHYLOGENIC_BENCHMARK_RESULTS_PATH", "benchmark_results"
+            ),
+            generate_report=os.getenv(
+                "PHYLOGENIC_BENCHMARK_GENERATE_REPORT", "true"
+            ).lower()
+            == "true",
             export_format=os.getenv("PHYLOGENIC_BENCHMARK_EXPORT_FORMAT", "json"),
-            parallel_execution=os.getenv("PHYLOGENIC_BENCHMARK_PARALLEL", "false").lower() == "true",
-            regression_testing=os.getenv("PHYLOGENIC_BENCHMARK_REGRESSION", "true").lower() == "true",
-            mlflow_integration=os.getenv("PHYLOGENIC_BENCHMARK_MLFLOW", "true").lower() == "true"
+            parallel_execution=os.getenv(
+                "PHYLOGENIC_BENCHMARK_PARALLEL", "false"
+            ).lower()
+            == "true",
+            regression_testing=os.getenv(
+                "PHYLOGENIC_BENCHMARK_REGRESSION", "true"
+            ).lower()
+            == "true",
+            mlflow_integration=os.getenv("PHYLOGENIC_BENCHMARK_MLFLOW", "true").lower()
+            == "true",
         )
 
 

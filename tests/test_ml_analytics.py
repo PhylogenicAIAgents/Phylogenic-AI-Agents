@@ -122,6 +122,7 @@ class TestMLAnalyticsConfig:
     def test_env_config_creation(self):
         """Test configuration from environment variables."""
         import os
+
         os.environ["PHYLOGENIC_ML_ANOMALY_DETECTION"] = "false"
         os.environ["PHYLOGENIC_ML_DEBUG"] = "true"
 
@@ -145,7 +146,7 @@ class TestAnomalyDetection:
             isolation_forest_contamination=0.1,
             one_class_svm_nu=0.1,
             anomaly_threshold=0.7,
-            min_training_samples=50
+            min_training_samples=50,
         )
 
     @pytest.fixture
@@ -156,25 +157,29 @@ class TestAnomalyDetection:
 
         # Normal metrics
         for i in range(100):
-            metrics.append(MLMetric(
-                timestamp=base_time + timedelta(minutes=i),
-                component_type=ComponentType.EVOLUTION_ENGINE,
-                component_id="test_engine_1",
-                metric_name="fitness_score",
-                value=np.random.normal(0.5, 0.1),
-                metadata={"generation": i}
-            ))
+            metrics.append(
+                MLMetric(
+                    timestamp=base_time + timedelta(minutes=i),
+                    component_type=ComponentType.EVOLUTION_ENGINE,
+                    component_id="test_engine_1",
+                    metric_name="fitness_score",
+                    value=np.random.normal(0.5, 0.1),
+                    metadata={"generation": i},
+                )
+            )
 
         # Add some anomalous metrics
         for i in range(10):
-            metrics.append(MLMetric(
-                timestamp=base_time + timedelta(minutes=100+i),
-                component_type=ComponentType.EVOLUTION_ENGINE,
-                component_id="test_engine_1",
-                metric_name="fitness_score",
-                value=np.random.normal(2.0, 0.2),  # Much higher values
-                metadata={"generation": 100+i}
-            ))
+            metrics.append(
+                MLMetric(
+                    timestamp=base_time + timedelta(minutes=100 + i),
+                    component_type=ComponentType.EVOLUTION_ENGINE,
+                    component_id="test_engine_1",
+                    metric_name="fitness_score",
+                    value=np.random.normal(2.0, 0.2),  # Much higher values
+                    metadata={"generation": 100 + i},
+                )
+            )
 
         return metrics
 
@@ -207,7 +212,7 @@ class TestAnomalyDetection:
             component_id="test_engine_1",
             metric_name="fitness_score",
             value=0.5,
-            metadata={}
+            metadata={},
         )
 
         result = await detector.detect_anomaly(normal_metric)
@@ -221,14 +226,18 @@ class TestAnomalyDetection:
             component_id="test_engine_1",
             metric_name="fitness_score",
             value=2.0,  # Significantly higher than training data
-            metadata={}
+            metadata={},
         )
 
         result = await detector.detect_anomaly(anomalous_metric)
         if result:
             assert result.anomaly_score > anomaly_config.anomaly_threshold
             assert result.anomaly_type == AnomalyType.PERFORMANCE_DEGRADATION
-            assert result.severity in [AlertSeverity.WARNING, AlertSeverity.ERROR, AlertSeverity.CRITICAL]
+            assert result.severity in [
+                AlertSeverity.WARNING,
+                AlertSeverity.ERROR,
+                AlertSeverity.CRITICAL,
+            ]
 
     @pytest.mark.asyncio
     async def test_one_class_svm_training(self, anomaly_config, sample_metrics):
@@ -252,7 +261,7 @@ class TestAnomalyDetection:
             component_id="test_engine_1",
             metric_name="fitness_score",
             value=2.0,
-            metadata={}
+            metadata={},
         )
 
         result = await detector.detect_anomaly(test_metric)
@@ -268,7 +277,7 @@ class TestAnomalyDetection:
         asyncio.run(detector.train(sample_metrics[:80]))
 
         # Save model to temporary file
-        with tempfile.NamedTemporaryFile(suffix='.pkl', delete=False) as tmp_file:
+        with tempfile.NamedTemporaryFile(suffix=".pkl", delete=False) as tmp_file:
             detector.save_model(Path(tmp_file.name))
 
             # Create new detector and load model
@@ -284,7 +293,7 @@ class TestAnomalyDetection:
                 component_id="test_engine_1",
                 metric_name="fitness_score",
                 value=2.0,
-                metadata={}
+                metadata={},
             )
 
             result = asyncio.run(new_detector.detect_anomaly(test_metric))
@@ -307,7 +316,7 @@ class TestPredictiveAnalytics:
             training_window_days=30,
             arima_order=(1, 1, 1),
             lstm_sequence_length=10,
-            min_training_samples=50
+            min_training_samples=50,
         )
 
     @pytest.fixture
@@ -331,7 +340,7 @@ class TestPredictiveAnalytics:
             component_type=ComponentType.EVOLUTION_ENGINE,
             component_id="test_engine_1",
             metric_name="fitness_score",
-            frequency_minutes=1
+            frequency_minutes=1,
         )
 
     @pytest.mark.asyncio
@@ -367,7 +376,11 @@ class TestPredictiveAnalytics:
         assert isinstance(prediction.predicted_value, float)
         assert isinstance(prediction.confidence_interval, tuple)
         assert len(prediction.confidence_interval) == 2
-        assert prediction.confidence_interval[0] <= prediction.predicted_value <= prediction.confidence_interval[1]
+        assert (
+            prediction.confidence_interval[0]
+            <= prediction.predicted_value
+            <= prediction.confidence_interval[1]
+        )
         assert 0.0 <= prediction.model_accuracy <= 1.0
 
     @pytest.mark.asyncio
@@ -399,17 +412,27 @@ class TestPredictiveAnalytics:
                 component_id="test_engine_1",
                 metric_name="fitness_score",
                 value=value,
-                metadata={}
+                metadata={},
             )
-            for ts, value in zip(sample_time_series.timestamps, sample_time_series.values)
+            for ts, value in zip(
+                sample_time_series.timestamps, sample_time_series.values
+            )
         ]
 
-        trend_analysis = await analyzer.get_performance_trends("evolution_engine", metrics)
+        trend_analysis = await analyzer.get_performance_trends(
+            "evolution_engine", metrics
+        )
 
         assert "trend" in trend_analysis
         assert "confidence" in trend_analysis
         assert "slope" in trend_analysis
-        assert trend_analysis["trend"] in ["improving", "degrading", "stable", "insufficient_data", "error"]
+        assert trend_analysis["trend"] in [
+            "improving",
+            "degrading",
+            "stable",
+            "insufficient_data",
+            "error",
+        ]
         assert 0.0 <= trend_analysis["confidence"] <= 1.0
 
     @pytest.mark.asyncio
@@ -422,16 +445,20 @@ class TestPredictiveAnalytics:
         base_time = datetime.now(timezone.utc)
 
         for i in range(60):  # Need at least 50 data points
-            metrics.append(MLMetric(
-                timestamp=base_time + timedelta(minutes=i),
-                component_type=ComponentType.EVOLUTION_ENGINE,
-                component_id="test_engine_1",
-                metric_name="fitness_score",
-                value=np.sin(i * 0.1) + np.random.normal(0, 0.1),  # Cyclic pattern
-                metadata={}
-            ))
+            metrics.append(
+                MLMetric(
+                    timestamp=base_time + timedelta(minutes=i),
+                    component_type=ComponentType.EVOLUTION_ENGINE,
+                    component_id="test_engine_1",
+                    metric_name="fitness_score",
+                    value=np.sin(i * 0.1) + np.random.normal(0, 0.1),  # Cyclic pattern
+                    metadata={},
+                )
+            )
 
-        pattern_analysis = await analyzer.detect_performance_patterns("evolution_engine", metrics)
+        pattern_analysis = await analyzer.detect_performance_patterns(
+            "evolution_engine", metrics
+        )
 
         assert "patterns" in pattern_analysis
         assert "confidence" in pattern_analysis
@@ -451,7 +478,7 @@ class TestAlertIntelligence:
             clustering_eps=0.5,
             correlation_window_minutes=15,
             similarity_threshold=0.8,
-            deduplication_window_minutes=5
+            deduplication_window_minutes=5,
         )
 
     @pytest.fixture
@@ -462,41 +489,45 @@ class TestAlertIntelligence:
 
         # Component-related alerts
         for i in range(5):
-            alerts.append({
-                "alert_id": f"alert_{i}",
-                "timestamp": (base_time + timedelta(minutes=i)).isoformat(),
-                "component_type": "evolution_engine",
-                "component_id": "test_engine_1",
-                "metric_name": "fitness_score",
-                "severity": AlertSeverity.WARNING.value,
-                "anomaly_type": AnomalyType.PERFORMANCE_DEGRADATION.value,
-                "anomaly_score": 0.7 + i * 0.05,
-                "confidence": 0.8,
-                "actual_value": 0.3 + i * 0.02,
-                "expected_value": 0.5,
-                "deviation": -0.2,
-                "context": {"generation": i},
-                "recommendations": ["Review evolution parameters"]
-            })
+            alerts.append(
+                {
+                    "alert_id": f"alert_{i}",
+                    "timestamp": (base_time + timedelta(minutes=i)).isoformat(),
+                    "component_type": "evolution_engine",
+                    "component_id": "test_engine_1",
+                    "metric_name": "fitness_score",
+                    "severity": AlertSeverity.WARNING.value,
+                    "anomaly_type": AnomalyType.PERFORMANCE_DEGRADATION.value,
+                    "anomaly_score": 0.7 + i * 0.05,
+                    "confidence": 0.8,
+                    "actual_value": 0.3 + i * 0.02,
+                    "expected_value": 0.5,
+                    "deviation": -0.2,
+                    "context": {"generation": i},
+                    "recommendations": ["Review evolution parameters"],
+                }
+            )
 
         # Add some different component alerts
         for i in range(3):
-            alerts.append({
-                "alert_id": f"nlp_alert_{i}",
-                "timestamp": (base_time + timedelta(minutes=10+i)).isoformat(),
-                "component_type": "nlp_agent",
-                "component_id": "test_agent_1",
-                "metric_name": "response_time",
-                "severity": AlertSeverity.ERROR.value,
-                "anomaly_type": AnomalyType.LATENCY_SPIKE.value,
-                "anomaly_score": 0.8 + i * 0.05,
-                "confidence": 0.9,
-                "actual_value": 2000 + i * 100,
-                "expected_value": 1000,
-                "deviation": 1000,
-                "context": {"request_id": f"req_{i}"},
-                "recommendations": ["Optimize response time"]
-            })
+            alerts.append(
+                {
+                    "alert_id": f"nlp_alert_{i}",
+                    "timestamp": (base_time + timedelta(minutes=10 + i)).isoformat(),
+                    "component_type": "nlp_agent",
+                    "component_id": "test_agent_1",
+                    "metric_name": "response_time",
+                    "severity": AlertSeverity.ERROR.value,
+                    "anomaly_type": AnomalyType.LATENCY_SPIKE.value,
+                    "anomaly_score": 0.8 + i * 0.05,
+                    "confidence": 0.9,
+                    "actual_value": 2000 + i * 100,
+                    "expected_value": 1000,
+                    "deviation": 1000,
+                    "context": {"request_id": f"req_{i}"},
+                    "recommendations": ["Optimize response time"],
+                }
+            )
 
         return alerts
 
@@ -511,7 +542,13 @@ class TestAlertIntelligence:
             assert isinstance(cluster, AlertCluster)
             assert len(cluster.alerts) > 0
             assert cluster.cluster_id is not None
-            assert cluster.cluster_type in ["component_related", "metric_related", "cascading", "root_cause", "independent"]
+            assert cluster.cluster_type in [
+                "component_related",
+                "metric_related",
+                "cascading",
+                "root_cause",
+                "independent",
+            ]
             assert 0.0 <= cluster.confidence <= 1.0
             assert 0.0 <= cluster.priority_score <= 1.0
             assert cluster.impact_assessment is not None
@@ -549,7 +586,7 @@ class TestAlertIntelligence:
                 deviation=-0.2,
                 threshold=0.7,
                 context={},
-                recommendations=["Review parameters"]
+                recommendations=["Review parameters"],
             )
             anomalies.append(anomaly)
 
@@ -575,7 +612,7 @@ class TestAlertIntelligence:
             "anomaly_type": AnomalyType.PERFORMANCE_DEGRADATION.value,
             "severity": AlertSeverity.WARNING.value,
             "actual_value": 0.3,
-            "expected_value": 0.5
+            "expected_value": 0.5,
         }
 
         alert2 = {
@@ -584,7 +621,7 @@ class TestAlertIntelligence:
             "anomaly_type": AnomalyType.PERFORMANCE_DEGRADATION.value,
             "severity": AlertSeverity.WARNING.value,
             "actual_value": 0.32,  # Similar value
-            "expected_value": 0.5
+            "expected_value": 0.5,
         }
 
         similarity = manager._calculate_alert_similarity(alert1, alert2)
@@ -605,7 +642,7 @@ class TestAlertIntelligence:
                 "component_type": "evolution_engine",
                 "metric_name": "fitness_score",
                 "severity": AlertSeverity.CRITICAL.value,
-                "priority_score": 0.9
+                "priority_score": 0.9,
             }
             high_priority_alerts.append(alert)
 
@@ -628,7 +665,7 @@ class TestOptimizationEngine:
             min_expected_improvement=0.05,
             batch_optimization_size=10,
             enable_ml_based=True,
-            enable_rule_based=True
+            enable_rule_based=True,
         )
 
     @pytest.fixture
@@ -641,29 +678,37 @@ class TestOptimizationEngine:
         evolution_metrics = []
         for i in range(50):
             # Simulate stagnating fitness
-            fitness_value = 0.5 + np.random.normal(0, 0.05) if i < 30 else 0.5 + np.random.normal(0, 0.05)
-            evolution_metrics.append(MLMetric(
-                timestamp=base_time + timedelta(minutes=i),
-                component_type=ComponentType.EVOLUTION_ENGINE,
-                component_id="test_engine_1",
-                metric_name="fitness_score",
-                value=fitness_value,
-                metadata={"generation": i}
-            ))
+            fitness_value = (
+                0.5 + np.random.normal(0, 0.05)
+                if i < 30
+                else 0.5 + np.random.normal(0, 0.05)
+            )
+            evolution_metrics.append(
+                MLMetric(
+                    timestamp=base_time + timedelta(minutes=i),
+                    component_type=ComponentType.EVOLUTION_ENGINE,
+                    component_id="test_engine_1",
+                    metric_name="fitness_score",
+                    value=fitness_value,
+                    metadata={"generation": i},
+                )
+            )
 
         metrics_history["evolution_engine"] = evolution_metrics
 
         # NLP agent metrics
         nlp_metrics = []
         for i in range(30):
-            nlp_metrics.append(MLMetric(
-                timestamp=base_time + timedelta(minutes=i),
-                component_type=ComponentType.NLP_AGENT,
-                component_id="test_agent_1",
-                metric_name="response_time",
-                value=3000 + np.random.normal(0, 200),  # High response times
-                metadata={"request_id": f"req_{i}"}
-            ))
+            nlp_metrics.append(
+                MLMetric(
+                    timestamp=base_time + timedelta(minutes=i),
+                    component_type=ComponentType.NLP_AGENT,
+                    component_id="test_agent_1",
+                    metric_name="response_time",
+                    value=3000 + np.random.normal(0, 200),  # High response times
+                    metadata={"request_id": f"req_{i}"},
+                )
+            )
 
         metrics_history["nlp_agent"] = nlp_metrics
 
@@ -687,7 +732,7 @@ class TestOptimizationEngine:
                 prediction_horizon_minutes=60,
                 model_name="ARIMA",
                 model_version="1.0.0",
-                model_accuracy=0.8
+                model_accuracy=0.8,
             )
         ]
         predictions["evolution_engine"] = evolution_predictions
@@ -701,17 +746,15 @@ class TestOptimizationEngine:
             "evolution_engine": {
                 "population_size": 100,
                 "mutation_rate": 0.1,
-                "crossover_rate": 0.8
+                "crossover_rate": 0.8,
             },
-            "nlp_agent": {
-                "max_tokens": 1000,
-                "temperature": 0.7,
-                "top_p": 0.9
-            }
+            "nlp_agent": {"max_tokens": 1000, "temperature": 0.7, "top_p": 0.9},
         }
 
     @pytest.mark.asyncio
-    async def test_performance_optimization(self, optimization_config, sample_metrics_history, sample_predictions):
+    async def test_performance_optimization(
+        self, optimization_config, sample_metrics_history, sample_predictions
+    ):
         """Test performance optimization analysis."""
         optimizer = PerformanceOptimizer(optimization_config)
 
@@ -724,31 +767,43 @@ class TestOptimizationEngine:
         for rec in recommendations:
             assert isinstance(rec, OptimizationRecommendation)
             assert rec.recommendation_id is not None
-            assert rec.category in [OptimizationCategory.CONFIGURATION_TUNING,
-                                  OptimizationCategory.PERFORMANCE_TUNING,
-                                  OptimizationCategory.RESOURCE_ALLOCATION]
+            assert rec.category in [
+                OptimizationCategory.CONFIGURATION_TUNING,
+                OptimizationCategory.PERFORMANCE_TUNING,
+                OptimizationCategory.RESOURCE_ALLOCATION,
+            ]
             assert rec.title is not None
             assert rec.description is not None
             assert 0.0 <= rec.confidence <= 1.0
             assert rec.expected_improvement > 0
             assert len(rec.implementation_steps) > 0
-            assert rec.component_type in [ComponentType.EVOLUTION_ENGINE, ComponentType.NLP_AGENT, ComponentType.KRAKEN_LNN]
+            assert rec.component_type in [
+                ComponentType.EVOLUTION_ENGINE,
+                ComponentType.NLP_AGENT,
+                ComponentType.KRAKEN_LNN,
+            ]
 
     @pytest.mark.asyncio
-    async def test_configuration_recommendations(self, optimization_config, sample_metrics_history, sample_configs):
+    async def test_configuration_recommendations(
+        self, optimization_config, sample_metrics_history, sample_configs
+    ):
         """Test configuration recommendation engine."""
         recommender = ConfigurationRecommender(optimization_config)
 
         recommendations = await recommender.recommend_configuration_changes(
             "evolution_engine",
             sample_configs["evolution_engine"],
-            sample_metrics_history["evolution_engine"]
+            sample_metrics_history["evolution_engine"],
         )
 
         assert isinstance(recommendations, list)
 
         # Should recommend optimization for stagnating fitness
-        evolution_recs = [r for r in recommendations if r.category == OptimizationCategory.CONFIGURATION_TUNING]
+        evolution_recs = [
+            r
+            for r in recommendations
+            if r.category == OptimizationCategory.CONFIGURATION_TUNING
+        ]
         assert len(evolution_recs) > 0
 
         for rec in evolution_recs:
@@ -757,14 +812,18 @@ class TestOptimizationEngine:
             assert rec.confidence >= optimization_config.min_confidence_threshold
 
     @pytest.mark.asyncio
-    async def test_comprehensive_optimization(self, optimization_config, sample_metrics_history, sample_predictions, sample_configs):
+    async def test_comprehensive_optimization(
+        self,
+        optimization_config,
+        sample_metrics_history,
+        sample_predictions,
+        sample_configs,
+    ):
         """Test comprehensive system optimization."""
         engine = OptimizationEngine(optimization_config)
 
         recommendations = await engine.optimize_system(
-            sample_metrics_history,
-            sample_predictions,
-            sample_configs
+            sample_metrics_history, sample_predictions, sample_configs
         )
 
         assert isinstance(recommendations, list)
@@ -779,15 +838,19 @@ class TestOptimizationEngine:
         assert len(components) > 1
 
     @pytest.mark.asyncio
-    async def test_optimization_summary(self, optimization_config, sample_metrics_history, sample_predictions, sample_configs):
+    async def test_optimization_summary(
+        self,
+        optimization_config,
+        sample_metrics_history,
+        sample_predictions,
+        sample_configs,
+    ):
         """Test optimization summary generation."""
         engine = OptimizationEngine(optimization_config)
 
         # Run optimization to generate recommendations
         await engine.optimize_system(
-            sample_metrics_history,
-            sample_predictions,
-            sample_configs
+            sample_metrics_history, sample_predictions, sample_configs
         )
 
         summary = await engine.get_optimization_summary()
@@ -805,19 +868,25 @@ class TestOptimizationEngine:
         assert 0.0 <= summary["average_confidence"] <= 1.0
         assert summary["average_expected_improvement"] >= 0
 
-    def test_recommendation_export(self, optimization_config, sample_metrics_history, sample_predictions, sample_configs):
+    def test_recommendation_export(
+        self,
+        optimization_config,
+        sample_metrics_history,
+        sample_predictions,
+        sample_configs,
+    ):
         """Test recommendation export functionality."""
         engine = OptimizationEngine(optimization_config)
 
         # Generate some recommendations
-        asyncio.run(engine.optimize_system(
-            sample_metrics_history,
-            sample_predictions,
-            sample_configs
-        ))
+        asyncio.run(
+            engine.optimize_system(
+                sample_metrics_history, sample_predictions, sample_configs
+            )
+        )
 
         # Export to temporary file
-        tmp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        tmp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
         tmp_path = Path(tmp_file.name)
         tmp_file.close()  # Close before writing on Windows
 
@@ -852,16 +921,20 @@ class TestMLAnalyticsIntegration:
         # Generate metrics with anomalies
         for i in range(100):
             is_anomaly = i > 80  # Last 20 are anomalous
-            value = np.random.normal(2.0, 0.2) if is_anomaly else np.random.normal(0.5, 0.1)
+            value = (
+                np.random.normal(2.0, 0.2) if is_anomaly else np.random.normal(0.5, 0.1)
+            )
 
-            metrics.append(MLMetric(
-                timestamp=base_time + timedelta(minutes=i),
-                component_type=ComponentType.EVOLUTION_ENGINE,
-                component_id="test_engine",
-                metric_name="fitness_score",
-                value=value,
-                metadata={"generation": i}
-            ))
+            metrics.append(
+                MLMetric(
+                    timestamp=base_time + timedelta(minutes=i),
+                    component_type=ComponentType.EVOLUTION_ENGINE,
+                    component_id="test_engine",
+                    metric_name="fitness_score",
+                    value=value,
+                    metadata={"generation": i},
+                )
+            )
 
         # 1. Anomaly Detection
         anomaly_config = AnomalyDetectionConfig(min_training_samples=50)
@@ -886,7 +959,7 @@ class TestMLAnalyticsIntegration:
             values=[m.value for m in metrics],
             component_type=ComponentType.EVOLUTION_ENGINE,
             component_id="test_engine",
-            metric_name="fitness_score"
+            metric_name="fitness_score",
         )
 
         forecaster = TimeSeriesForecaster(predictive_config)

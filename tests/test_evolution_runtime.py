@@ -4,7 +4,6 @@ Runtime tests for EvolutionEngine and genetic operators.
 Tests actual execution of evolution cycles, selection, crossover, and mutation.
 """
 
-
 import pytest
 
 from phylogenic import (
@@ -55,8 +54,7 @@ class TestEvolutionRuntime:
         selected_genomes = []
         for _ in range(10):
             selected = GeneticOperators.tournament_selection(
-                population_of_genomes,
-                tournament_size=3
+                population_of_genomes, tournament_size=3
             )
             selected_genomes.append(selected)
             assert_genome_valid(selected)
@@ -70,7 +68,10 @@ class TestEvolutionRuntime:
         offspring = GeneticOperators.crossover(custom_genome, technical_genome)
 
         assert_genome_valid(offspring)
-        assert offspring.generation == max(custom_genome.generation, technical_genome.generation) + 1
+        assert (
+            offspring.generation
+            == max(custom_genome.generation, technical_genome.generation) + 1
+        )
         assert len(offspring.metadata.parent_ids) == 2
 
     def test_mutation_operator_runtime(self, custom_genome):
@@ -81,7 +82,8 @@ class TestEvolutionRuntime:
 
         # Verify some traits changed
         changes = sum(
-            1 for trait in original_traits
+            1
+            for trait in original_traits
             if abs(custom_genome.traits[trait] - original_traits[trait]) > 1e-6
         )
         assert changes > 0
@@ -98,9 +100,7 @@ class TestEvolutionRuntime:
 
         # Run evolution for a few generations
         best_genome = await evolution_engine.evolve(
-            population,
-            fitness_function,
-            generations=5
+            population, fitness_function, generations=5
         )
 
         # Verify best genome
@@ -113,11 +113,11 @@ class TestEvolutionRuntime:
 
         # Verify fitness improvement (or at least tracking)
         for record in evolution_engine.evolution_history:
-            assert 'generation' in record
-            assert 'best_fitness' in record
-            assert 'avg_fitness' in record
-            assert 'diversity' in record
-            assert 0.0 <= record['best_fitness'] <= 1.0
+            assert "generation" in record
+            assert "best_fitness" in record
+            assert "avg_fitness" in record
+            assert "diversity" in record
+            assert 0.0 <= record["best_fitness"] <= 1.0
 
     @pytest.mark.asyncio
     async def test_elitism_runtime(self, evolution_config, fitness_function):
@@ -141,7 +141,9 @@ class TestEvolutionRuntime:
         assert engine.best_genome.fitness_score >= initial_best_score
 
     @pytest.mark.asyncio
-    async def test_elite_preservation_hpc_mode(self, evolution_config, fitness_function):
+    async def test_elite_preservation_hpc_mode(
+        self, evolution_config, fitness_function
+    ):
         """Test elite genomes remain unchanged during HPC mode in-place mutations."""
         evolution_config.elitism_enabled = True
         evolution_config.hpc_mode = True
@@ -155,17 +157,21 @@ class TestEvolutionRuntime:
 
         # Sort by fitness and capture elite traits before evolution
         population.sort(key=lambda g: g.fitness_score, reverse=True)
-        elitism_count = int(evolution_config.population_size * evolution_config.selection_pressure)
+        elitism_count = int(
+            evolution_config.population_size * evolution_config.selection_pressure
+        )
         elite_genomes = population[:elitism_count]
 
         # Store original traits of elites (deep copy to avoid reference issues)
         elite_original_traits = []
         for elite in elite_genomes:
-            elite_original_traits.append({
-                'traits': elite.traits.copy(),
-                'genome_id': elite.genome_id,
-                'fitness_score': elite.fitness_score
-            })
+            elite_original_traits.append(
+                {
+                    "traits": elite.traits.copy(),
+                    "genome_id": elite.genome_id,
+                    "fitness_score": elite.fitness_score,
+                }
+            )
 
         # Evolve one generation
         await engine.evolve(population, fitness_function, generations=1)
@@ -181,11 +187,13 @@ class TestEvolutionRuntime:
         for original_elite_data in elite_original_traits:
             match_found = False
             for i, genome in enumerate(searchable_population):
-                if genome.traits == original_elite_data['traits']:
+                if genome.traits == original_elite_data["traits"]:
                     searchable_population.pop(i)
                     match_found = True
                     break
-            assert match_found, f"Elite genome traits from {original_elite_data['genome_id']} were not preserved"
+            assert (
+                match_found
+            ), f"Elite genome {original_elite_data['genome_id']} not preserved"
 
     def test_population_diversity_tracking(self, evolution_engine, fitness_function):
         """Test population diversity is tracked correctly."""
@@ -247,8 +255,8 @@ class TestEvolutionRuntime:
         await engine.evolve(population, fitness_function)
 
         # Verify convergence (best fitness should improve)
-        initial_fitness = engine.evolution_history[0]['best_fitness']
-        final_fitness = engine.evolution_history[-1]['best_fitness']
+        initial_fitness = engine.evolution_history[0]["best_fitness"]
+        final_fitness = engine.evolution_history[-1]["best_fitness"]
 
         # Fitness should improve or at least be tracked
         assert final_fitness >= initial_fitness - 0.1  # Allow small variance
@@ -256,10 +264,7 @@ class TestEvolutionRuntime:
     def test_large_population_runtime(self, fitness_function):
         """Test evolution with large population."""
         config = EvolutionConfig(
-            population_size=100,
-            generations=5,
-            mutation_rate=0.1,
-            crossover_rate=0.8
+            population_size=100, generations=5, mutation_rate=0.1, crossover_rate=0.8
         )
         engine = EvolutionEngine(config)
 
@@ -270,6 +275,7 @@ class TestEvolutionRuntime:
 
         # Run evolution
         import asyncio
+
         best = asyncio.run(engine.evolve(population, fitness_function))
 
         assert best is not None

@@ -50,6 +50,7 @@ from .llm_exceptions import (
 
 logger = structlog.get_logger(__name__)
 
+
 class OpenAIClient(LLMClient):
     """OpenAI LLM client implementation with full error handling and monitoring."""
 
@@ -76,8 +77,14 @@ class OpenAIClient(LLMClient):
 
     # Known models (fallback if API doesn't provide list)
     FALLBACK_MODELS = [
-        "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4-turbo-preview",
-        "gpt-4", "gpt-4-32k", "gpt-3.5-turbo", "gpt-3.5-turbo-16k"
+        "gpt-4o",
+        "gpt-4o-mini",
+        "gpt-4-turbo",
+        "gpt-4-turbo-preview",
+        "gpt-4",
+        "gpt-4-32k",
+        "gpt-3.5-turbo",
+        "gpt-3.5-turbo-16k",
     ]
 
     def __init__(self, config: LLMConfig):
@@ -97,7 +104,7 @@ class OpenAIClient(LLMClient):
                 raise LLMAuthenticationError(
                     "Invalid OpenAI API key format. Key must start with 'sk-'",
                     "openai",
-                    self.config.model
+                    self.config.model,
                 )
 
             # Create client
@@ -105,16 +112,18 @@ class OpenAIClient(LLMClient):
                 api_key=self.config.api_key,
                 base_url=self.config.base_url,
                 timeout=self.config.timeout,
-                max_retries=0  # We handle retries ourselves
+                max_retries=0,  # We handle retries ourselves
             )
 
             # Validate connection and permissions
             await self._validate_connection_and_permissions()
 
             self._initialized = True
-            self.logger.info("OpenAI client initialized successfully",
-                           model=self.config.model,
-                           temperature=self.config.temperature)
+            self.logger.info(
+                "OpenAI client initialized successfully",
+                model=self.config.model,
+                temperature=self.config.temperature,
+            )
 
         except LLMError:
             # Re-raise known LLM errors
@@ -127,8 +136,12 @@ class OpenAIClient(LLMClient):
                 self.config.model,
                 {
                     "api_key_provided": bool(self.config.api_key),
-                    "api_key_format_valid": self.config.api_key.startswith("sk-") if self.config.api_key else False
-                }
+                    "api_key_format_valid": (
+                        self.config.api_key.startswith("sk-")
+                        if self.config.api_key
+                        else False
+                    ),
+                },
             ) from e
 
     async def __aenter__(self) -> "OpenAIClient":
@@ -147,8 +160,10 @@ class OpenAIClient(LLMClient):
             # Test basic connectivity with a minimal call
             assert self._openai_client is not None
             models = await self._openai_client.models.list()
-            if not hasattr(models, 'data') or not models.data:
-                raise LLMInitializationError("No models available - check API permissions")
+            if not hasattr(models, "data") or not models.data:
+                raise LLMInitializationError(
+                    "No models available - check API permissions"
+                )
 
             # Verify target model is accessible
             available_models = await self.get_available_models()
@@ -157,33 +172,31 @@ class OpenAIClient(LLMClient):
                     f"Model '{self.config.model}' is not available",
                     "openai",
                     self.config.model,
-                    available_models=available_models[:20]  # Limit for error message
+                    available_models=available_models[:20],  # Limit for error message
                 )
 
-            self.logger.debug("OpenAI connection and permissions validated successfully",
-                            available_models_count=len(available_models),
-                            target_model=self.config.model)
+            self.logger.debug(
+                "OpenAI connection and permissions validated successfully",
+                available_models_count=len(available_models),
+                target_model=self.config.model,
+            )
 
         except AuthenticationError as e:
             raise LLMAuthenticationError(
-                f"OpenAI authentication failed: {e}",
-                "openai",
-                self.config.model
+                f"OpenAI authentication failed: {e}", "openai", self.config.model
             ) from e
         except LLMError:
             # Re-raise known LLM errors
             raise
         except APIError as e:
             raise LLMInitializationError(
-                f"OpenAI API error during validation: {e}",
-                "openai",
-                self.config.model
+                f"OpenAI API error during validation: {e}", "openai", self.config.model
             ) from e
         except Exception as e:
             raise LLMInitializationError(
                 f"Unexpected error during OpenAI validation: {e}",
                 "openai",
-                self.config.model
+                self.config.model,
             ) from e
 
     async def chat_completion(
@@ -191,7 +204,9 @@ class OpenAIClient(LLMClient):
     ) -> AsyncGenerator[str, None]:
         """Generate streaming or non-streaming chat completion with error handling."""
         if not self._initialized or not self._openai_client:
-            raise LLMGenerationError("Client not initialized", "openai", self.config.model)
+            raise LLMGenerationError(
+                "Client not initialized", "openai", self.config.model
+            )
 
         # Estimate input tokens for rate limiting
         estimated_input_tokens = self._estimate_token_count(messages)
@@ -217,58 +232,63 @@ class OpenAIClient(LLMClient):
                 if stream:
                     # Type ignore: stream response is AsyncIterable
                     async for chunk in response:  # type: ignore[union-attr]
-                        if hasattr(chunk, 'choices') and chunk.choices:
+                        if hasattr(chunk, "choices") and chunk.choices:
                             delta = chunk.choices[0].delta
-                            if hasattr(delta, 'content') and delta.content:
+                            if hasattr(delta, "content") and delta.content:
                                 content = delta.content
                                 response_content += content
-                                total_output_tokens += self._estimate_token_count([{"content": content}])
+                                total_output_tokens += self._estimate_token_count(
+                                    [{"content": content}]
+                                )
                                 yield content
 
                         # Handle usage information in final chunk
-                        if hasattr(chunk, 'usage') and chunk.usage:
+                        if hasattr(chunk, "usage") and chunk.usage:
                             await self._update_metrics(chunk.usage)
                 else:
-                    if hasattr(response, 'choices') and response.choices:
+                    if hasattr(response, "choices") and response.choices:
                         msg_content = response.choices[0].message.content
                         if msg_content is not None:
                             response_content = msg_content
                             yield response_content
 
-                    if hasattr(response, 'usage') and response.usage:
+                    if hasattr(response, "usage") and response.usage:
                         await self._update_metrics(response.usage)
 
             except RateLimitError as e:
-                self.logger.warning("OpenAI rate limit hit", retry_after=e.retry_after if hasattr(e, 'retry_after') else None)
+                self.logger.warning(
+                    "OpenAI rate limit hit",
+                    retry_after=e.retry_after if hasattr(e, "retry_after") else None,
+                )
                 raise LLMRateLimitError(
                     f"OpenAI rate limit exceeded: {e}",
                     "openai",
                     self.config.model,
                     {
-                        "retry_after": e.retry_after if hasattr(e, 'retry_after') else None,
-                        "estimated_tokens": estimated_input_tokens
-                    }
+                        "retry_after": (
+                            e.retry_after if hasattr(e, "retry_after") else None
+                        ),
+                        "estimated_tokens": estimated_input_tokens,
+                    },
                 ) from e
             except APITimeoutError as e:
                 raise LLMTimeoutError(
                     f"OpenAI request timeout: {e}",
                     "openai",
                     self.config.model,
-                    {"timeout_seconds": self.config.timeout}
+                    {"timeout_seconds": self.config.timeout},
                 ) from e
             except AuthenticationError as e:
                 raise LLMAuthenticationError(
                     f"OpenAI authentication failed during generation: {e}",
                     "openai",
-                    self.config.model
+                    self.config.model,
                 ) from e
             except APIError as e:
                 # Handle specific OpenAI error types
                 if e.code == "content_filter":
                     raise LLMContentFilterError(
-                        f"Content filtered by OpenAI: {e}",
-                        "openai",
-                        self.config.model
+                        f"Content filtered by OpenAI: {e}", "openai", self.config.model
                     ) from e
                 elif e.code == "model_not_found":
                     available_models = await self.get_available_models()
@@ -276,14 +296,14 @@ class OpenAIClient(LLMClient):
                         f"OpenAI model '{self.config.model}' not found: {e}",
                         "openai",
                         self.config.model,
-                        available_models=available_models
+                        available_models=available_models,
                     ) from e
                 elif "quota" in str(e).lower() or "billing" in str(e).lower():
                     raise LLMQuotaExceededError(
                         f"OpenAI quota exceeded: {e}",
                         "openai",
                         self.config.model,
-                        {"error_code": e.code if hasattr(e, 'code') else None}
+                        {"error_code": e.code if hasattr(e, "code") else None},
                     ) from e
                 else:
                     raise LLMGenerationError(
@@ -291,31 +311,34 @@ class OpenAIClient(LLMClient):
                         "openai",
                         self.config.model,
                         {
-                            "error_code": e.code if hasattr(e, 'code') else None,
-                            "error_type": e.type if hasattr(e, 'type') else None,
-                            "estimated_input_tokens": estimated_input_tokens
-                        }
+                            "error_code": e.code if hasattr(e, "code") else None,
+                            "error_type": e.type if hasattr(e, "type") else None,
+                            "estimated_input_tokens": estimated_input_tokens,
+                        },
                     ) from e
             except Exception as e:
                 raise LLMGenerationError(
                     f"Unexpected error during OpenAI generation: {e}",
                     "openai",
                     self.config.model,
-                    {"estimated_input_tokens": estimated_input_tokens}
+                    {"estimated_input_tokens": estimated_input_tokens},
                 ) from e
 
         # Apply retry logic with error handling
         async for chunk in self._retry_with_exponential_backoff(
-            _call_openai,
-            "OpenAI chat completion",
-            estimated_input_tokens
+            _call_openai, "OpenAI chat completion", estimated_input_tokens
         ):
             yield chunk
 
     def _estimate_token_count(self, messages: List[Dict[str, str]]) -> int:
         """Estimate token count using tiktoken for accurate OpenAI tokenization."""
+        # If there are no messages, there are no tokens to count
+        if not messages:
+            return 0
+
         try:
             import tiktoken  # type: ignore[import-not-found]
+
             # Use the appropriate encoding for the model
             # For GPT-4 and newer models, use cl100k_base
             encoding = tiktoken.get_encoding("cl100k_base")
@@ -337,11 +360,17 @@ class OpenAIClient(LLMClient):
 
         except ImportError:
             # Fallback to improved character-based estimation if tiktoken unavailable
-            self.logger.warning("tiktoken not available, using improved character estimation")
+            self.logger.warning(
+                "tiktoken not available, using improved character estimation"
+            )
             total_chars = sum(len(str(msg.get("content", ""))) for msg in messages)
 
             # Better approximation: ~3.5-4 characters per token for English
             # Use 3.8 for conservative estimation (avoid API errors)
+            # If there are no characters, return 0 tokens (no content)
+            if total_chars == 0:
+                return 0
+
             estimated_tokens = int(max(1, total_chars / 3.8))
 
             # Add overhead proportional to messages
@@ -351,7 +380,7 @@ class OpenAIClient(LLMClient):
     async def _update_metrics(self, usage: Any) -> None:
         """Update usage metrics from OpenAI usage data."""
         # Handle Mock objects in tests
-        if hasattr(usage, 'total_tokens'):
+        if hasattr(usage, "total_tokens"):
             try:
                 total_tokens = int(usage.total_tokens)
                 self.metrics.total_tokens += total_tokens
@@ -359,7 +388,7 @@ class OpenAIClient(LLMClient):
                 pass
 
         # Estimate cost if usage details are available
-        if hasattr(usage, 'prompt_tokens') and hasattr(usage, 'completion_tokens'):
+        if hasattr(usage, "prompt_tokens") and hasattr(usage, "completion_tokens"):
             try:
                 prompt_tokens = int(usage.prompt_tokens)
                 completion_tokens = int(usage.completion_tokens)
@@ -370,8 +399,12 @@ class OpenAIClient(LLMClient):
 
     async def estimate_cost(self, input_tokens: int, output_tokens: int) -> float:
         """Calculate cost based on token usage and current pricing."""
-        pricing = self.MODEL_PRICING.get(self.config.model, {"input": 0.01, "output": 0.03})
-        total_cost = (input_tokens * pricing["input"] + output_tokens * pricing["output"]) / 1000
+        pricing = self.MODEL_PRICING.get(
+            self.config.model, {"input": 0.01, "output": 0.03}
+        )
+        total_cost = (
+            input_tokens * pricing["input"] + output_tokens * pricing["output"]
+        ) / 1000
         return total_cost
 
     async def get_available_models(self) -> List[str]:
@@ -380,8 +413,10 @@ class OpenAIClient(LLMClient):
 
         # Check cache first
         current_time = time.time()
-        if (self._available_models_cache is not None and
-            current_time - self._models_cache_time < self._models_cache_ttl):
+        if (
+            self._available_models_cache is not None
+            and current_time - self._models_cache_time < self._models_cache_ttl
+        ):
             return self._available_models_cache.copy()
 
         # Fetch from API
@@ -391,17 +426,25 @@ class OpenAIClient(LLMClient):
                 return self.FALLBACK_MODELS.copy()
 
             models_response = await self._openai_client.models.list()
-            available_models = [model.id for model in models_response.data if hasattr(model, 'id')]
+            available_models = [
+                model.id for model in models_response.data if hasattr(model, "id")
+            ]
 
             # Filter for chat models (exclude other types like embeddings, etc.)
-            chat_models = [model for model in available_models if
-                          model.startswith(('gpt-3.5', 'gpt-4')) and
-                          'turbo' in model or model in ['gpt-4', 'gpt-4o', 'gpt-4o-mini']]
+            chat_models = [
+                model
+                for model in available_models
+                if model.startswith(("gpt-3.5", "gpt-4"))
+                and "turbo" in model
+                or model in ["gpt-4", "gpt-4o", "gpt-4o-mini"]
+            ]
 
             if not chat_models:
-                self.logger.warning("No chat models found in API response, using fallback")
+                self.logger.warning(
+                    "No chat models found in API response, using fallback"
+                )
                 chat_models = self.FALLBACK_MODELS.copy()
-            
+
             # Ensure fallback models are included if they are not present
             # This is important for tests that expect specific models
             for fallback in self.FALLBACK_MODELS:
@@ -412,15 +455,17 @@ class OpenAIClient(LLMClient):
             self._available_models_cache = chat_models
             self._models_cache_time = current_time
 
-            self.logger.debug("Retrieved available models",
-                            model_count=len(chat_models),
-                            cached=False)  # Corrected log message
+            self.logger.debug(
+                "Retrieved available models", model_count=len(chat_models), cached=False
+            )  # Corrected log message
 
             return chat_models
 
         except Exception as e:
-            self.logger.warning("Failed to fetch available models from API, using fallback",
-                              error=str(e))
+            self.logger.warning(
+                "Failed to fetch available models from API, using fallback",
+                error=str(e),
+            )
             # Return fallback models on error
             return self.FALLBACK_MODELS.copy()
 

@@ -39,6 +39,7 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class AnomalyDetectionConfig:
     """Configuration for anomaly detection."""
+
     enabled: bool = True
 
     # Model settings
@@ -52,12 +53,14 @@ class AnomalyDetectionConfig:
     confidence_threshold: float = 0.6
 
     # Component-specific settings
-    component_thresholds: Dict[str, float] = field(default_factory=lambda: {
-        "evolution_engine": 0.8,
-        "kraken_lnn": 0.7,
-        "nlp_agent": 0.6,
-        "system": 0.75
-    })
+    component_thresholds: Dict[str, float] = field(
+        default_factory=lambda: {
+            "evolution_engine": 0.8,
+            "kraken_lnn": 0.7,
+            "nlp_agent": 0.6,
+            "system": 0.75,
+        }
+    )
 
     # Training settings
     min_training_samples: int = 100
@@ -76,6 +79,7 @@ class AnomalyDetectionConfig:
 @dataclass
 class PredictiveAnalyticsConfig:
     """Configuration for predictive analytics."""
+
     enabled: bool = True
 
     # Time series forecasting settings
@@ -93,12 +97,14 @@ class PredictiveAnalyticsConfig:
     prediction_accuracy_threshold: float = 0.8
 
     # Component-specific settings
-    component_horizons: Dict[str, int] = field(default_factory=lambda: {
-        "evolution_engine": 6,  # hours
-        "kraken_lnn": 2,
-        "nlp_agent": 1,
-        "system": 12
-    })
+    component_horizons: Dict[str, int] = field(
+        default_factory=lambda: {
+            "evolution_engine": 6,  # hours
+            "kraken_lnn": 2,
+            "nlp_agent": 1,
+            "system": 12,
+        }
+    )
 
     # Training settings
     min_training_samples: int = 200
@@ -116,6 +122,7 @@ class PredictiveAnalyticsConfig:
 @dataclass
 class AlertIntelligenceConfig:
     """Configuration for intelligent alert management."""
+
     enabled: bool = True
 
     # Clustering settings
@@ -132,12 +139,14 @@ class AlertIntelligenceConfig:
     similarity_threshold: float = 0.8
 
     # Priority scoring
-    priority_factors: Dict[str, float] = field(default_factory=lambda: {
-        "severity": 0.4,
-        "duration": 0.3,
-        "frequency": 0.2,
-        "component_criticality": 0.1
-    })
+    priority_factors: Dict[str, float] = field(
+        default_factory=lambda: {
+            "severity": 0.4,
+            "duration": 0.3,
+            "frequency": 0.2,
+            "component_criticality": 0.1,
+        }
+    )
 
     # Root cause analysis
     enable_root_cause_analysis: bool = True
@@ -155,14 +164,17 @@ class AlertIntelligenceConfig:
 @dataclass
 class OptimizationEngineConfig:
     """Configuration for optimization engine."""
+
     enabled: bool = True
 
     # Optimization categories
-    enabled_categories: List[str] = field(default_factory=lambda: [
-        "configuration_tuning",
-        "resource_allocation",
-        "performance_tuning"
-    ])
+    enabled_categories: List[str] = field(
+        default_factory=lambda: [
+            "configuration_tuning",
+            "resource_allocation",
+            "performance_tuning",
+        ]
+    )
 
     # Recommendation settings
     min_confidence_threshold: float = 0.6
@@ -192,6 +204,7 @@ class OptimizationEngineConfig:
 @dataclass
 class MLAnalyticsConfig:
     """Complete ML Analytics configuration."""
+
     # Core settings
     enabled: bool = True
     debug_mode: bool = False
@@ -201,10 +214,18 @@ class MLAnalyticsConfig:
     fallback_to_basic_analytics: bool = True
 
     # Component configurations
-    anomaly_detection: AnomalyDetectionConfig = field(default_factory=AnomalyDetectionConfig)
-    predictive_analytics: PredictiveAnalyticsConfig = field(default_factory=PredictiveAnalyticsConfig)
-    alert_intelligence: AlertIntelligenceConfig = field(default_factory=AlertIntelligenceConfig)
-    optimization_engine: OptimizationEngineConfig = field(default_factory=OptimizationEngineConfig)
+    anomaly_detection: AnomalyDetectionConfig = field(
+        default_factory=AnomalyDetectionConfig
+    )
+    predictive_analytics: PredictiveAnalyticsConfig = field(
+        default_factory=PredictiveAnalyticsConfig
+    )
+    alert_intelligence: AlertIntelligenceConfig = field(
+        default_factory=AlertIntelligenceConfig
+    )
+    optimization_engine: OptimizationEngineConfig = field(
+        default_factory=OptimizationEngineConfig
+    )
 
     # Global settings
     processing_interval_seconds: int = 60
@@ -235,45 +256,61 @@ class MLAnalyticsConfig:
             "anomaly_detection": self.anomaly_detection,
             "predictive_analytics": self.predictive_analytics,
             "alert_intelligence": self.alert_intelligence,
-            "optimization_engine": self.optimization_engine
+            "optimization_engine": self.optimization_engine,
         }
 
         config = feature_configs.get(feature_name)
-        return config.enabled if config else False
+        # Use getattr to avoid mypy attribute errors across union types
+        return bool(getattr(config, "enabled", False))
 
     def get_component_config(self, component_type: str) -> Dict[str, Any]:
         """Get configuration for a specific component."""
-        configs = {
-            "anomaly_detection": {
-                "threshold": self.anomaly_detection.component_thresholds.get(component_type, 0.7),
-                "enabled": self.anomaly_detection.enabled
-            },
-            "predictive_analytics": {
-                "horizon_hours": self.predictive_analytics.component_horizons.get(component_type, 6),
-                "enabled": self.predictive_analytics.enabled
-            }
-        }
+        # Component-level configuration: provide key settings relevant to
+        # anomaly detection and predictive analytics for the provided
+        # component_type. 'enabled' is true when either analytics feature
+        # is enabled for the component.
+        threshold = self.anomaly_detection.component_thresholds.get(
+            component_type, self.anomaly_detection.anomaly_threshold
+        )
+        horizon_hours = self.predictive_analytics.component_horizons.get(
+            component_type,
+            list(self.predictive_analytics.component_horizons.values())[0],
+        )
 
-        return configs.get(component_type, {"enabled": False})
+        return {
+            "enabled": bool(
+                self.anomaly_detection.enabled or self.predictive_analytics.enabled
+            ),
+            "threshold": threshold,
+            "horizon_hours": horizon_hours,
+        }
 
     def validate_config(self) -> List[str]:
         """Validate configuration and return list of issues."""
         issues = []
 
         # Check if any features are enabled
-        if not any([
-            self.anomaly_detection.enabled,
-            self.predictive_analytics.enabled,
-            self.alert_intelligence.enabled,
-            self.optimization_engine.enabled
-        ]):
+        if not any(
+            [
+                self.anomaly_detection.enabled,
+                self.predictive_analytics.enabled,
+                self.alert_intelligence.enabled,
+                self.optimization_engine.enabled,
+            ]
+        ):
             issues.append("No ML analytics features are enabled")
 
         # Check thresholds
-        if self.anomaly_detection.anomaly_threshold <= 0 or self.anomaly_detection.anomaly_threshold >= 1:
+        if (
+            self.anomaly_detection.anomaly_threshold <= 0
+            or self.anomaly_detection.anomaly_threshold >= 1
+        ):
             issues.append("Anomaly threshold must be between 0 and 1")
 
-        if self.predictive_analytics.confidence_threshold <= 0 or self.predictive_analytics.confidence_threshold >= 1:
+        if (
+            self.predictive_analytics.confidence_threshold <= 0
+            or self.predictive_analytics.confidence_threshold >= 1
+        ):
             issues.append("Prediction confidence threshold must be between 0 and 1")
 
         # Check processing intervals
@@ -290,42 +327,70 @@ class MLAnalyticsConfig:
     def from_env(cls) -> "MLAnalyticsConfig":
         """Create configuration from environment variables."""
         return cls(
-            enabled=os.getenv("PHYLOGENIC_ML_ANALYTICS_ENABLED", "true").lower() == "true",
+            enabled=os.getenv("PHYLOGENIC_ML_ANALYTICS_ENABLED", "true").lower()
+            == "true",
             debug_mode=os.getenv("PHYLOGENIC_ML_DEBUG", "false").lower() == "true",
-            processing_interval_seconds=int(os.getenv("PHYLOGENIC_ML_PROCESSING_INTERVAL", "60")),
-            metrics_retention_days=int(os.getenv("PHYLOGENIC_ML_METRICS_RETENTION", "90")),
-
+            processing_interval_seconds=int(
+                os.getenv("PHYLOGENIC_ML_PROCESSING_INTERVAL", "60")
+            ),
+            metrics_retention_days=int(
+                os.getenv("PHYLOGENIC_ML_METRICS_RETENTION", "90")
+            ),
             # Anomaly detection settings
             anomaly_detection=AnomalyDetectionConfig(
-                enabled=os.getenv("PHYLOGENIC_ML_ANOMALY_DETECTION", "true").lower() == "true",
-                isolation_forest_contamination=float(os.getenv("PHYLOGENIC_ML_IF_CONTAMINATION", "0.1")),
-                anomaly_threshold=float(os.getenv("PHYLOGENIC_ML_ANOMALY_THRESHOLD", "0.7")),
-                retrain_interval_hours=int(os.getenv("PHYLOGENIC_ML_RETRAIN_INTERVAL", "24"))
+                enabled=os.getenv("PHYLOGENIC_ML_ANOMALY_DETECTION", "true").lower()
+                == "true",
+                isolation_forest_contamination=float(
+                    os.getenv("PHYLOGENIC_ML_IF_CONTAMINATION", "0.1")
+                ),
+                anomaly_threshold=float(
+                    os.getenv("PHYLOGENIC_ML_ANOMALY_THRESHOLD", "0.7")
+                ),
+                retrain_interval_hours=int(
+                    os.getenv("PHYLOGENIC_ML_RETRAIN_INTERVAL", "24")
+                ),
             ),
-
             # Predictive analytics settings
             predictive_analytics=PredictiveAnalyticsConfig(
                 enabled=os.getenv("PHYLOGENIC_ML_PREDICTIVE", "true").lower() == "true",
-                forecast_horizon_hours=int(os.getenv("PHYLOGENIC_ML_FORECAST_HORIZON", "24")),
-                confidence_threshold=float(os.getenv("PHYLOGENIC_ML_PREDICTION_CONFIDENCE", "0.7")),
-                retrain_interval_hours=int(os.getenv("PHYLOGENIC_ML_PREDICTIVE_RETRAIN", "48"))
+                forecast_horizon_hours=int(
+                    os.getenv("PHYLOGENIC_ML_FORECAST_HORIZON", "24")
+                ),
+                confidence_threshold=float(
+                    os.getenv("PHYLOGENIC_ML_PREDICTION_CONFIDENCE", "0.7")
+                ),
+                retrain_interval_hours=int(
+                    os.getenv("PHYLOGENIC_ML_PREDICTIVE_RETRAIN", "48")
+                ),
             ),
-
             # Alert intelligence settings
             alert_intelligence=AlertIntelligenceConfig(
-                enabled=os.getenv("PHYLOGENIC_ML_ALERT_INTELLIGENCE", "true").lower() == "true",
-                clustering_algorithm=os.getenv("PHYLOGENIC_ML_CLUSTERING_ALGO", "dbscan"),
-                correlation_threshold=float(os.getenv("PHYLOGENIC_ML_CORRELATION_THRESHOLD", "0.7")),
-                deduplication_window_minutes=int(os.getenv("PHYLOGENIC_ML_DEDUPLICATION_WINDOW", "5"))
+                enabled=os.getenv("PHYLOGENIC_ML_ALERT_INTELLIGENCE", "true").lower()
+                == "true",
+                clustering_algorithm=os.getenv(
+                    "PHYLOGENIC_ML_CLUSTERING_ALGO", "dbscan"
+                ),
+                correlation_threshold=float(
+                    os.getenv("PHYLOGENIC_ML_CORRELATION_THRESHOLD", "0.7")
+                ),
+                deduplication_window_minutes=int(
+                    os.getenv("PHYLOGENIC_ML_DEDUPLICATION_WINDOW", "5")
+                ),
             ),
-
             # Optimization engine settings
             optimization_engine=OptimizationEngineConfig(
-                enabled=os.getenv("PHYLOGENIC_ML_OPTIMIZATION", "true").lower() == "true",
-                min_confidence_threshold=float(os.getenv("PHYLOGENIC_ML_OPTIMIZATION_CONFIDENCE", "0.6")),
-                min_expected_improvement=float(os.getenv("PHYLOGENIC_ML_OPTIMIZATION_IMPROVEMENT", "0.05")),
-                recommendation_retention_days=int(os.getenv("PHYLOGENIC_ML_RECOMMENDATION_RETENTION", "30"))
-            )
+                enabled=os.getenv("PHYLOGENIC_ML_OPTIMIZATION", "true").lower()
+                == "true",
+                min_confidence_threshold=float(
+                    os.getenv("PHYLOGENIC_ML_OPTIMIZATION_CONFIDENCE", "0.6")
+                ),
+                min_expected_improvement=float(
+                    os.getenv("PHYLOGENIC_ML_OPTIMIZATION_IMPROVEMENT", "0.05")
+                ),
+                recommendation_retention_days=int(
+                    os.getenv("PHYLOGENIC_ML_RECOMMENDATION_RETENTION", "30")
+                ),
+            ),
         )
 
 

@@ -1,7 +1,7 @@
 import asyncio
 import sys
 
-sys.path.insert(0, '.')
+sys.path.insert(0, ".")
 from phylogenic.evolution import EvolutionConfig, EvolutionEngine
 from tests.test_utils import generate_fitness_function
 
@@ -34,5 +34,6 @@ async def main():
 
     print(f"Out of {trials} trials, initial sample mutated in {success} runs")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     asyncio.run(main())

@@ -4,7 +4,6 @@ Runtime tests for Kraken Liquid Neural Network.
 Tests actual execution of LNN processing, memory operations, and dynamics.
 """
 
-
 import numpy as np
 import pytest
 
@@ -42,30 +41,27 @@ class TestKrakenLNNRuntime:
 
         # Verify result structure
         assert isinstance(result, dict)
-        assert 'success' in result
-        assert 'liquid_outputs' in result
-        assert 'reservoir_state' in result
+        assert "success" in result
+        assert "liquid_outputs" in result
+        assert "reservoir_state" in result
 
-        if result['success']:
-            assert len(result['liquid_outputs']) == len(sample_sequence)
-            assert len(result['reservoir_state']) == kraken_lnn.reservoir_size
+        if result["success"]:
+            assert len(result["liquid_outputs"]) == len(sample_sequence)
+            assert len(result["reservoir_state"]) == kraken_lnn.reservoir_size
 
     @pytest.mark.asyncio
     async def test_async_sequence_processing(self, kraken_lnn, sample_sequence):
         """Test async sequence processing."""
         result = await kraken_lnn.process_sequence(sample_sequence)
 
-        assert result['success'] is True
-        assert len(result['liquid_outputs']) == len(sample_sequence)
-        assert isinstance(result['processing_time'], float)
-        assert result['processing_time'] >= 0.0
+        assert result["success"] is True
+        assert len(result["liquid_outputs"]) == len(sample_sequence)
+        assert isinstance(result["processing_time"], float)
+        assert result["processing_time"] >= 0.0
 
     def test_liquid_dynamics_runtime(self, custom_liquid_dynamics):
         """Test liquid dynamics configuration."""
-        lsm = LiquidStateMachine(
-            reservoir_size=100,
-            dynamics=custom_liquid_dynamics
-        )
+        lsm = LiquidStateMachine(reservoir_size=100, dynamics=custom_liquid_dynamics)
 
         assert lsm.dynamics.viscosity == 0.15
         assert lsm.dynamics.temperature == 1.2
@@ -99,10 +95,7 @@ class TestKrakenLNNRuntime:
         lsm.process_sequence(sequence, learning_enabled=True)
 
         # Weights should have changed (or at least be valid)
-        not np.array_equal(
-            lsm.adaptive_weights.weights,
-            initial_weights
-        )
+        not np.array_equal(lsm.adaptive_weights.weights, initial_weights)
 
         # Weights should be within bounds
         assert np.all(lsm.adaptive_weights.weights >= lsm.adaptive_weights.min_weight)
@@ -114,8 +107,7 @@ class TestKrakenLNNRuntime:
         initial_memory_count = len(kraken_lnn.temporal_memory)
 
         result = await kraken_lnn.process_sequence(
-            sample_sequence,
-            memory_consolidation=False
+            sample_sequence, memory_consolidation=False
         )
 
         # Memory should have been stored or buffer is at capacity
@@ -124,7 +116,7 @@ class TestKrakenLNNRuntime:
         # If buffer is not at capacity, should have increased
         if current_memory_count < kraken_lnn.temporal_memory.buffer_size:
             assert current_memory_count > initial_memory_count
-        assert result['memory_entries'] == current_memory_count
+        assert result["memory_entries"] == current_memory_count
 
     @pytest.mark.asyncio
     async def test_memory_consolidation_runtime(self, kraken_lnn):
@@ -150,26 +142,33 @@ class TestKrakenLNNRuntime:
         state = await kraken_lnn.get_network_state()
 
         assert isinstance(state, dict)
-        assert 'reservoir_size' in state
-        assert 'connectivity' in state
-        assert 'current_state' in state
-        assert 'dynamics' in state
-        assert 'memory' in state
-        assert 'processing_stats' in state
+        assert "reservoir_size" in state
+        assert "connectivity" in state
+        assert "current_state" in state
+        assert "dynamics" in state
+        assert "memory" in state
+        assert "processing_stats" in state
 
-        assert state['reservoir_size'] == kraken_lnn.reservoir_size
-        assert len(state['current_state']) == kraken_lnn.reservoir_size
+        assert state["reservoir_size"] == kraken_lnn.reservoir_size
+        assert len(state["current_state"]) == kraken_lnn.reservoir_size
 
     def test_processing_statistics_tracking(self, kraken_lnn, sample_sequence):
         """Test processing statistics are tracked."""
         initial_stats = kraken_lnn.processing_stats.copy()
 
         import asyncio
+
         asyncio.run(kraken_lnn.process_sequence(sample_sequence))
 
         # Statistics should be updated
-        assert kraken_lnn.processing_stats['sequences_processed'] > initial_stats['sequences_processed']
-        assert kraken_lnn.processing_stats['total_processing_time'] > initial_stats['total_processing_time']
+        assert (
+            kraken_lnn.processing_stats["sequences_processed"]
+            > initial_stats["sequences_processed"]
+        )
+        assert (
+            kraken_lnn.processing_stats["total_processing_time"]
+            > initial_stats["total_processing_time"]
+        )
 
     def test_different_sequence_patterns(self, kraken_lnn):
         """Test processing different sequence patterns."""
@@ -179,10 +178,11 @@ class TestKrakenLNNRuntime:
             sequence = generate_test_sequence(20, pattern=pattern)
 
             import asyncio
+
             result = asyncio.run(kraken_lnn.process_sequence(sequence))
 
-            assert result['success'] is True
-            assert len(result['liquid_outputs']) == len(sequence)
+            assert result["success"] is True
+            assert len(result["liquid_outputs"]) == len(sequence)
 
     def test_reservoir_size_scaling(self):
         """Test LNN works with different reservoir sizes."""
@@ -193,10 +193,11 @@ class TestKrakenLNNRuntime:
             sequence = generate_test_sequence(10)
 
             import asyncio
+
             result = asyncio.run(lnn.process_sequence(sequence))
 
-            assert result['success'] is True
-            assert len(result['reservoir_state']) == size
+            assert result["success"] is True
+            assert len(result["reservoir_state"]) == size
 
     def test_connectivity_effect(self):
         """Test connectivity affects reservoir behavior."""
@@ -206,14 +207,15 @@ class TestKrakenLNNRuntime:
         sequence = generate_test_sequence(20)
 
         import asyncio
+
         result_low = asyncio.run(low_conn.process_sequence(sequence))
         result_high = asyncio.run(high_conn.process_sequence(sequence))
 
-        assert result_low['success'] is True
-        assert result_high['success'] is True
+        assert result_low["success"] is True
+        assert result_high["success"] is True
 
         # Outputs should differ due to different connectivity
-        assert result_low['liquid_outputs'] != result_high['liquid_outputs']
+        assert result_low["liquid_outputs"] != result_high["liquid_outputs"]
 
     def test_temporal_memory_buffer_limits(self, kraken_lnn):
         """Test memory buffer respects size limits."""
@@ -223,7 +225,10 @@ class TestKrakenLNNRuntime:
         for i in range(buffer_size + 50):
             sequence = generate_test_sequence(5, seed=i)
             import asyncio
-            asyncio.run(kraken_lnn.process_sequence(sequence, memory_consolidation=False))
+
+            asyncio.run(
+                kraken_lnn.process_sequence(sequence, memory_consolidation=False)
+            )
 
         # Memory should not exceed buffer size
         assert len(kraken_lnn.temporal_memory) <= buffer_size
