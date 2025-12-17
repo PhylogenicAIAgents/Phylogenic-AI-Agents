@@ -106,34 +106,28 @@ __all__ = [
     "__version__",
     "__author__",
     "__license__",
-
     # Genome classes
     "ConversationalGenome",
     "Gene",
     "GenomeBase",
-
     # Neural network
     "KrakenLNN",
     "LiquidStateMachine",
     "LiquidDynamics",
     "AdaptiveWeightMatrix",
     "TemporalMemoryBuffer",
-
     # Evolution
     "EvolutionEngine",
     "EvolutionConfig",
     "GeneticOperators",
-
     # Agent
     "NLPAgent",
     "create_agent",
     "AgentConfig",
-
     # Types
     "TraitDict",
     "ConversationTurn",
     "AgentResponse",
-
     # Exceptions
     "AbeNLPError",
     "GenomeError",

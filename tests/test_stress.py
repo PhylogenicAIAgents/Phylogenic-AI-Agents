@@ -30,11 +30,7 @@ class TestStress:
 
     def test_large_population_stress(self):
         """Test with very large population."""
-        config = EvolutionConfig(
-            population_size=1000,
-            generations=1,
-            mutation_rate=0.1
-        )
+        config = EvolutionConfig(population_size=1000, generations=1, mutation_rate=0.1)
         engine = EvolutionEngine(config)
 
         population = engine.initialize_population()
@@ -48,11 +44,7 @@ class TestStress:
     @pytest.mark.asyncio
     async def test_long_evolution_run(self, fitness_function):
         """Test evolution with many generations."""
-        config = EvolutionConfig(
-            population_size=50,
-            generations=100,
-            mutation_rate=0.1
-        )
+        config = EvolutionConfig(population_size=50, generations=100, mutation_rate=0.1)
         engine = EvolutionEngine(config)
 
         population = engine.initialize_population()
@@ -69,14 +61,14 @@ class TestStress:
         # Minimum values
         min_genome = ConversationalGenome(
             "min_traits",
-            traits=dict.fromkeys(ConversationalGenome.DEFAULT_TRAITS.keys(), 0.0)
+            traits=dict.fromkeys(ConversationalGenome.DEFAULT_TRAITS.keys(), 0.0),
         )
         assert_genome_valid(min_genome)
 
         # Maximum values
         max_genome = ConversationalGenome(
             "max_traits",
-            traits=dict.fromkeys(ConversationalGenome.DEFAULT_TRAITS.keys(), 1.0)
+            traits=dict.fromkeys(ConversationalGenome.DEFAULT_TRAITS.keys(), 1.0),
         )
         assert_genome_valid(max_genome)
 
@@ -84,15 +76,15 @@ class TestStress:
         mixed_genome = ConversationalGenome(
             "mixed_traits",
             traits={
-                'empathy': 0.0,
-                'engagement': 1.0,
-                'technical_knowledge': 0.0,
-                'creativity': 1.0,
-                'conciseness': 0.0,
-                'context_awareness': 1.0,
-                'adaptability': 0.0,
-                'personability': 1.0
-            }
+                "empathy": 0.0,
+                "engagement": 1.0,
+                "technical_knowledge": 0.0,
+                "creativity": 1.0,
+                "conciseness": 0.0,
+                "context_awareness": 1.0,
+                "adaptability": 0.0,
+                "personability": 1.0,
+            },
         )
         assert_genome_valid(mixed_genome)
 
@@ -131,15 +123,17 @@ class TestStress:
 
         result = await kraken_lnn.process_sequence(very_long_sequence)
 
-        assert result['success'] is True
-        assert len(result['liquid_outputs']) == len(very_long_sequence)
+        assert result["success"] is True
+        assert len(result["liquid_outputs"]) == len(very_long_sequence)
 
     def test_memory_buffer_overflow(self, kraken_lnn):
         """Test memory buffer handling when overflow occurs."""
         buffer_size = kraken_lnn.temporal_memory.buffer_size
 
         # Fill buffer beyond capacity
-        sequences = [generate_test_sequence(5, seed=i) for i in range(buffer_size + 100)]
+        sequences = [
+            generate_test_sequence(5, seed=i) for i in range(buffer_size + 100)
+        ]
 
         async def fill_buffer():
             for seq in sequences:
@@ -174,13 +168,13 @@ class TestStress:
         """Test handling of invalid inputs."""
         # Invalid trait values should raise ValidationError
         with pytest.raises(ValidationError):
-            ConversationalGenome("invalid", {'empathy': 1.5})
+            ConversationalGenome("invalid", {"empathy": 1.5})
 
         with pytest.raises(ValidationError):
-            ConversationalGenome("invalid", {'empathy': -0.1})
+            ConversationalGenome("invalid", {"empathy": -0.1})
 
         with pytest.raises(ValidationError):
-            ConversationalGenome("invalid", {'invalid_trait': 0.5})
+            ConversationalGenome("invalid", {"invalid_trait": 0.5})
 
     @pytest.mark.asyncio
     async def test_many_concurrent_agents(self):
@@ -206,6 +200,7 @@ class TestStress:
 
         # Evolve
         import asyncio
+
         asyncio.run(engine.evolve(population, fitness_function))
 
         final_diversity = engine._calculate_diversity(population)
@@ -228,10 +223,12 @@ class TestStress:
         sequences = [generate_test_sequence(10, seed=i) for i in range(200)]
 
         # Process rapidly
-        results = await asyncio.gather(*[kraken_lnn.process_sequence(s) for s in sequences])
+        results = await asyncio.gather(
+            *[kraken_lnn.process_sequence(s) for s in sequences]
+        )
 
         assert len(results) == 200
-        assert all(r['success'] for r in results)
+        assert all(r["success"] for r in results)
 
     def test_extreme_mutation_rates(self, default_genome):
         """Test with extreme mutation rates."""
@@ -262,6 +259,7 @@ class TestStress:
         population = engine.initialize_population()
 
         import asyncio
+
         best_genome = asyncio.run(engine.evolve(population, fitness_function))
 
         assert best_genome is not None
@@ -272,7 +270,7 @@ class TestStress:
         """Test agent creation with extreme trait values."""
         extreme_genome = ConversationalGenome(
             "extreme",
-            traits=dict.fromkeys(ConversationalGenome.DEFAULT_TRAITS.keys(), 1.0)
+            traits=dict.fromkeys(ConversationalGenome.DEFAULT_TRAITS.keys(), 1.0),
         )
 
         agent = await create_agent(extreme_genome)
@@ -291,9 +289,10 @@ class TestStress:
         sequence = generate_test_sequence(20)
 
         import asyncio
+
         result = asyncio.run(lnn.process_sequence(sequence))
 
-        assert result['success'] is True
+        assert result["success"] is True
 
     def test_very_large_reservoir(self):
         """Test LNN with very large reservoir."""
@@ -301,8 +300,8 @@ class TestStress:
         sequence = generate_test_sequence(50)
 
         import asyncio
+
         result = asyncio.run(lnn.process_sequence(sequence))
 
-        assert result['success'] is True
-        assert len(result['reservoir_state']) == 1000
-
+        assert result["success"] is True
+        assert len(result["reservoir_state"]) == 1000

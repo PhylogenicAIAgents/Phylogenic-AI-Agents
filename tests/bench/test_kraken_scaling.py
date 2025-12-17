@@ -16,6 +16,7 @@ class TestKrakenScalingBenchmarks:
     @pytest.mark.benchmark
     def test_reservoir_scaling_small(self, benchmark):
         """Benchmark small reservoir size performance."""
+
         def process_sequence_small_reservoir():
             lnn = KrakenLNN(reservoir_size=50, connectivity=0.1)
             sequence = generate_test_sequence(50)
@@ -24,7 +25,7 @@ class TestKrakenScalingBenchmarks:
             result = asyncio.run(lnn.process_sequence(sequence))
             processing_time = time.time() - start_time
 
-            assert result['success'] is True
+            assert result["success"] is True
             return processing_time
 
         processing_time = benchmark(process_sequence_small_reservoir)
@@ -33,6 +34,7 @@ class TestKrakenScalingBenchmarks:
     @pytest.mark.benchmark
     def test_reservoir_scaling_medium(self, benchmark):
         """Benchmark medium reservoir size performance."""
+
         def process_sequence_medium_reservoir():
             lnn = KrakenLNN(reservoir_size=100, connectivity=0.1)
             sequence = generate_test_sequence(50)
@@ -41,7 +43,7 @@ class TestKrakenScalingBenchmarks:
             result = asyncio.run(lnn.process_sequence(sequence))
             processing_time = time.time() - start_time
 
-            assert result['success'] is True
+            assert result["success"] is True
             return processing_time
 
         processing_time = benchmark(process_sequence_medium_reservoir)
@@ -50,6 +52,7 @@ class TestKrakenScalingBenchmarks:
     @pytest.mark.benchmark
     def test_reservoir_scaling_large(self, benchmark):
         """Benchmark large reservoir size performance."""
+
         def process_sequence_large_reservoir():
             lnn = KrakenLNN(reservoir_size=200, connectivity=0.1)
             sequence = generate_test_sequence(50)
@@ -58,7 +61,7 @@ class TestKrakenScalingBenchmarks:
             result = asyncio.run(lnn.process_sequence(sequence))
             processing_time = time.time() - start_time
 
-            assert result['success'] is True
+            assert result["success"] is True
             return processing_time
 
         processing_time = benchmark(process_sequence_large_reservoir)
@@ -78,7 +81,7 @@ class TestKrakenScalingBenchmarks:
             result = asyncio.run(lnn.process_sequence(sequence))
             processing_time = time.time() - start_time
 
-            assert result['success'] is True
+            assert result["success"] is True
             times.append(processing_time)
 
             # Should scale roughly linearly (not exponentially)
@@ -102,7 +105,7 @@ class TestKrakenScalingBenchmarks:
             result = asyncio.run(lnn.process_sequence(sequence))
             processing_time = time.time() - start_time
 
-            assert result['success'] is True
+            assert result["success"] is True
             # Basic performance check
             assert processing_time > 0
             assert processing_time < 5.0  # Should complete within reasonable time
@@ -110,6 +113,7 @@ class TestKrakenScalingBenchmarks:
     @pytest.mark.benchmark
     def test_memory_consolidation_performance(self, benchmark):
         """Benchmark memory consolidation performance."""
+
         def benchmark_memory_consolidation():
             lnn = KrakenLNN(reservoir_size=100, connectivity=0.1)
 
@@ -125,12 +129,14 @@ class TestKrakenScalingBenchmarks:
             # Benchmark consolidation
             start_time = time.time()
             consolidation_seq = generate_test_sequence(20)
-            result = asyncio.run(lnn.process_sequence(consolidation_seq, memory_consolidation=True))
+            result = asyncio.run(
+                lnn.process_sequence(consolidation_seq, memory_consolidation=True)
+            )
             consolidation_time = time.time() - start_time
 
             final_memory_count = len(lnn.temporal_memory.memories)
 
-            assert result['success'] is True
+            assert result["success"] is True
             assert final_memory_count <= initial_memory_count
 
             return consolidation_time
@@ -143,6 +149,7 @@ class TestKrakenScalingBenchmarks:
     @pytest.mark.benchmark
     def test_liquid_state_machine_performance(self, benchmark):
         """Benchmark LiquidStateMachine individual operations."""
+
         def benchmark_lsm_operations():
             lsm = LiquidStateMachine(reservoir_size=100, connectivity=0.1)
             sequence = generate_test_sequence(100)
@@ -164,6 +171,7 @@ class TestKrakenScalingBenchmarks:
     @pytest.mark.benchmark
     def test_batch_sequence_processing(self, benchmark):
         """Benchmark processing multiple sequences in batch."""
+
         def benchmark_batch_processing():
             lnn = KrakenLNN(reservoir_size=100, connectivity=0.1)
 
@@ -180,7 +188,7 @@ class TestKrakenScalingBenchmarks:
             total_time = time.time() - start_time
 
             # All results should be successful
-            assert all(r['success'] for r in results)
+            assert all(r["success"] for r in results)
             assert len(results) == len(sequences)
 
             return total_time
@@ -193,17 +201,20 @@ class TestKrakenScalingBenchmarks:
     @pytest.mark.benchmark
     def test_large_reservoir_performance_limit(self, benchmark):
         """Test performance limits for large reservoirs to prevent OOM."""
+
         def process_large_reservoir():
             # Test with moderately large reservoir
-            lnn = KrakenLNN(reservoir_size=500, connectivity=0.05)  # Lower connectivity for large size
+            lnn = KrakenLNN(
+                reservoir_size=500, connectivity=0.05
+            )  # Lower connectivity for large size
             sequence = generate_test_sequence(100)
 
             start_time = time.time()
             result = asyncio.run(lnn.process_sequence(sequence))
             processing_time = time.time() - start_time
 
-            assert result['success'] is True
-            assert len(result['reservoir_state']) == 500
+            assert result["success"] is True
+            assert len(result["reservoir_state"]) == 500
 
             return processing_time
 
@@ -215,6 +226,7 @@ class TestKrakenScalingBenchmarks:
     @pytest.mark.benchmark
     def test_memory_efficiency_under_load(self, benchmark):
         """Benchmark memory efficiency during continuous processing."""
+
         def benchmark_memory_efficiency():
             lnn = KrakenLNN(reservoir_size=200, connectivity=0.1)
 
@@ -225,7 +237,7 @@ class TestKrakenScalingBenchmarks:
                 sequence = generate_test_sequence(25, seed=i)
                 result = asyncio.run(lnn.process_sequence(sequence))
 
-                if not result['success']:
+                if not result["success"]:
                     break
 
             total_time = time.time() - start_time
@@ -242,6 +254,7 @@ class TestKrakenScalingBenchmarks:
     @pytest.mark.parametrize("reservoir_size", [50, 100, 200, 500])
     def test_initialization_performance(self, benchmark, reservoir_size):
         """Benchmark initialization time for different reservoir sizes."""
+
         def initialize_lnn():
             start_time = time.time()
             lnn = KrakenLNN(reservoir_size=reservoir_size, connectivity=0.1)
@@ -262,7 +275,9 @@ class TestKrakenScalingBenchmarks:
         assert init_time > 0  # Should take some measurable time
 
     def test_concurrent_processing_performance(self):
-        """Test concurrent processing capabilities - removed benchmark decorator due to async incompatibility."""
+        """Test concurrent processing capabilities - removed benchmark
+        decorator due to async incompatibility."""
+
         async def run_concurrent_processing():
             lnn = KrakenLNN(reservoir_size=100, connectivity=0.1)
 
@@ -276,15 +291,17 @@ class TestKrakenScalingBenchmarks:
             return results
 
         import asyncio
+
         results = asyncio.run(run_concurrent_processing())
 
         # All should complete successfully
         assert len(results) == 5
-        assert all(r['success'] for r in results)
+        assert all(r["success"] for r in results)
 
     @pytest.mark.benchmark
     def test_dynamics_calculation_performance(self, benchmark):
         """Benchmark liquid dynamics calculation performance."""
+
         def benchmark_dynamics():
             from phylogenic.kraken_lnn import LiquidDynamics
 
@@ -312,6 +329,7 @@ class TestKrakenScalingBenchmarks:
     @pytest.mark.benchmark
     def test_weight_matrix_operations_performance(self, benchmark):
         """Benchmark weight matrix operations."""
+
         def benchmark_weight_operations():
             lsm = LiquidStateMachine(reservoir_size=150, connectivity=0.1)
 
@@ -320,7 +338,7 @@ class TestKrakenScalingBenchmarks:
             # Perform multiple weight updates
             for _ in range(50):
                 learning_signal = np.random.random()  # Random learning signal
-                state_vector = np.random.random(150)   # Random state vector
+                state_vector = np.random.random(150)  # Random state vector
                 lsm.adaptive_weights.update(learning_signal, state_vector)
 
             operation_time = time.time() - start_time

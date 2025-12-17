@@ -38,7 +38,7 @@ class AbeNLPError(Exception):
         self,
         message: str,
         error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize AbeNLP exception.
@@ -65,34 +65,47 @@ class AbeNLPError(Exception):
             "error_type": self.__class__.__name__,
             "message": self.message,
             "error_code": self.error_code,
-            "details": self.details
+            "details": self.details,
         }
+
 
 class GenomeError(AbeNLPError):
     """Exception raised for genome-related errors."""
+
     pass
+
 
 class EvolutionError(AbeNLPError):
     """Exception raised for evolution process errors."""
+
     pass
+
 
 class AgentError(AbeNLPError):
     """Exception raised for agent-related errors."""
+
     pass
 
-class ValidationError(AbeNLPError):
-    """Exception raised for validation errors."""
+
+class ValidationError(AgentError):
+    """Exception raised for validation errors (also an AgentError)."""
+
     pass
+
 
 class ConfigurationError(AbeNLPError):
     """Exception raised for configuration errors."""
+
     pass
+
 
 class APIError(AbeNLPError):
     """Exception raised for API communication errors."""
+
     pass
+
 
 class TimeoutError(AbeNLPError):
     """Exception raised when operations timeout."""
-    pass
 
+    pass

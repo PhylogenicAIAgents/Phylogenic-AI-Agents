@@ -43,7 +43,7 @@ def simple_fitness_function(genome: ConversationalGenome) -> float:
 async def main():
     """Run evolution example."""
     print("🧬 Abe-NLP Evolution Example\n")
-    print("="*60)
+    print("=" * 60)
 
     # Step 1: Configure evolution
     print("\n⚙️  Step 1: Configuring evolution parameters...")
@@ -74,10 +74,11 @@ async def main():
     # Step 4: Run evolution
     print("\n⚡ Step 4: Running evolution...")
     print("\n   Generation | Best Fitness | Avg Fitness | Diversity")
-    print("   " + "-"*56)
+    print("   " + "-" * 56)
 
     # Create a callback to track progress
     generation_count = 0
+
     def fitness_with_tracking(genome):
         nonlocal generation_count
         fitness = simple_fitness_function(genome)
@@ -85,20 +86,20 @@ async def main():
 
     # Run evolution
     best_genome = await engine.evolve(
-        population,
-        fitness_with_tracking,
-        generations=config.generations
+        population, fitness_with_tracking, generations=config.generations
     )
 
     # Print evolution history
     for record in engine.evolution_history:
-        print(f"   {record['generation']:>10} | "
-              f"{record['best_fitness']:>12.4f} | "
-              f"{record['avg_fitness']:>11.4f} | "
-              f"{record['diversity']:>9.4f}")
+        print(
+            f"   {record['generation']:>10} | "
+            f"{record['best_fitness']:>12.4f} | "
+            f"{record['avg_fitness']:>11.4f} | "
+            f"{record['diversity']:>9.4f}"
+        )
 
     # Step 5: Analyze results
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("\n🏆 Step 5: Evolution Results\n")
 
     print(f"Best Genome ID: {best_genome.genome_id}")
@@ -112,7 +113,7 @@ async def main():
         print(f"  {trait:20s}: {bar} {value:.2f}")
 
     # Step 6: Demonstrate genetic operators
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("\n🧪 Step 6: Genetic Operators Demo\n")
 
     # Tournament selection
@@ -142,7 +143,7 @@ async def main():
         if abs(change) > 0.01:
             print(f"      {trait}: {old_val:.2f} → {new_val:.2f} ({change:+.2f})")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("\n✅ Evolution example completed!")
     print("\nKey Takeaways:")
     print("  - Evolution improves genome fitness over generations")
@@ -153,4 +154,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

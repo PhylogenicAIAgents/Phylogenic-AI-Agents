@@ -33,9 +33,11 @@ class LLMError(AbeNLPError):
     """Base exception for LLM-related errors.
 
     Attributes:
-        provider: The LLM provider where the error occurred (e.g., 'openai', 'anthropic')
+        provider: The LLM provider where the error occurred (e.g., 'openai',
+            'anthropic')
         model: The specific model being used when the error occurred
-        details: Additional error details like request_id, attempt count, etc.
+        details: Additional error details like request_id, attempt count,
+            etc.
     """
 
     def __init__(
@@ -43,7 +45,7 @@ class LLMError(AbeNLPError):
         message: str,
         provider: Optional[str] = None,
         model: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(message)
         self.provider = provider
@@ -57,6 +59,7 @@ class LLMInitializationError(LLMError):
     This includes API key validation failures, network connectivity issues,
     and provider-specific initialization errors.
     """
+
     pass
 
 
@@ -66,6 +69,7 @@ class LLMGenerationError(LLMError):
     This includes content generation failures, invalid parameters,
     and provider-specific generation errors.
     """
+
     pass
 
 
@@ -74,6 +78,7 @@ class LLMRateLimitError(LLMError):
 
     Includes information about when to retry and current limit status.
     """
+
     pass
 
 
@@ -83,6 +88,7 @@ class LLMAuthenticationError(LLMError):
     This could be due to invalid API keys, expired tokens,
     or insufficient permissions.
     """
+
     pass
 
 
@@ -98,7 +104,7 @@ class LLMTimeoutError(LLMError):
         provider: Optional[str] = None,
         model: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None,
-        timeout_seconds: Optional[float] = None
+        timeout_seconds: Optional[float] = None,
     ):
         super().__init__(message, provider, model, details)
         self.timeout_seconds = timeout_seconds
@@ -116,7 +122,7 @@ class LLMQuotaExceededError(LLMError):
         provider: Optional[str] = None,
         model: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None,
-        reset_time: Optional[str] = None
+        reset_time: Optional[str] = None,
     ):
         super().__init__(message, provider, model, details)
         self.reset_time = reset_time
@@ -127,6 +133,7 @@ class LLMContentFilterError(LLMError):
 
     Includes information about filtered content and suggested alternatives.
     """
+
     pass
 
 
@@ -142,7 +149,7 @@ class LLMModelNotAvailableError(LLMError):
         provider: Optional[str] = None,
         model: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None,
-        available_models: Optional[List[str]] = None
+        available_models: Optional[List[str]] = None,
     ):
         super().__init__(message, provider, model, details)
         self.available_models = available_models or []
@@ -154,4 +161,5 @@ class LLMConfigurationError(LLMError):
     This includes invalid parameters, unsupported combinations,
     and configuration conflicts.
     """
+
     pass

@@ -26,7 +26,8 @@
 
 import json
 import os
-from typing import AsyncGenerator, Dict, List, Optional
+from types import TracebackType
+from typing import AsyncGenerator, Dict, List, Optional, Type
 
 import httpx
 import structlog
@@ -41,18 +42,32 @@ from .llm_exceptions import (
 
 logger = structlog.get_logger(__name__)
 
+
 class OllamaClient(LLMClient):
     """Ollama LLM client implementation for local and cloud AI models."""
 
     # Common Ollama models (can be extended)
     COMMON_MODELS = [
-        "llama2", "llama2:7b", "llama2:13b", "llama2:70b",
-        "codellama", "codellama:13b", "codellama:34b",
-        "mistral", "mistral:7b",
-        "orca-mini", "orca2:13b", "orca2:7b",
-        "vicuna", "vicuna:13b", "vicuna:7b",
-        "llava", "llava:13b",
-        "neural-chat", "starling-lm", "openchat"
+        "llama2",
+        "llama2:7b",
+        "llama2:13b",
+        "llama2:70b",
+        "codellama",
+        "codellama:13b",
+        "codellama:34b",
+        "mistral",
+        "mistral:7b",
+        "orca-mini",
+        "orca2:13b",
+        "orca2:7b",
+        "vicuna",
+        "vicuna:13b",
+        "vicuna:7b",
+        "llava",
+        "llava:13b",
+        "neural-chat",
+        "starling-lm",
+        "openchat",
     ]
 
     def __init__(self, config: LLMConfig):
@@ -60,11 +75,11 @@ class OllamaClient(LLMClient):
         self._http_client: Optional[httpx.AsyncClient] = None
 
         # Enhanced base URL with cloud support
-        self._base_url = getattr(config, 'base_url', None) or 'http://localhost:11434'
-        self._base_url = self._base_url.rstrip('/')  # Remove trailing slash
+        self._base_url = getattr(config, "base_url", None) or "http://localhost:11434"
+        self._base_url = self._base_url.rstrip("/")  # Remove trailing slash
 
         # Headers for authentication (especially for Ollama Cloud)
-        self._headers = getattr(config, 'headers', None) or {}
+        self._headers = getattr(config, "headers", None) or {}
 
     async def initialize(self) -> None:
         """Initialize Ollama client with connectivity test."""
@@ -73,54 +88,54 @@ class OllamaClient(LLMClient):
 
             # Auto-configure authentication for Ollama Cloud
             headers = self._headers.copy()
-            if 'ollama.com' in self._base_url:
+            if "ollama.com" in self._base_url:
                 # Check config first, then env var
-                api_key = self.config.api_key or os.getenv('OLLAMA_API_KEY')
+                api_key = self.config.api_key or os.getenv("OLLAMA_API_KEY")
                 if api_key:
-                    headers['Authorization'] = f'Bearer {api_key}'
+                    headers["Authorization"] = f"Bearer {api_key}"
                     self.logger.debug("Using Ollama Cloud authentication")
                 else:
                     self.logger.warning("OLLAMA_API_KEY not set for Ollama Cloud")
 
             # Test connection with authentication
-            async with httpx.AsyncClient(timeout=self.config.timeout, headers=headers) as client:
+            async with httpx.AsyncClient(
+                timeout=self.config.timeout, headers=headers
+            ) as client:
                 response = await client.get(f"{self._base_url}/api/version")
                 if response.status_code != 200:
                     raise LLMInitializationError(
                         f"Ollama server not accessible at {self._base_url}",
                         "ollama",
-                        self.config.model
+                        self.config.model,
                     )
 
             # Create persistent client with authentication
             self._http_client = httpx.AsyncClient(
-                base_url=self._base_url,
-                timeout=self.config.timeout,
-                headers=headers
+                base_url=self._base_url, timeout=self.config.timeout, headers=headers
             )
 
             # Validate model availability
             await self._validate_model_available()
 
             self._initialized = True
-            self.logger.info("Ollama client initialized successfully",
-                           model=self.config.model,
-                           base_url=self._base_url,
-                           cloud_auth='ollama.com' in self._base_url)
+            self.logger.info(
+                "Ollama client initialized successfully",
+                model=self.config.model,
+                base_url=self._base_url,
+                cloud_auth="ollama.com" in self._base_url,
+            )
 
         except httpx.TimeoutException as err:
             raise LLMTimeoutError(
                 f"Timeout connecting to Ollama server at {self._base_url}",
                 "ollama",
                 self.config.model,
-                timeout_seconds=self.config.timeout
+                timeout_seconds=self.config.timeout,
             ) from err
         except Exception as e:
             self.logger.error("Ollama client initialization failed", error=str(e))
             raise LLMInitializationError(
-                f"Failed to initialize Ollama client: {e}",
-                "ollama",
-                self.config.model
+                f"Failed to initialize Ollama client: {e}", "ollama", self.config.model
             ) from e
 
     async def _validate_model_available(self) -> None:
@@ -131,7 +146,7 @@ class OllamaClient(LLMClient):
                 f"Model '{self.config.model}' not available in Ollama",
                 "ollama",
                 self.config.model,
-                available_models=available_models[:20]
+                available_models=available_models[:20],
             )
 
     async def chat_completion(
@@ -139,7 +154,9 @@ class OllamaClient(LLMClient):
     ) -> AsyncGenerator[str, None]:
         """Generate chat completion using Ollama API."""
         if not self._initialized or not self._http_client:
-            raise LLMGenerationError("Client not initialized", "ollama", self.config.model)
+            raise LLMGenerationError(
+                "Client not initialized", "ollama", self.config.model
+            )
 
         # Convert messages to Ollama format
         ollama_messages = []
@@ -162,7 +179,7 @@ class OllamaClient(LLMClient):
             "options": {
                 "temperature": self.config.temperature,
                 "num_predict": self.config.max_tokens,
-            }
+            },
         }
 
         if system_message:
@@ -172,28 +189,24 @@ class OllamaClient(LLMClient):
             try:
                 assert self._http_client is not None
                 response = await self._http_client.post(
-                    "/api/chat",
-                    json=payload,
-                    timeout=self.config.timeout
+                    "/api/chat", json=payload, timeout=self.config.timeout
                 )
 
                 if response.status_code == 404:
                     raise LLMModelNotAvailableError(
                         f"Model '{self.config.model}' not found",
                         "ollama",
-                        self.config.model
+                        self.config.model,
                     )
                 elif response.status_code == 400:
                     raise LLMGenerationError(
-                        "Invalid request parameters",
-                        "ollama",
-                        self.config.model
+                        "Invalid request parameters", "ollama", self.config.model
                     )
                 elif response.status_code >= 500:
                     raise LLMGenerationError(
                         f"Ollama server error: {response.status_code}",
                         "ollama",
-                        self.config.model
+                        self.config.model,
                     )
 
                 if stream:
@@ -218,33 +231,31 @@ class OllamaClient(LLMClient):
                     if "message" in result and "content" in result["message"]:
                         content = result["message"]["content"]
                         yield content
-                        self.metrics.total_tokens += len(content.split()) * 2  # Rough estimate
+                        self.metrics.total_tokens += (
+                            len(content.split()) * 2
+                        )  # Rough estimate
 
             except httpx.TimeoutException as err:
                 raise LLMTimeoutError(
                     f"Ollama request timeout after {self.config.timeout}s",
                     "ollama",
                     self.config.model,
-                    timeout_seconds=self.config.timeout
+                    timeout_seconds=self.config.timeout,
                 ) from err
             except httpx.ConnectError as err:
                 raise LLMInitializationError(
                     f"Cannot connect to Ollama server at {self._base_url}",
                     "ollama",
-                    self.config.model
+                    self.config.model,
                 ) from err
             except Exception as e:
                 raise LLMGenerationError(
-                    f"Ollama generation error: {e}",
-                    "ollama",
-                    self.config.model
+                    f"Ollama generation error: {e}", "ollama", self.config.model
                 ) from e
 
         # Apply rate limiting and retry logic
         async for chunk in self._retry_with_exponential_backoff(
-            _ollama_request,
-            "Ollama chat completion",
-            tokens_used=1
+            _ollama_request, "Ollama chat completion", tokens_used=1
         ):
             yield chunk
 
@@ -269,7 +280,9 @@ class OllamaClient(LLMClient):
                 return self.COMMON_MODELS.copy()
 
         except Exception as e:
-            self.logger.warning("Error fetching Ollama models, using fallback", error=str(e))
+            self.logger.warning(
+                "Error fetching Ollama models, using fallback", error=str(e)
+            )
             return self.COMMON_MODELS.copy()
 
     async def close(self) -> None:
@@ -284,12 +297,13 @@ class OllamaClient(LLMClient):
                 self._http_client = None
                 self._initialized = False
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "OllamaClient":
         """Async context manager entry."""
         await self.initialize()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+    ) -> None:
         """Async context manager exit."""
         await self.close()
-

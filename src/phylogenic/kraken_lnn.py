@@ -41,7 +41,7 @@ import asyncio
 import heapq
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 
@@ -54,51 +54,59 @@ class DeterministicRandom:
     This class ensures that all random operations in Kraken LNN components
     use a controlled sequence that can be reset for testing purposes.
     """
-    _instances: Dict[str, 'DeterministicRandom'] = {}
+
+    _instances: Dict[str, "DeterministicRandom"] = {}
 
     def __init__(self, seed_value: Optional[int] = None):
         """Initialize deterministic random instance."""
         self._rng = np.random.RandomState(seed_value)
 
     @classmethod
-    def get_instance(cls, name: str = 'default') -> 'DeterministicRandom':
+    def get_instance(cls, name: str = "default") -> "DeterministicRandom":
         """Get or create a deterministic random instance by name."""
         if name not in cls._instances:
             cls._instances[name] = cls()
         return cls._instances[name]
 
     @classmethod
-    def seed(cls, seed_value: int, name: str = 'default') -> None:
+    def seed(cls, seed_value: int, name: str = "default") -> None:
         """Set the seed for a named deterministic random instance."""
         instance = cls.get_instance(name)
         instance._rng = np.random.RandomState(seed_value)
 
     @classmethod
-    def random(cls, size: Optional[Any] = None, name: str = 'default') -> np.ndarray:
+    def random(cls, size: Optional[Any] = None, name: str = "default") -> np.ndarray:
         """Generate random floats in [0, 1)."""
         instance = cls.get_instance(name)
         result: np.ndarray = np.asarray(instance._rng.random_sample(size))
         return result
 
     @classmethod
-    def randn(cls, *args: Any, name: str = 'default') -> np.ndarray:
+    def randn(cls, *args: Any, name: str = "default") -> np.ndarray:
         """Generate standard normal random values."""
         instance = cls.get_instance(name)
         result: np.ndarray = np.asarray(instance._rng.standard_normal(args))
         return result
 
     @classmethod
-    def normal(cls, loc: float = 0.0, scale: float = 1.0, size: Optional[Any] = None, name: str = 'default') -> np.ndarray:
+    def normal(
+        cls,
+        loc: float = 0.0,
+        scale: float = 1.0,
+        size: Optional[Any] = None,
+        name: str = "default",
+    ) -> np.ndarray:
         """Generate normal random values."""
         instance = cls.get_instance(name)
         result: np.ndarray = np.asarray(instance._rng.normal(loc, scale, size))
         return result
 
     @classmethod
-    def reset(cls, name: str = 'default') -> None:
+    def reset(cls, name: str = "default") -> None:
         """Reset the random state for a named instance."""
         if name in cls._instances:
             del cls._instances[name]
+
 
 @dataclass
 class LiquidDynamics:
@@ -111,6 +119,7 @@ class LiquidDynamics:
         flow_rate: Controls information propagation speed
         turbulence: Adds non-linear dynamics
     """
+
     viscosity: float = 0.1
     temperature: float = 1.0
     pressure: float = 1.0
@@ -118,9 +127,7 @@ class LiquidDynamics:
     turbulence: float = 0.05
 
     def calculate_perturbation(
-        self,
-        input_force: float,
-        random_vector: np.ndarray
+        self, input_force: float, random_vector: np.ndarray
     ) -> float:
         """Calculate perturbation based on input force and random dynamics.
 
@@ -136,9 +143,10 @@ class LiquidDynamics:
 
         # Apply temperature and viscosity scaling
         perturbation = input_force + noise * self.temperature
-        perturbation /= (1 + self.viscosity)  # Viscosity dampens perturbations
+        perturbation /= 1 + self.viscosity  # Viscosity dampens perturbations
 
         return float(perturbation)
+
 
 @dataclass
 class AdaptiveWeightMatrix:
@@ -152,6 +160,7 @@ class AdaptiveWeightMatrix:
         min_weight: Minimum allowed weight value
         learning_threshold: Threshold for learning activation
     """
+
     weights: np.ndarray = field(default_factory=lambda: np.array([]))
     plasticity_rate: float = 0.01
     decay_rate: float = 0.001
@@ -170,17 +179,24 @@ class AdaptiveWeightMatrix:
         """
         # Apply Hebbian-like learning rule with threshold check
         if abs(learning_signal) > self.learning_threshold:
-            # Single vectorized operation: plasticity_rate * learning_signal * outer(state_vector, state_vector)
+            # Single vectorized operation: plasticity_rate * learning_signal *
+            # outer(state_vector, state_vector)
             # This combines scaling and outer product in one step
-            self.weights += self.plasticity_rate * learning_signal * np.outer(state_vector, state_vector)
+            self.weights += (
+                self.plasticity_rate
+                * learning_signal
+                * np.outer(state_vector, state_vector)
+            )
 
             # Apply weight constraints with single clip operation
             np.clip(self.weights, self.min_weight, self.max_weight, out=self.weights)
 
         # Apply weight decay (in-place multiplication for memory efficiency)
-        self.weights *= (1 - self.decay_rate)
+        self.weights *= 1 - self.decay_rate
 
-    def update_batch(self, learning_signals: np.ndarray, state_vectors: np.ndarray) -> None:
+    def update_batch(
+        self, learning_signals: np.ndarray, state_vectors: np.ndarray
+    ) -> None:
         """Batch update weight matrix for multiple learning signals and state vectors.
 
         Args:
@@ -195,9 +211,13 @@ class AdaptiveWeightMatrix:
             significant_states = state_vectors[significant_mask]
 
             # Vectorized batch weight updates
-            # Outer products for all significant signals: (n_signals, state_dim, state_dim)
-            outer_products = self.plasticity_rate * significant_signals[:, np.newaxis, np.newaxis] * \
-                           np.einsum('bi,bj->bij', significant_states, significant_states)
+            # Outer products for all significant signals:
+            # (n_signals, state_dim, state_dim)
+            outer_products = (
+                self.plasticity_rate
+                * significant_signals[:, np.newaxis, np.newaxis]
+                * np.einsum("bi,bj->bij", significant_states, significant_states)
+            )
 
             # Accumulate all weight updates at once
             self.weights += np.sum(outer_products, axis=0)
@@ -206,7 +226,8 @@ class AdaptiveWeightMatrix:
             np.clip(self.weights, self.min_weight, self.max_weight, out=self.weights)
 
         # Apply weight decay (always, regardless of learning threshold)
-        self.weights *= (1 - self.decay_rate)
+        self.weights *= 1 - self.decay_rate
+
 
 @dataclass
 class TemporalMemoryBuffer:
@@ -223,6 +244,7 @@ class TemporalMemoryBuffer:
         _head: Current insertion position in circular buffer
         _count: Number of valid entries in buffer
     """
+
     buffer_size: int = 1000
     memory_decay: float = 0.95
     consolidation_threshold: float = 0.8
@@ -308,6 +330,7 @@ class TemporalMemoryBuffer:
         buffer_idx = (start_idx + index) % self.buffer_size
         self.memories[buffer_idx] = value
 
+
 class LiquidStateMachine:
     """Liquid State Machine for reservoir computing.
 
@@ -326,7 +349,7 @@ class LiquidStateMachine:
         connectivity: float = 0.1,
         dynamics: Optional[LiquidDynamics] = None,
         random_state: Optional[np.random.RandomState] = None,
-        instance_name: str = 'lsm_default'
+        instance_name: str = "lsm_default",
     ):
         """Initialize liquid state machine.
 
@@ -367,16 +390,20 @@ class LiquidStateMachine:
     def _initialize_weights(self) -> AdaptiveWeightMatrix:
         """Initialize adaptive weights with sparsity and random values."""
         # Initialize with small random weights
-        initial_weights = self.random_state.randn(self.reservoir_size, self.reservoir_size) * 0.1
-        
+        initial_weights = (
+            self.random_state.randn(self.reservoir_size, self.reservoir_size) * 0.1
+        )
+
         # Apply sparsity mask from connections
         initial_weights *= self.connections
-        
+
         return AdaptiveWeightMatrix(weights=initial_weights)
 
     def _initialize_connections(self) -> np.ndarray:
         """Initialize connection matrix with specified connectivity."""
-        connections = self.random_state.random((self.reservoir_size, self.reservoir_size))
+        connections = self.random_state.random(
+            (self.reservoir_size, self.reservoir_size)
+        )
         connections = (connections < self.connectivity).astype(float)
 
         # Remove self-connections
@@ -386,9 +413,7 @@ class LiquidStateMachine:
         return result
 
     def process_sequence(
-        self,
-        input_sequence: List[float],
-        learning_enabled: bool = True
+        self, input_sequence: List[float], learning_enabled: bool = True
     ) -> List[float]:
         """Process temporal sequence through liquid dynamics.
 
@@ -416,9 +441,7 @@ class LiquidStateMachine:
         return outputs
 
     def process_sequences_batch(
-        self,
-        input_sequences: List[List[float]],
-        learning_enabled: bool = True
+        self, input_sequences: List[List[float]], learning_enabled: bool = True
     ) -> List[List[float]]:
         """Process multiple sequences through liquid dynamics in batch.
 
@@ -466,9 +489,8 @@ class LiquidStateMachine:
         turbulent_flow = viscous_flow + self._add_liquid_noise()
 
         # Update state with liquid dynamics
-        self.state = (
-            self.state * self.dynamics.flow_rate +
-            turbulent_flow * (1 - self.dynamics.flow_rate)
+        self.state = self.state * self.dynamics.flow_rate + turbulent_flow * (
+            1 - self.dynamics.flow_rate
         )
 
         # Apply activation function with temperature
@@ -488,7 +510,9 @@ class LiquidStateMachine:
             Noise vector for the reservoir
         """
         # Use instance's random state for reproducible behavior
-        noise: np.ndarray = self.random_state.normal(0, self.dynamics.turbulence, self.reservoir_size)
+        noise: np.ndarray = self.random_state.normal(
+            0, self.dynamics.turbulence, self.reservoir_size
+        )
         return noise
 
     def process_input(self, input_value: float) -> float:
@@ -513,7 +537,7 @@ class LiquidStateMachine:
         """
         # Optimized input injection using direct slicing assignment
         input_injection = np.zeros(self.reservoir_size, dtype=np.float64)
-        input_injection[:min(10, self.reservoir_size)] = input_value
+        input_injection[: min(10, self.reservoir_size)] = input_value
 
         # Pre-multiply connection and weight matrices for faster computation
         # This avoids element-wise multiplication during each iteration
@@ -539,11 +563,125 @@ class LiquidStateMachine:
 
         return float(output)
 
-    def _update_adaptive_weights(
+    # ----------------------- Readout API -----------------------
+    def readout_predict(self, state: Optional[np.ndarray] = None) -> float:
+        """Predict supervised output from a reservoir state using the readout.
+
+        If the readout is not trained, raises a ValueError.
+        """
+        if self.readout_weights is None:
+            raise ValueError("Readout model is not trained")
+
+        # Use local state if provided, otherwise use this reservoir's state
+        s = state if state is not None else self.get_state()
+        s = np.asarray(s)
+        if s.shape[0] != self.reservoir_size:
+            raise ValueError("State dimension does not match reservoir size")
+
+        return float(np.dot(self.readout_weights, s) + self.readout_bias)
+
+    def train_readout(
+        self, X: np.ndarray, y: np.ndarray, method: str = "ridge", alpha: float = 1.0
+    ) -> Dict[str, Any]:
+        """Train a linear readout mapping reservoir states X -> targets y.
+
+        Args:
+            X: 2D array (n_samples, reservoir_size)
+            y: 1D array (n_samples,)
+            method: 'ridge' (default) uses sklearn Ridge if available,
+                otherwise numpy closed-form
+            alpha: regularization strength for ridge
+
+        Returns:
+            dict with training metrics (mse, method)
+        """
+        X = np.asarray(X)
+        y = np.asarray(y)
+        if X.ndim != 2 or X.shape[1] != self.reservoir_size:
+            raise ValueError("X must be shape (n_samples, reservoir_size)")
+
+        # Append bias column for closed-form solution convenience
+        if method == "ridge":
+            try:
+                from sklearn.linear_model import Ridge  # type: ignore[import-untyped]
+
+                model = Ridge(alpha=alpha, fit_intercept=True)
+                model.fit(X, y)
+                self.readout_weights = model.coef_.astype(float)
+                self.readout_bias = float(model.intercept_)
+                self.readout_method = "ridge(sklearn)"
+            except Exception:
+                # numpy closed-form ridge with intercept handled explicitly.
+                # Build augmented design matrix with bias column and do not
+                # regularize the intercept term.
+                Xb = np.hstack([X, np.ones((X.shape[0], 1))])
+                n_feat = Xb.shape[1]
+                reg = alpha * np.eye(n_feat)
+                # Do not penalize intercept (last column)
+                reg[-1, -1] = 0.0
+
+                w_aug = np.linalg.solve(Xb.T @ Xb + reg, Xb.T @ y)
+                w = w_aug[:-1]
+                bias = w_aug[-1]
+                self.readout_weights = w.astype(float)
+                self.readout_bias = float(bias)
+                self.readout_method = "ridge(numpy)"
+        else:
+            raise ValueError(f"Unsupported readout method: {method}")
+
+        # Metrics
+        preds = X @ self.readout_weights + self.readout_bias
+        mse = float(np.mean((preds - y) ** 2))
+        self.readout_trained_at = datetime.now(timezone.utc)
+
+        return {"method": self.readout_method, "mse": mse, "n_samples": X.shape[0]}
+
+    def train_readout_from_memory(
         self,
-        input_value: float,
-        output_value: float
-    ) -> None:
+        label_extractor: Callable[[Dict[str, Any]], float],
+        min_samples: int = 10,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Collect states and labels from temporal memory and train readout.
+
+        label_extractor: function that takes a memory entry and returns a numeric label
+        """
+        # LiquidStateMachine does not own a temporal memory by default.
+        # Require the caller to provide a 'memories' attribute or raise.
+        if not hasattr(self, "temporal_memory"):
+            raise ValueError("No temporal memory available to train readout")
+
+        memories = list(self.temporal_memory)
+        if not memories or len(memories) < min_samples:
+            raise ValueError("Not enough memory samples to train readout")
+
+        X = np.array([m["reservoir_state"] for m in memories])
+        y = np.array([float(label_extractor(m)) for m in memories])
+        return self.train_readout(X, y, **kwargs)
+
+    def save_readout(self, path: str) -> None:
+        import pickle
+
+        obj = {
+            "weights": self.readout_weights,
+            "bias": self.readout_bias,
+            "method": self.readout_method,
+            "trained_at": self.readout_trained_at,
+        }
+        with open(path, "wb") as f:
+            pickle.dump(obj, f)
+
+    def load_readout(self, path: str) -> None:
+        import pickle
+
+        with open(path, "rb") as f:
+            obj = pickle.load(f)
+        self.readout_weights = obj.get("weights")
+        self.readout_bias = obj.get("bias", 0.0)
+        self.readout_method = obj.get("method")
+        self.readout_trained_at = obj.get("trained_at")
+
+    def _update_adaptive_weights(self, input_value: float, output_value: float) -> None:
         """Update adaptive weights based on input-output correlation."""
         # Calculate learning signal
         learning_signal = input_value * output_value
@@ -552,9 +690,9 @@ class LiquidStateMachine:
         if abs(learning_signal) > self.adaptive_weights.learning_threshold:
             # Hebbian-like learning
             weight_update = (
-                self.adaptive_weights.plasticity_rate *
-                learning_signal *
-                np.outer(self.state, self.state)
+                self.adaptive_weights.plasticity_rate
+                * learning_signal
+                * np.outer(self.state, self.state)
             )
 
             # Apply weight update
@@ -564,16 +702,17 @@ class LiquidStateMachine:
             self.adaptive_weights.weights = np.clip(
                 self.adaptive_weights.weights,
                 self.adaptive_weights.min_weight,
-                self.adaptive_weights.max_weight
+                self.adaptive_weights.max_weight,
             )
 
         # Apply weight decay
-        self.adaptive_weights.weights *= (1 - self.adaptive_weights.decay_rate)
+        self.adaptive_weights.weights *= 1 - self.adaptive_weights.decay_rate
 
     def get_state(self) -> np.ndarray:
         """Get current reservoir state."""
         result: np.ndarray = self.state.copy()
         return result
+
 
 class KrakenLNN:
     """Kraken Liquid Neural Network implementation.
@@ -594,7 +733,7 @@ class KrakenLNN:
         memory_buffer_size: int = 1000,
         dynamics: Optional[LiquidDynamics] = None,
         random_state: Optional[np.random.RandomState] = None,
-        instance_name: str = 'kraken_default'
+        instance_name: str = "kraken_default",
     ):
         """Initialize Kraken LNN.
 
@@ -624,32 +763,103 @@ class KrakenLNN:
             connectivity=connectivity,
             dynamics=dynamics,
             random_state=self.random_state,
-            instance_name=instance_name + "_lsm"
+            instance_name=instance_name + "_lsm",
         )
 
         # Initialize temporal memory
-        self.temporal_memory = TemporalMemoryBuffer(
-            buffer_size=memory_buffer_size
-        )
+        self.temporal_memory = TemporalMemoryBuffer(buffer_size=memory_buffer_size)
 
         # Performance tracking
         self.processing_stats = {
             "sequences_processed": 0,
             "total_processing_time": 0.0,
             "average_sequence_length": 0.0,
-            "memory_utilization": 0.0
+            "memory_utilization": 0.0,
         }
+
+        # Readout model (trainable) - maps reservoir state -> supervised output
+        # readout_weights: numpy array shape (reservoir_size,) for linear readout
+        # readout_bias: scalar bias term
+        self.readout_weights: Optional[np.ndarray] = None
+        self.readout_bias: float = 0.0
+        # Readout training metadata
+        self.readout_trained_at = None
+        self.readout_method: Optional[str] = None
+
+    # ----------------------- Readout wrappers -----------------------
+    def train_readout(
+        self, X: np.ndarray, y: np.ndarray, method: str = "ridge", alpha: float = 1.0
+    ) -> Dict[str, Any]:
+        """Train readout via underlying liquid reservoir and mirror metadata."""
+        res = self.liquid_reservoir.train_readout(X, y, method=method, alpha=alpha)
+        # Mirror trained weights into KrakenLNN convenience attributes
+        self.readout_weights = getattr(self.liquid_reservoir, "readout_weights", None)
+        self.readout_bias = getattr(self.liquid_reservoir, "readout_bias", 0.0)
+        self.readout_method = getattr(self.liquid_reservoir, "readout_method", None)
+        self.readout_trained_at = getattr(
+            self.liquid_reservoir, "readout_trained_at", None
+        )
+        return res
+
+    def train_readout_from_memory(
+        self, label_extractor: Callable[[Dict[str, Any]], float], min_samples: int = 10, **kwargs: Any
+    ) -> Dict[str, Any]:
+        """Train readout using samples stored in the temporal memory."""
+        memories = list(self.temporal_memory)
+        if not memories or len(memories) < min_samples:
+            raise ValueError("Not enough memory samples to train readout")
+
+        X = np.array([m["reservoir_state"] for m in memories])
+        y = np.array([float(label_extractor(m)) for m in memories])
+
+        res = self.train_readout(X, y, **kwargs)
+        return res
+
+    def save_readout(self, path: str) -> None:
+        self.liquid_reservoir.save_readout(path)
+        # Also save KrakenLNN metadata if needed (no-op for now)
+
+    def load_readout(self, path: str) -> None:
+        self.liquid_reservoir.load_readout(path)
+        # Mirror into Kraken attributes
+        self.readout_weights = getattr(self.liquid_reservoir, "readout_weights", None)
+        self.readout_bias = getattr(self.liquid_reservoir, "readout_bias", 0.0)
+        self.readout_method = getattr(self.liquid_reservoir, "readout_method", None)
+        self.readout_trained_at = getattr(
+            self.liquid_reservoir, "readout_trained_at", None
+        )
+
+    def readout_predict(self, state: Optional[np.ndarray] = None) -> float:
+        """Predict supervised output from a reservoir state using the readout.
+
+        Uses KrakenLNN's trained readout weights if available, otherwise
+        delegates to the underlying LiquidStateMachine implementation.
+        """
+        # Prefer Kraken-level weights (keeps behavior consistent after load/save)
+        if self.readout_weights is not None:
+            s = state if state is not None else self.liquid_reservoir.get_state()
+            s = np.asarray(s)
+            if s.shape[0] != self.reservoir_size:
+                raise ValueError("State dimension does not match reservoir size")
+            return float(np.dot(self.readout_weights, s) + self.readout_bias)
+
+        # Fallback to LSM's readout if present (older code paths)
+        if hasattr(self.liquid_reservoir, "readout_predict"):
+            return self.liquid_reservoir.readout_predict(state)
+
+        raise ValueError("Readout model is not trained")
 
     async def process_sequences_batch(
         self,
         input_sequences: List[List[float]],
         learning_enabled: bool = True,
         memory_consolidation: bool = True,
-        max_concurrent: int = 4
+        max_concurrent: int = 4,
     ) -> List[Dict[str, Any]]:
         """Process multiple sequences in parallel for improved throughput.
 
-        Uses asyncio to process sequences concurrently, optimized for reservoir operations.
+        Uses asyncio to process sequences concurrently, optimized for
+        reservoir operations.
 
         Args:
             input_sequences: List of input sequences to process
@@ -668,7 +878,9 @@ class KrakenLNN:
 
         async def process_single_sequence(seq: List[float]) -> Dict[str, Any]:
             async with semaphore:
-                return await self.process_sequence(seq, learning_enabled, memory_consolidation)
+                return await self.process_sequence(
+                    seq, learning_enabled, memory_consolidation
+                )
 
         # Process all sequences concurrently
         tasks = [process_single_sequence(seq) for seq in input_sequences]
@@ -680,7 +892,7 @@ class KrakenLNN:
         self,
         input_sequence: List[float],
         learning_enabled: bool = True,
-        memory_consolidation: bool = True
+        memory_consolidation: bool = True,
     ) -> Dict[str, Any]:
         """Process temporal sequence with liquid dynamics and memory.
 
@@ -706,7 +918,7 @@ class KrakenLNN:
                 "input_sequence": input_sequence,
                 "liquid_outputs": liquid_outputs,
                 "reservoir_state": self.liquid_reservoir.state.copy(),
-                "sequence_length": len(input_sequence)
+                "sequence_length": len(input_sequence),
             }
 
             await self._store_memory(memory_entry)
@@ -730,8 +942,8 @@ class KrakenLNN:
                     "temperature": self.dynamics.temperature,
                     "pressure": self.dynamics.pressure,
                     "flow_rate": self.dynamics.flow_rate,
-                    "turbulence": self.dynamics.turbulence
-                }
+                    "turbulence": self.dynamics.turbulence,
+                },
             }
 
             return result
@@ -740,7 +952,7 @@ class KrakenLNN:
             return {
                 "success": False,
                 "error": str(e),
-                "processing_time": (datetime.now() - start_time).total_seconds()
+                "processing_time": (datetime.now() - start_time).total_seconds(),
             }
 
     async def get_network_state(self) -> Dict[str, Any]:
@@ -758,17 +970,16 @@ class KrakenLNN:
                 "temperature": self.dynamics.temperature,
                 "pressure": self.dynamics.pressure,
                 "flow_rate": self.dynamics.flow_rate,
-                "turbulence": self.dynamics.turbulence
+                "turbulence": self.dynamics.turbulence,
             },
             "memory": {
                 "buffer_size": self.temporal_memory.buffer_size,
                 "current_memories": len(self.temporal_memory),
                 "memory_utilization": (
-                    len(self.temporal_memory) /
-                    self.temporal_memory.buffer_size
-                )
+                    len(self.temporal_memory) / self.temporal_memory.buffer_size
+                ),
             },
-            "processing_stats": self.processing_stats
+            "processing_stats": self.processing_stats,
         }
 
     async def _store_memory(self, memory_entry: Dict[str, Any]) -> None:
@@ -791,14 +1002,18 @@ class KrakenLNN:
 
         # Calculate importance scores and create (importance, memory) tuples
         # Use heap to maintain top-k efficiently (O(n log k) vs O(n log n) sorting)
-        keep_count = max(1, int(len(memories) * self.temporal_memory.consolidation_threshold))
+        keep_count = max(
+            1, int(len(memories) * self.temporal_memory.consolidation_threshold)
+        )
         top_memories: List[tuple[float, Dict[str, Any]]] = []
 
         for memory in memories:
             if memory is not None:
                 # Vectorized recency calculation
                 recency_seconds = (current_time - memory["timestamp"]).total_seconds()
-                importance = memory["sequence_length"] / (1.0 + recency_seconds / hours_to_seconds)
+                importance = memory["sequence_length"] / (
+                    1.0 + recency_seconds / hours_to_seconds
+                )
 
                 # Use heap to keep track of top memories
                 if len(top_memories) < keep_count:
@@ -817,9 +1032,7 @@ class KrakenLNN:
             self.temporal_memory.add_memory(memory)
 
     def _update_processing_stats(
-        self,
-        input_sequence: List[float],
-        start_time: datetime
+        self, input_sequence: List[float], start_time: datetime
     ) -> None:
         """Update processing statistics."""
         processing_time = (datetime.now() - start_time).total_seconds()
@@ -827,10 +1040,10 @@ class KrakenLNN:
         self.processing_stats["sequences_processed"] += 1
         self.processing_stats["total_processing_time"] += processing_time
         self.processing_stats["average_sequence_length"] = (
-            (self.processing_stats["average_sequence_length"] *
-             (self.processing_stats["sequences_processed"] - 1) +
-             len(input_sequence)) / self.processing_stats["sequences_processed"]
-        )
+            self.processing_stats["average_sequence_length"]
+            * (self.processing_stats["sequences_processed"] - 1)
+            + len(input_sequence)
+        ) / self.processing_stats["sequences_processed"]
         self.processing_stats["memory_utilization"] = (
             len(self.temporal_memory) / self.temporal_memory.buffer_size
         )
@@ -851,6 +1064,6 @@ class KrakenLNN:
                 temperature=dynamics.temperature,
                 pressure=dynamics.pressure,
                 flow_rate=dynamics.flow_rate,
-                turbulence=dynamics.turbulence
-            )
+                turbulence=dynamics.turbulence,
+            ),
         )

@@ -14,8 +14,7 @@ from phylogenic import ConversationalGenome, TraitDict
 
 
 def generate_random_genome(
-    genome_id: str,
-    seed: Optional[int] = None
+    genome_id: str, seed: Optional[int] = None
 ) -> ConversationalGenome:
     """Generate a genome with random traits.
 
@@ -37,9 +36,7 @@ def generate_random_genome(
 
 
 def generate_population(
-    size: int,
-    base_traits: Optional[TraitDict] = None,
-    seed: Optional[int] = None
+    size: int, base_traits: Optional[TraitDict] = None, seed: Optional[int] = None
 ) -> List[ConversationalGenome]:
     """Generate a population of genomes.
 
@@ -64,18 +61,14 @@ def generate_population(
             variation = np.random.uniform(-0.2, 0.2)
             traits[trait_name] = np.clip(base_value + variation, 0.0, 1.0)
 
-        genome = ConversationalGenome(
-            genome_id=f"genome_{i:04d}",
-            traits=traits
-        )
+        genome = ConversationalGenome(genome_id=f"genome_{i:04d}", traits=traits)
         population.append(genome)
 
     return population
 
 
 def compare_genomes(
-    genome1: ConversationalGenome,
-    genome2: ConversationalGenome
+    genome1: ConversationalGenome, genome2: ConversationalGenome
 ) -> Dict[str, Any]:
     """Compare two genomes and return differences.
 
@@ -96,16 +89,14 @@ def compare_genomes(
     max_diff = max(trait_diffs.values())
 
     return {
-        'trait_differences': trait_diffs,
-        'mean_difference': mean_diff,
-        'max_difference': max_diff,
-        'identical': all(diff < 1e-10 for diff in trait_diffs.values())
+        "trait_differences": trait_diffs,
+        "mean_difference": mean_diff,
+        "max_difference": max_diff,
+        "identical": all(diff < 1e-10 for diff in trait_diffs.values()),
     }
 
 
-def calculate_population_diversity(
-    population: List[ConversationalGenome]
-) -> float:
+def calculate_population_diversity(population: List[ConversationalGenome]) -> float:
     """Calculate genetic diversity in a population.
 
     Args:
@@ -119,9 +110,7 @@ def calculate_population_diversity(
 
     trait_values = {}
     for trait_name in ConversationalGenome.DEFAULT_TRAITS.keys():
-        trait_values[trait_name] = [
-            g.get_trait_value(trait_name) for g in population
-        ]
+        trait_values[trait_name] = [g.get_trait_value(trait_name) for g in population]
 
     diversities = []
     for _trait, values in trait_values.items():
@@ -132,7 +121,7 @@ def calculate_population_diversity(
 
 
 def calculate_population_statistics(
-    population: List[ConversationalGenome]
+    population: List[ConversationalGenome],
 ) -> Dict[str, Any]:
     """Calculate statistics for a population.
 
@@ -144,29 +133,28 @@ def calculate_population_statistics(
     """
     if not population:
         return {
-            'size': 0,
-            'mean_fitness': 0.0,
-            'std_fitness': 0.0,
-            'best_fitness': 0.0,
-            'worst_fitness': 0.0,
-            'diversity': 0.0
+            "size": 0,
+            "mean_fitness": 0.0,
+            "std_fitness": 0.0,
+            "best_fitness": 0.0,
+            "worst_fitness": 0.0,
+            "diversity": 0.0,
         }
 
     fitness_scores = [g.fitness_score for g in population]
 
     return {
-        'size': len(population),
-        'mean_fitness': float(np.mean(fitness_scores)),
-        'std_fitness': float(np.std(fitness_scores)),
-        'best_fitness': float(max(fitness_scores)),
-        'worst_fitness': float(min(fitness_scores)),
-        'diversity': calculate_population_diversity(population)
+        "size": len(population),
+        "mean_fitness": float(np.mean(fitness_scores)),
+        "std_fitness": float(np.std(fitness_scores)),
+        "best_fitness": float(max(fitness_scores)),
+        "worst_fitness": float(min(fitness_scores)),
+        "diversity": calculate_population_diversity(population),
     }
 
 
 def generate_fitness_function(
-    weights: Optional[Dict[str, float]] = None,
-    seed: Optional[int] = None
+    weights: Optional[Dict[str, float]] = None, seed: Optional[int] = None
 ):
     """Generate a fitness function with custom weights.
 
@@ -219,9 +207,7 @@ def assert_genome_valid(genome: ConversationalGenome) -> None:
 
 
 def generate_test_sequence(
-    length: int,
-    pattern: str = "random",
-    seed: Optional[int] = None
+    length: int, pattern: str = "random", seed: Optional[int] = None
 ) -> List[float]:
     """Generate test sequences for LNN processing.
 
@@ -297,14 +283,14 @@ def create_serialization_test_data() -> Dict[str, Any]:
     return {
         "genome_id": "test_serialize_001",
         "traits": {
-            'empathy': 0.85,
-            'engagement': 0.75,
-            'technical_knowledge': 0.90,
-            'creativity': 0.65,
-            'conciseness': 0.80,
-            'context_awareness': 0.85,
-            'adaptability': 0.70,
-            'personability': 0.80
+            "empathy": 0.85,
+            "engagement": 0.75,
+            "technical_knowledge": 0.90,
+            "creativity": 0.65,
+            "conciseness": 0.80,
+            "context_awareness": 0.85,
+            "adaptability": 0.70,
+            "personability": 0.80,
         },
         "fitness_score": 0.82,
         "fitness_history": [0.75, 0.78, 0.80, 0.82],
@@ -314,6 +300,6 @@ def create_serialization_test_data() -> Dict[str, Any]:
             "last_mutation": datetime.now(timezone.utc).isoformat(),
             "parent_ids": ["parent_001", "parent_002"],
             "lineage": ["ancestor_001", "ancestor_002"],
-            "tags": ["test", "serialization"]
-        }
+            "tags": ["test", "serialization"],
+        },
     }

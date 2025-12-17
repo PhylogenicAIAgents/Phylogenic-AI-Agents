@@ -67,7 +67,7 @@ class Gene:
         expression_level: float = 0.5,
         mutation_rate: float = 0.1,
         regulation_factors: Optional[Dict[str, float]] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Initialize a gene with comprehensive parameters.
 
@@ -105,9 +105,8 @@ class Gene:
             noise_std: Standard deviation of Gaussian noise
         """
         noise = np.random.normal(0, noise_std)
-        self.expression_level = np.clip(
-            self.expression_level + noise, 0.0, 1.0
-        )
+        self.expression_level = np.clip(self.expression_level + noise, 0.0, 1.0)
+
 
 class GenomeBase(ABC):
     """
@@ -144,9 +143,10 @@ class GenomeBase(ABC):
 
     @classmethod
     @abstractmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'GenomeBase':
+    def from_dict(cls, data: Dict[str, Any]) -> "GenomeBase":
         """Deserialize from dictionary."""
         pass
+
 
 class ConversationalGenome(GenomeBase):
     """Genome specialized for conversational AI capabilities.
@@ -174,9 +174,11 @@ class ConversationalGenome(GenomeBase):
         ...         'creativity': 0.7
         ...     }
         ... )
-        >>> genome.get_trait_value('empathy')
-        0.9
-        >>> genome.mutate_trait('empathy', learning_rate=0.1)
+        if traits:
+            # Let ValidationError propagate to callers so tests and callers
+            # can handle validation failures explicitly.
+            self._validate_traits(traits)
+            self.traits.update(traits)
         >>> genome.crossover(other_genome)
     """
 
@@ -187,7 +189,7 @@ class ConversationalGenome(GenomeBase):
         self,
         genome_id: str,
         traits: Optional[TraitDict] = None,
-        metadata: Optional[GenomeMetadata] = None
+        metadata: Optional[GenomeMetadata] = None,
     ) -> None:
         """Initialize a conversational genome with specific traits.
 
@@ -202,7 +204,11 @@ class ConversationalGenome(GenomeBase):
         super().__init__(genome_id)
 
         # Initialize traits with defaults (pull from settings if present)
-        self.traits = self.DEFAULT_TRAITS.copy() if self.DEFAULT_TRAITS else allele_settings.default_traits.copy()
+        self.traits = (
+            self.DEFAULT_TRAITS.copy()
+            if self.DEFAULT_TRAITS
+            else allele_settings.default_traits.copy()
+        )
         if traits:
             self._validate_traits(traits)
             self.traits.update(traits)
@@ -213,8 +219,7 @@ class ConversationalGenome(GenomeBase):
 
         # Metadata
         self.metadata = metadata or GenomeMetadata(
-            creation_timestamp=datetime.now(timezone.utc),
-            generation=0
+            creation_timestamp=datetime.now(timezone.utc), generation=0
         )
 
         # Sync generation from metadata to base class
@@ -235,6 +240,7 @@ class ConversationalGenome(GenomeBase):
         """
         for trait_name, value in traits.items():
             if trait_name not in self.DEFAULT_TRAITS:
+                # Unknown trait names are validation errors
                 raise ValidationError(
                     f"Unknown trait: {trait_name}. "
                     f"Valid traits: {list(self.DEFAULT_TRAITS.keys())}"
@@ -265,14 +271,14 @@ class ConversationalGenome(GenomeBase):
                 expression_level=expression_level,
                 mutation_rate=0.1,
                 regulation_factors={
-                    'stability': 0.8,
-                    'plasticity': 0.6,
-                    'heritability': 0.9
+                    "stability": 0.8,
+                    "plasticity": 0.6,
+                    "heritability": 0.9,
                 },
                 metadata={
-                    'trait_type': 'conversational',
-                    'optimization_target': trait_name
-                }
+                    "trait_type": "conversational",
+                    "optimization_target": trait_name,
+                },
             )
             self.genes.append(gene)
 
@@ -310,7 +316,7 @@ class ConversationalGenome(GenomeBase):
 
         # Update corresponding gene
         for gene in self.genes:
-            if gene.metadata.get('optimization_target') == trait_name:
+            if gene.metadata.get("optimization_target") == trait_name:
                 gene.expression_level = value
                 break
 
@@ -318,7 +324,7 @@ class ConversationalGenome(GenomeBase):
         self,
         trait_name: str,
         mutation_strength: float = 0.1,
-        rng: Optional[np.random.RandomState] = None
+        rng: Optional[np.random.RandomState] = None,
     ) -> None:
         """Mutate a specific trait.
 
@@ -341,7 +347,9 @@ class ConversationalGenome(GenomeBase):
         new_value = np.clip(self.traits[trait_name] + noise, 0.0, 1.0)
         self.set_trait_value(trait_name, new_value)
 
-    def mutate_all_traits(self, mutation_rate: float = 0.1, seed: Optional[int] = None) -> None:
+    def mutate_all_traits(
+        self, mutation_rate: float = 0.1, seed: Optional[int] = None
+    ) -> None:
         """Apply mutations to all conversational traits.
 
         Args:
@@ -369,7 +377,9 @@ class ConversationalGenome(GenomeBase):
         # Update metadata
         self.metadata.last_mutation = datetime.now(timezone.utc)
 
-    def crossover(self, other: 'ConversationalGenome', seed: Optional[int] = None) -> 'ConversationalGenome':
+    def crossover(
+        self, other: "ConversationalGenome", seed: Optional[int] = None
+    ) -> "ConversationalGenome":
         """Create offspring through genome crossover.
 
         Args:
@@ -391,13 +401,11 @@ class ConversationalGenome(GenomeBase):
             # Random blend
             if rng.random() < 0.5:
                 child_traits[trait_name] = (
-                    0.7 * self.traits[trait_name] +
-                    0.3 * other.traits[trait_name]
+                    0.7 * self.traits[trait_name] + 0.3 * other.traits[trait_name]
                 )
             else:
                 child_traits[trait_name] = (
-                    0.3 * self.traits[trait_name] +
-                    0.7 * other.traits[trait_name]
+                    0.3 * self.traits[trait_name] + 0.7 * other.traits[trait_name]
                 )
 
             # Add small random variation
@@ -405,23 +413,31 @@ class ConversationalGenome(GenomeBase):
             child_traits[trait_name] = np.clip(child_traits[trait_name], 0.0, 1.0)
 
         # Create child genome
-        child_id = f"crossover_{hashlib.md5(str(child_traits).encode()).hexdigest()[:12]}"
+        child_id = (
+            f"crossover_{hashlib.md5(str(child_traits).encode()).hexdigest()[:12]}"
+        )
 
         child_metadata = GenomeMetadata(
             creation_timestamp=datetime.now(timezone.utc),
             generation=max(self.generation, other.generation) + 1,
-            parent_ids=[self.genome_id, other.genome_id]
+            parent_ids=[self.genome_id, other.genome_id],
         )
 
         return ConversationalGenome(
-            genome_id=child_id,
-            traits=child_traits,
-            metadata=child_metadata
+            genome_id=child_id, traits=child_traits, metadata=child_metadata
         )
 
     @classmethod
-    def from_settings(cls, genome_id: str, traits: Optional[TraitDict] = None, metadata: Optional[GenomeMetadata] = None, settings: Optional[Any] = None) -> 'ConversationalGenome':
-        """Create ConversationalGenome using central settings defaults when traits are not provided."""
+    def from_settings(
+        cls,
+        genome_id: str,
+        traits: Optional[TraitDict] = None,
+        metadata: Optional[GenomeMetadata] = None,
+        settings: Optional[Any] = None,
+    ) -> "ConversationalGenome":
+        """Create a ConversationalGenome using central settings defaults
+        when traits are not provided.
+        """
         if settings is None:
             settings = allele_settings
         combined_traits = settings.default_traits.copy()
@@ -431,9 +447,7 @@ class ConversationalGenome(GenomeBase):
         return cls(genome_id=genome_id, traits=combined_traits, metadata=metadata)
 
     def adapt_from_feedback(
-        self,
-        feedback_score: float,
-        learning_rate: float = 0.1
+        self, feedback_score: float, learning_rate: float = 0.1
     ) -> None:
         """Adapt genome based on conversational feedback.
 
@@ -464,7 +478,7 @@ class ConversationalGenome(GenomeBase):
     # GenomeBase interface implementation
     def get_config(self, key: str, default: Any = None) -> Any:
         """Get trait value or configuration."""
-        if key == 'traits':
+        if key == "traits":
             return self.traits
         return self.traits.get(key, default)
 
@@ -489,16 +503,17 @@ class ConversationalGenome(GenomeBase):
                 "creation_timestamp": self.metadata.creation_timestamp.isoformat(),
                 "last_mutation": (
                     self.metadata.last_mutation.isoformat()
-                    if self.metadata.last_mutation else None
+                    if self.metadata.last_mutation
+                    else None
                 ),
                 "parent_ids": self.metadata.parent_ids,
                 "lineage": self.metadata.lineage,
-                "tags": self.metadata.tags
-            }
+                "tags": self.metadata.tags,
+            },
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ConversationalGenome':
+    def from_dict(cls, data: Dict[str, Any]) -> "ConversationalGenome":
         """Deserialize genome from dictionary.
 
         Args:
@@ -517,23 +532,24 @@ class ConversationalGenome(GenomeBase):
         metadata_dict = data.get("metadata", {})
         metadata = GenomeMetadata(
             creation_timestamp=datetime.fromisoformat(
-                metadata_dict.get("creation_timestamp", datetime.now(timezone.utc).isoformat())
+                metadata_dict.get(
+                    "creation_timestamp", datetime.now(timezone.utc).isoformat()
+                )
             ),
             last_mutation=(
                 datetime.fromisoformat(metadata_dict["last_mutation"])
-                if metadata_dict.get("last_mutation") else None
+                if metadata_dict.get("last_mutation")
+                else None
             ),
             generation=data.get("generation", 0),
             parent_ids=metadata_dict.get("parent_ids"),
             lineage=metadata_dict.get("lineage"),
-            tags=metadata_dict.get("tags")
+            tags=metadata_dict.get("tags"),
         )
 
         # Create genome
         genome = cls(
-            genome_id=data["genome_id"],
-            traits=data.get("traits"),
-            metadata=metadata
+            genome_id=data["genome_id"], traits=data.get("traits"), metadata=metadata
         )
 
         # Restore fitness info

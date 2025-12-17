@@ -21,7 +21,7 @@ class TestOpenAIStreamingUnit:
             temperature=0.7,
             max_tokens=1000,
             timeout=30,
-            max_retries=2
+            max_retries=2,
         )
 
     @pytest.fixture
@@ -35,12 +35,14 @@ class TestOpenAIStreamingUnit:
     @pytest.fixture
     def mock_openai_class(self, mock_openai_client):
         """Mock AsyncOpenAI class constructor."""
-        with patch('phylogenic.llm_openai.AsyncOpenAI') as mock_class:
+        with patch("phylogenic.llm_openai.AsyncOpenAI") as mock_class:
             mock_class.return_value = mock_openai_client
             yield mock_class
 
     @pytest.mark.asyncio
-    async def test_streaming_basic_functionality(self, mock_config, mock_openai_class, mock_openai_client):
+    async def test_streaming_basic_functionality(
+        self, mock_config, mock_openai_class, mock_openai_client
+    ):
         """Test basic streaming functionality with mocked responses."""
         client = OpenAIClient(mock_config)
         await client.initialize()
@@ -50,7 +52,7 @@ class TestOpenAIStreamingUnit:
             chunks = [
                 MagicMock(choices=[MagicMock(delta=MagicMock(content="Hello"))]),
                 MagicMock(choices=[MagicMock(delta=MagicMock(content=" world"))]),
-                MagicMock(choices=[MagicMock(delta=MagicMock(content="!"))])
+                MagicMock(choices=[MagicMock(delta=MagicMock(content="!"))]),
             ]
             for chunk in chunks:
                 yield chunk
@@ -72,7 +74,9 @@ class TestOpenAIStreamingUnit:
         mock_openai_client.chat.completions.create.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_streaming_with_empty_content(self, mock_config, mock_openai_class, mock_openai_client):
+    async def test_streaming_with_empty_content(
+        self, mock_config, mock_openai_class, mock_openai_client
+    ):
         """Test streaming handles chunks with no content."""
         client = OpenAIClient(mock_config)
         await client.initialize()
@@ -99,7 +103,9 @@ class TestOpenAIStreamingUnit:
         assert chunks == ["Hello", " world"]
 
     @pytest.mark.asyncio
-    async def test_non_streaming_response(self, mock_config, mock_openai_class, mock_openai_client):
+    async def test_non_streaming_response(
+        self, mock_config, mock_openai_class, mock_openai_client
+    ):
         """Test non-streaming response format."""
         client = OpenAIClient(mock_config)
         await client.initialize()
@@ -122,10 +128,12 @@ class TestOpenAIStreamingUnit:
         assert chunks == ["Complete response"]
         # Verify non-streaming parameters were passed
         call_args = mock_openai_client.chat.completions.create.call_args[1]
-        assert call_args['stream'] is False
+        assert call_args["stream"] is False
 
     @pytest.mark.asyncio
-    async def test_streaming_error_handling(self, mock_config, mock_openai_class, mock_openai_client):
+    async def test_streaming_error_handling(
+        self, mock_config, mock_openai_class, mock_openai_client
+    ):
         """Test streaming handles errors gracefully."""
         client = OpenAIClient(mock_config)
         await client.initialize()
@@ -151,7 +159,9 @@ class TestOpenAIStreamingUnit:
         assert "Hello" in chunks  # At least got the first chunk
 
     @pytest.mark.asyncio
-    async def test_streaming_request_parameters(self, mock_config, mock_openai_class, mock_openai_client):
+    async def test_streaming_request_parameters(
+        self, mock_config, mock_openai_class, mock_openai_client
+    ):
         """Test that streaming requests include correct parameters."""
         client = OpenAIClient(mock_config)
         await client.initialize()
@@ -172,25 +182,33 @@ class TestOpenAIStreamingUnit:
 
         # Verify request parameters
         call_args = mock_openai_client.chat.completions.create.call_args[1]
-        assert call_args['model'] == mock_config.model
-        assert call_args['messages'] == messages
-        assert call_args['temperature'] == mock_config.temperature
-        assert call_args['max_tokens'] == mock_config.max_tokens
-        assert call_args['stream'] is True
-        assert 'stream_options' in call_args
-        assert call_args['stream_options']['include_usage'] is True
+        assert call_args["model"] == mock_config.model
+        assert call_args["messages"] == messages
+        assert call_args["temperature"] == mock_config.temperature
+        assert call_args["max_tokens"] == mock_config.max_tokens
+        assert call_args["stream"] is True
+        assert "stream_options" in call_args
+        assert call_args["stream_options"]["include_usage"] is True
 
     @pytest.mark.asyncio
-    async def test_streaming_token_usage_tracking(self, mock_config, mock_openai_class, mock_openai_client):
+    async def test_streaming_token_usage_tracking(
+        self, mock_config, mock_openai_class, mock_openai_client
+    ):
         """Test that token usage is tracked during streaming."""
         client = OpenAIClient(mock_config)
         await client.initialize()
 
         async def mock_stream():
             for i in range(3):
-                yield MagicMock(choices=[MagicMock(delta=MagicMock(content=f"Chunk{i}"))])
+                yield MagicMock(
+                    choices=[MagicMock(delta=MagicMock(content=f"Chunk{i}"))]
+                )
             # Final usage chunk
-            final_chunk = MagicMock(usage=MagicMock(total_tokens=150, prompt_tokens=50, completion_tokens=100))
+            final_chunk = MagicMock(
+                usage=MagicMock(
+                    total_tokens=150, prompt_tokens=50, completion_tokens=100
+                )
+            )
             final_chunk.choices = []
             yield final_chunk
 
@@ -206,14 +224,16 @@ class TestOpenAIStreamingUnit:
         assert client.metrics.total_tokens >= 150
 
     @pytest.mark.asyncio
-    async def test_streaming_with_system_messages(self, mock_config, mock_openai_class, mock_openai_client):
+    async def test_streaming_with_system_messages(
+        self, mock_config, mock_openai_class, mock_openai_client
+    ):
         """Test streaming with system and user messages."""
         client = OpenAIClient(mock_config)
         await client.initialize()
 
         messages = [
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Tell me about AI."}
+            {"role": "user", "content": "Tell me about AI."},
         ]
 
         async def mock_stream():
@@ -230,20 +250,23 @@ class TestOpenAIStreamingUnit:
         assert chunks == ["AI ", "is ", "awesome"]
         # Verify the messages were passed correctly
         call_args = mock_openai_client.chat.completions.create.call_args[1]
-        assert call_args['messages'] == messages
+        assert call_args["messages"] == messages
 
     @pytest.mark.asyncio
-    async def test_streaming_preserves_message_order(self, mock_config, mock_openai_class, mock_openai_client):
+    async def test_streaming_preserves_message_order(
+        self, mock_config, mock_openai_class, mock_openai_client
+    ):
         """Test that streaming preserves message order and content."""
         client = OpenAIClient(mock_config)
         await client.initialize()
 
         messages = [
             {"role": "system", "content": "Be concise."},
-            {"role": "user", "content": "What is 2+2?"}
+            {"role": "user", "content": "What is 2+2?"},
         ]
 
         response_parts = ["The ", "answer ", "is ", "4."]
+
         async def mock_stream():
             for part in response_parts:
                 yield Mock(choices=[Mock(delta=Mock(content=part))])
@@ -257,13 +280,18 @@ class TestOpenAIStreamingUnit:
         assert chunks == response_parts
 
     @pytest.mark.asyncio
-    async def test_streaming_handles_large_content(self, mock_config, mock_openai_class, mock_openai_client):
+    async def test_streaming_handles_large_content(
+        self, mock_config, mock_openai_class, mock_openai_client
+    ):
         """Test streaming with larger content chunks."""
         client = OpenAIClient(mock_config)
         await client.initialize()
 
         # Simulate large response in multiple chunks
-        large_content = "This is a much longer response that would typically come in multiple streaming chunks from the API."
+        large_content = (
+            "This is a much longer response that would typically come in "
+            "multiple streaming chunks from the API."
+        )
 
         async def mock_stream():
             words = large_content.split()
@@ -273,7 +301,9 @@ class TestOpenAIStreamingUnit:
         mock_openai_client.chat.completions.create.return_value = mock_stream()
 
         chunks = []
-        async for chunk in client.chat_completion(messages=[{"role": "user", "content": "Test"}], stream=True):
+        async for chunk in client.chat_completion(
+            messages=[{"role": "user", "content": "Test"}], stream=True
+        ):
             chunks.append(chunk)
 
         # Verify we got all the content

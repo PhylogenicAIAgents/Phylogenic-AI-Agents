@@ -16,22 +16,22 @@ from phylogenic import AgentConfig, ConversationalGenome, create_agent
 async def main():
     """Run basic usage example."""
     print("🧬 Abe-NLP Basic Usage Example\n")
-    print("="*50)
+    print("=" * 50)
 
     # Step 1: Create a genome with specific traits
     print("\n📊 Step 1: Creating conversational genome...")
     genome = ConversationalGenome(
         genome_id="example_agent_001",
         traits={
-            'empathy': 0.85,              # High empathy
-            'engagement': 0.75,           # Good engagement
-            'technical_knowledge': 0.90,  # Expert technical knowledge
-            'creativity': 0.65,           # Moderately creative
-            'conciseness': 0.80,          # Concise responses
-            'context_awareness': 0.85,    # Strong context retention
-            'adaptability': 0.70,         # Adapts well
-            'personability': 0.80         # Friendly personality
-        }
+            "empathy": 0.85,  # High empathy
+            "engagement": 0.75,  # Good engagement
+            "technical_knowledge": 0.90,  # Expert technical knowledge
+            "creativity": 0.65,  # Moderately creative
+            "conciseness": 0.80,  # Concise responses
+            "context_awareness": 0.85,  # Strong context retention
+            "adaptability": 0.70,  # Adapts well
+            "personability": 0.80,  # Friendly personality
+        },
     )
 
     print(f"   ✓ Genome ID: {genome.genome_id}")
@@ -54,24 +54,24 @@ async def main():
 
     # Step 4: Chat with agent
     print("\n💬 Step 4: Starting conversation...")
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
 
     messages = [
         "Hello! Can you introduce yourself?",
         "What are your strengths?",
-        "Tell me about your technical capabilities."
+        "Tell me about your technical capabilities.",
     ]
 
     for i, message in enumerate(messages, 1):
         print(f"\n[User #{i}]: {message}")
-        print("[Agent]: ", end='')
+        print("[Agent]: ", end="")
 
         async for response_chunk in agent.chat(message):
-            print(response_chunk, end='')
+            print(response_chunk, end="")
 
         print()  # New line after response
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("\n✅ Example completed successfully!")
     print("\nNext steps:")
     print("  - Try examples/evolution.py for genome evolution")
@@ -81,4 +81,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

@@ -24,6 +24,9 @@
 
 from typing import Any, Dict
 
+# Alias used to import a BaseSettings implementation (pydantic v2/v1)
+PydanticBaseSettingsImpl: Any
+
 try:
     # Pydantic v1 or v2 - use BaseModel for compatibility
     from pydantic import BaseModel, Field
@@ -33,29 +36,34 @@ except Exception:
 
 try:
     # Pydantic v2 settings
-    from pydantic_settings import BaseSettings, SettingsConfigDict
+    from pydantic_settings import BaseSettings as _ImportedPydanticBaseSettingsV2
+    from pydantic_settings import SettingsConfigDict
+    PydanticBaseSettingsImpl = _ImportedPydanticBaseSettingsV2
     _HAS_SETTINGS = True
-except ImportError:
-    # Fallback or older version
+except Exception:
+    # Fallback to pydantic v1 BaseSettings if available
     try:
-        from pydantic import BaseSettings
+        from pydantic import BaseSettings as _ImportedPydanticBaseSettingsV1
+
+        PydanticBaseSettingsImpl = _ImportedPydanticBaseSettingsV1
         _HAS_SETTINGS = True
-    except ImportError:
+    except Exception:
         _HAS_SETTINGS = False
-        from pydantic import BaseModel
+        PydanticBaseSettingsImpl = None
 
 # Central configuration definitions using pydantic
 
 DEFAULT_TRAITS: Dict[str, float] = {
-    'empathy': 0.5,
-    'engagement': 0.5,
-    'technical_knowledge': 0.5,
-    'creativity': 0.5,
-    'conciseness': 0.5,
-    'context_awareness': 0.5,
-    'adaptability': 0.5,
-    'personability': 0.5
+    "empathy": 0.5,
+    "engagement": 0.5,
+    "technical_knowledge": 0.5,
+    "creativity": 0.5,
+    "conciseness": 0.5,
+    "context_awareness": 0.5,
+    "adaptability": 0.5,
+    "personability": 0.5,
 }
+
 
 class AgentSettings(BaseModel):
     model_name: str = Field("gpt-4", description="Name of the LLM to use")
@@ -65,6 +73,7 @@ class AgentSettings(BaseModel):
     memory_enabled: bool = True
     evolution_enabled: bool = True
     kraken_enabled: bool = True
+
 
 class EvolutionSettings(BaseModel):
     population_size: int = 100
@@ -85,10 +94,12 @@ class EvolutionSettings(BaseModel):
     # respect the immutable flag first and fall back to the hpc_mode setting
     # only when immutable_evolution is False.
 
+
 class KrakenSettings(BaseModel):
     reservoir_size: int = 100
     connectivity: float = 0.1
     memory_buffer_size: int = 1000
+
 
 class LiquidDynamicsSettings(BaseModel):
     viscosity: float = 0.1
@@ -97,7 +108,25 @@ class LiquidDynamicsSettings(BaseModel):
     flow_rate: float = 0.5
     turbulence: float = 0.05
 
-class AlleleSettings(BaseSettings if _HAS_SETTINGS else BaseModel):
+
+# Create a single runtime BaseSettingsImpl class that subclasses the
+# available pydantic BaseSettings implementation when present, otherwise
+# fall back to BaseModel. Defining it once avoids duplicate-definition
+# errors from mypy while preserving runtime behavior.
+import importlib
+
+_PydanticRuntimeBase: type
+if importlib.util.find_spec("pydantic_settings") is not None:
+    _mod = importlib.import_module("pydantic_settings")
+    _PydanticRuntimeBase = getattr(_mod, "BaseSettings")
+elif importlib.util.find_spec("pydantic") is not None:
+    _mod = importlib.import_module("pydantic")
+    _PydanticRuntimeBase = getattr(_mod, "BaseSettings")
+else:
+    _PydanticRuntimeBase = BaseModel
+
+
+class AlleleSettings(BaseModel):
     """Application settings loaded from environment variables or .env files.
 
     Naming convention for env vars is uppercase with underscores; nested fields
@@ -110,19 +139,56 @@ class AlleleSettings(BaseSettings if _HAS_SETTINGS else BaseModel):
     liquid_dynamics: LiquidDynamicsSettings = LiquidDynamicsSettings()
     default_traits: Dict[str, float] = DEFAULT_TRAITS
 
-    if _HAS_SETTINGS:
+    if _HAS_SETTINGS and "SettingsConfigDict" in globals():
+        # Attach pydantic v2 model_config dynamically when available so
+        # environment variable names like AGENT__MODEL_NAME are supported.
         model_config = SettingsConfigDict(
             env_nested_delimiter="__",
             env_file=".env",
             env_file_encoding="utf-8",
-            extra="ignore"
+            extra="ignore",
         )
     else:
+
         class Config:
             env_nested_delimiter = "__"
             env_file = ".env"
             env_file_encoding = "utf-8"
 
-# Singleton instance to use across the package
-settings = AlleleSettings()
+    def __new__(cls, *args: Any, **kwargs: Any):
+        """If a pydantic BaseSettings implementation is available at
+        runtime, instantiate and return a BaseSettings-backed instance so
+        environment variable overrides are respected when callers use
+        ``AlleleSettings()`` directly in tests or runtime code.
+        """
+        if PydanticBaseSettingsImpl is not None and cls is AlleleSettings:
+            # Build a runtime class dict without the `__new__` hook to avoid
+            # recursive instantiation issues when the runtime class is
+            # created from the BaseModel-defined class.
+            class_dict = dict(cls.__dict__)
+            class_dict.pop("__new__", None)
+            class_dict.pop("__classcell__", None)
+            RuntimeCls = type("AlleleSettingsRuntime", (PydanticBaseSettingsImpl,), class_dict)
+            # Construct and return a pydantic-backed instance which will
+            # automatically load from environment variables.
+            return RuntimeCls(*args, **kwargs)
 
+        return super().__new__(cls)
+
+
+# Singleton instance to use across the package
+if PydanticBaseSettingsImpl is not None:
+    try:
+        # Create a runtime subclass of the pydantic BaseSettings implementation
+        # that contains the same attributes as our BaseModel-defined
+        # `AlleleSettings`. We instantiate that class so pydantic's env-var
+        # parsing behavior is used at runtime while preserving static typing.
+        # Use the BaseSettings implementation directly if it exists; fall back
+        # to BaseModel behavior when constructing the runtime class. We avoid
+        # referencing internal temporary names to keep mypy happy.
+        AlleleSettingsRuntime = type("AlleleSettingsRuntime", (PydanticBaseSettingsImpl,), dict(AlleleSettings.__dict__))
+        settings = AlleleSettingsRuntime()
+    except Exception:
+        settings = AlleleSettings()
+else:
+    settings = AlleleSettings()

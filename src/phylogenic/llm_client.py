@@ -44,9 +44,11 @@ from .llm_exceptions import (
 
 logger = structlog.get_logger(__name__)
 
+
 @dataclass
 class LLMConfig:
     """Configuration for LLM client."""
+
     provider: str
     model: str
     api_key: Optional[str] = None
@@ -70,10 +72,10 @@ class LLMConfig:
         # Allow empty API key for local providers like ollama
         if self.api_key is None:
             self.api_key = ""
-            
+
         if not isinstance(self.api_key, str):
             raise ValueError("api_key must be a string")
-        if self.api_key == "" and self.provider not in ['ollama']:
+        if self.api_key == "" and self.provider not in ["ollama"]:
             raise ValueError("api_key must be a non-empty string for cloud providers")
         if not 0 <= self.temperature <= 2:
             raise ValueError("temperature must be between 0 and 2")
@@ -92,9 +94,11 @@ class LLMConfig:
         return None
         return None
 
+
 @dataclass
 class LLMUsageMetrics:
     """Track LLM usage for monitoring and billing."""
+
     total_requests: int = 0
     total_tokens: int = 0
     total_cost: float = 0.0
@@ -103,6 +107,7 @@ class LLMUsageMetrics:
     rate_limit_hits: int = 0
     last_request_time: Optional[float] = None
     uptime_seconds: float = 0.0
+
 
 class RateLimiter:
     """Simple token bucket rate limiter with sliding window."""
@@ -121,8 +126,12 @@ class RateLimiter:
 
             # Clean old entries (sliding window of 60 seconds)
             cutoff_time = current_time - 60
-            self.request_timestamps = [t for t in self.request_timestamps if t > cutoff_time]
-            self.token_usage = self.token_usage[len([t for t in self.request_timestamps if t <= cutoff_time]):]
+            self.request_timestamps = [
+                t for t in self.request_timestamps if t > cutoff_time
+            ]
+            self.token_usage = self.token_usage[
+                len([t for t in self.request_timestamps if t <= cutoff_time]) :
+            ]
 
             # Check limits
             request_count = len(self.request_timestamps)
@@ -156,6 +165,7 @@ class RateLimiter:
 
             return wait_time
 
+
 class LLMClient(ABC):
     """Abstract base class for LLM providers with comprehensive error handling."""
 
@@ -163,13 +173,10 @@ class LLMClient(ABC):
         self.config = config
         self.metrics = LLMUsageMetrics()
         self.rate_limiter = RateLimiter(
-            config.rate_limit_requests_per_minute,
-            config.rate_limit_tokens_per_minute
+            config.rate_limit_requests_per_minute, config.rate_limit_tokens_per_minute
         )
         self.logger = logger.bind(
-            provider=config.provider,
-            model=config.model,
-            client_id=id(self)
+            provider=config.provider, model=config.model, client_id=id(self)
         )
         self._client = None
         self._initialized = False
@@ -189,7 +196,10 @@ class LLMClient(ABC):
     def chat_completion(
         self, messages: List[Dict[str, str]], stream: bool = True
     ) -> AsyncGenerator[str, None]:
-        """Generate chat completion (async generator). Implementations should be async generators."""
+        """Generate chat completion (async generator).
+
+        Implementations should be async generators.
+        """
         ...
 
     @abstractmethod
@@ -223,7 +233,7 @@ class LLMClient(ABC):
         operation_name: str,
         tokens_used: int = 1,
         *args: Any,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> AsyncGenerator[str, None]:
         """Retry operation with exponential backoff and circuit breaker pattern."""
         last_exception = None
@@ -238,7 +248,7 @@ class LLMClient(ABC):
                     self.logger.debug(
                         f"Rate limited, waited {wait_time:.2f}s",
                         attempt=attempt,
-                        wait_time=wait_time
+                        wait_time=wait_time,
                     )
                     total_wait_time += wait_time
 
@@ -265,11 +275,11 @@ class LLMClient(ABC):
                     attempt=attempt,
                     duration_ms=round(duration_ms, 2),
                     tokens_used=tokens_used,
-                    total_wait_time=round(total_wait_time, 2)
+                    total_wait_time=round(total_wait_time, 2),
                 )
 
                 # Yield results for async generators
-                if hasattr(result, '__aiter__'):
+                if hasattr(result, "__aiter__"):
                     async for item in result:
                         yield item
                 else:
@@ -279,9 +289,8 @@ class LLMClient(ABC):
             except Exception as e:
                 last_exception = e
                 self.metrics.error_rate = (
-                    (self.metrics.error_rate * (self.metrics.total_requests or 1) + 1) /
-                    ((self.metrics.total_requests or 1) + 1)
-                )
+                    self.metrics.error_rate * (self.metrics.total_requests or 1) + 1
+                ) / ((self.metrics.total_requests or 1) + 1)
 
                 # Classify and handle different error types
                 error_type, should_retry, delay = self._classify_error(e, attempt)
@@ -293,13 +302,17 @@ class LLMClient(ABC):
                     error_type=error_type,
                     will_retry=should_retry,
                     delay=round(delay, 2),
-                    max_retries=self.config.max_retries
+                    max_retries=self.config.max_retries,
                 )
 
                 if not should_retry or attempt >= self.config.max_retries - 1:
                     # Final failure - raise appropriate exception
                     raise self._create_final_exception(
-                        last_exception, attempt, total_wait_time, operation_name, error_type
+                        last_exception,
+                        attempt,
+                        total_wait_time,
+                        operation_name,
+                        error_type,
                     ) from last_exception
                 else:
                     await asyncio.sleep(delay)
@@ -310,21 +323,30 @@ class LLMClient(ABC):
         error_str = str(error).lower()
 
         if "rate limit" in error_str or "rate_limit" in error_str:
-            delay = self.config.retry_delay * (2 ** attempt) * 3  # Longer delay for rate limits
+            delay = (
+                self.config.retry_delay * (2**attempt) * 3
+            )  # Longer delay for rate limits
             return "rate_limit", True, delay
-        elif any(keyword in error_str for keyword in ["auth", "unauthorized", "invalid api key"]):
+        elif any(
+            keyword in error_str
+            for keyword in ["auth", "unauthorized", "invalid api key"]
+        ):
             return "authentication", False, 0  # Don't retry auth errors
         elif "timeout" in error_str:
-            delay = self.config.retry_delay * (2 ** attempt)
+            delay = self.config.retry_delay * (2**attempt)
             return "timeout", True, delay
         elif any(keyword in error_str for keyword in ["quota", "billing", "credit"]):
             return "quota", False, 0  # Don't retry quota errors
         elif "content" in error_str and "filter" in error_str:
             return "content_filter", False, 0  # Don't retry content filter errors
-        elif "model" in error_str and ("not found" in error_str or "not available" in error_str):
+        elif "model" in error_str and (
+            "not found" in error_str or "not available" in error_str
+        ):
             return "model_not_found", False, 0  # Don't retry model errors
         else:
-            delay = self.config.retry_delay * (self.config.retry_backoff_multiplier ** attempt)
+            delay = self.config.retry_delay * (
+                self.config.retry_backoff_multiplier**attempt
+            )
             return "general", True, min(delay, 30)  # Cap max delay at 30 seconds
 
     def _create_final_exception(
@@ -333,7 +355,7 @@ class LLMClient(ABC):
         attempt: int,
         total_wait_time: float,
         operation_name: str,
-        error_type: str
+        error_type: str,
     ) -> LLMError:
         """Create appropriate final exception based on error type."""
         base_message = f"{operation_name} failed after {attempt + 1} attempts"
@@ -344,26 +366,34 @@ class LLMClient(ABC):
             "total_wait_time": round(total_wait_time, 2),
             "error_type": error_type,
             "provider": self.config.provider,
-            "model": self.config.model
+            "model": self.config.model,
         }
 
         # Map error types to specific exceptions
         if error_type == "authentication":
-            return LLMAuthenticationError(base_message, self.config.provider, self.config.model, details)
+            return LLMAuthenticationError(
+                base_message, self.config.provider, self.config.model, details
+            )
         elif error_type == "rate_limit":
-            return LLMRateLimitError(base_message, self.config.provider, self.config.model, details)
+            return LLMRateLimitError(
+                base_message, self.config.provider, self.config.model, details
+            )
         elif error_type == "timeout":
             return LLMTimeoutError(
                 base_message,
                 self.config.provider,
                 self.config.model,
                 details,
-                timeout_seconds=self.config.timeout
+                timeout_seconds=self.config.timeout,
             )
         elif error_type == "quota":
-            return LLMQuotaExceededError(base_message, self.config.provider, self.config.model, details)
+            return LLMQuotaExceededError(
+                base_message, self.config.provider, self.config.model, details
+            )
         else:
-            return LLMGenerationError(base_message, self.config.provider, self.config.model, details)
+            return LLMGenerationError(
+                base_message, self.config.provider, self.config.model, details
+            )
 
     def get_uptime(self) -> float:
         """Get client uptime in seconds."""
@@ -374,7 +404,9 @@ class LLMClient(ABC):
         uptime = self.get_uptime()
 
         try:
-            available_models = await self.get_available_models() if self.initialized else []
+            available_models = (
+                await self.get_available_models() if self.initialized else []
+            )
         except Exception:
             available_models = []
 
@@ -389,16 +421,16 @@ class LLMClient(ABC):
                 "total_cost": round(self.metrics.total_cost, 4),
                 "average_latency_ms": round(self.metrics.average_latency_ms, 2),
                 "error_rate": round(self.metrics.error_rate, 4),
-                "rate_limit_hits": self.metrics.rate_limit_hits
+                "rate_limit_hits": self.metrics.rate_limit_hits,
             },
             "config": {
                 "temperature": self.config.temperature,
                 "max_tokens": self.config.max_tokens,
                 "timeout": self.config.timeout,
-                "max_retries": self.config.max_retries
+                "max_retries": self.config.max_retries,
             },
             "available_models": available_models[:10],  # Limit for brevity
-            "status": "healthy" if self.initialized else "uninitialized"
+            "status": "healthy" if self.initialized else "uninitialized",
         }
 
 
@@ -413,7 +445,9 @@ class MockLLMClient(LLMClient):
     async def initialize(self) -> None:
         self._initialized = True
 
-    async def chat_completion(self, messages: List[Dict[str, str]], stream: bool = True) -> AsyncGenerator[str, None]:
+    async def chat_completion(
+        self, messages: List[Dict[str, str]], stream: bool = True
+    ) -> AsyncGenerator[str, None]:
         # Simple mock response echoing the last user message
         content = ""
         if messages:

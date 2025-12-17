@@ -120,12 +120,12 @@ async def main():
     # Check if any env vars are set
     env_vars_set = []
     check_vars = [
-        'AGENT__MODEL_NAME',
-        'AGENT__TEMPERATURE',
-        'EVOLUTION__POPULATION_SIZE',
-        'EVOLUTION__IMMUTABLE_EVOLUTION',
-        'EVOLUTION__HPC_MODE',
-        'KRAKEN__RESERVOIR_SIZE'
+        "AGENT__MODEL_NAME",
+        "AGENT__TEMPERATURE",
+        "EVOLUTION__POPULATION_SIZE",
+        "EVOLUTION__IMMUTABLE_EVOLUTION",
+        "EVOLUTION__HPC_MODE",
+        "KRAKEN__RESERVOIR_SIZE",
     ]
 
     print("\nCurrently set environment variables:")
@@ -148,15 +148,11 @@ async def main():
 
     custom_settings = AlleleSettings(
         agent=AgentSettings(
-            model_name="custom-model",
-            temperature=0.95,
-            max_tokens=4096
+            model_name="custom-model", temperature=0.95, max_tokens=4096
         ),
         evolution=EvolutionSettings(
-            population_size=50,
-            generations=20,
-            mutation_rate=0.2
-        )
+            population_size=50, generations=20, mutation_rate=0.2
+        ),
     )
 
     print("Created custom settings instance:")
@@ -174,10 +170,22 @@ async def main():
     print_section("4b. Mutation Strategy Examples")
     # HPC/in-place (default)
     engine_hpc = EvolutionEngine(EvolutionConfig.from_settings())
-    print(f"  HPC mode (in-place): {engine_hpc.hpc_mode}, immutable: {engine_hpc.immutable_evolution}")
+    print(
+        "  HPC mode (in-place):",
+        engine_hpc.hpc_mode,
+        ", immutable:",
+        engine_hpc.immutable_evolution,
+    )
     # Immutable
-    engine_immutable = EvolutionEngine(EvolutionConfig(immutable_evolution=True, hpc_mode=False))
-    print(f"  Immutable mode: {engine_immutable.immutable_evolution}, hpc: {engine_immutable.hpc_mode}")
+    engine_immutable = EvolutionEngine(
+        EvolutionConfig(immutable_evolution=True, hpc_mode=False)
+    )
+    print(
+        "  Immutable mode:",
+        engine_immutable.immutable_evolution,
+        ", hpc:",
+        engine_immutable.hpc_mode,
+    )
 
     # ==========================================================================
     # Example 5: Hybrid Approach
@@ -194,7 +202,7 @@ async def main():
         streaming=True,
         memory_enabled=base_config.memory_enabled,
         evolution_enabled=False,  # Override
-        kraken_enabled=base_config.kraken_enabled
+        kraken_enabled=base_config.kraken_enabled,
     )
 
     print("Hybrid configuration (settings + overrides):")
@@ -209,8 +217,7 @@ async def main():
 
     # Create genome and agent using settings
     genome = ConversationalGenome.from_settings(
-        "demo_agent",
-        traits={'empathy': 0.9, 'technical_knowledge': 0.85}
+        "demo_agent", traits={"empathy": 0.9, "technical_knowledge": 0.85}
     )
 
     config = AgentConfig.from_settings()
@@ -255,7 +262,7 @@ async def main():
     print("   ✓ Flexible for edge cases")
     print("   ✓ Override only what's needed")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("\n✅ Configuration examples completed!")
     print("\nNext steps:")
     print("  - Copy .env.example to .env and customize")

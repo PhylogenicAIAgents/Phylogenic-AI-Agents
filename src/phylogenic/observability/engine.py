@@ -40,7 +40,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from .collector import ComponentMetricsCollector, MetricsCollector
-from .config import get_observability_settings
+from .config import ObservabilitySettings, get_observability_settings
 from .types import Alert, ComponentMetrics, ComponentType, SystemMetrics
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ class ObservabilityEngine:
     alerting, and provides a unified interface for observability features.
     """
 
-    def __init__(self, settings=None):
+    def __init__(self, settings: Optional[ObservabilitySettings] = None) -> None:
         """Initialize observability engine.
 
         Args:
@@ -83,22 +83,31 @@ class ObservabilityEngine:
     def _setup_component_monitoring(self) -> None:
         """Set up monitoring for configured components."""
         # System monitoring is always enabled
-        self.metrics_collector.component_metrics["system"] = self._create_system_collector()
+        system_collector = self._create_system_collector()
+        # Keep local registry of collectors (the collector registers its
+        # ComponentMetrics with the central MetricsCollector during init)
+        self.component_collectors["system"] = system_collector
 
         # Evolution engine monitoring
         if self.settings.monitoring.monitor_evolution:
             evolution_id = f"evolution_engine_{int(time.time())}"
-            self.metrics_collector.component_metrics[evolution_id] = self._create_evolution_collector(evolution_id)
+            self.component_collectors[evolution_id] = (
+                self._create_evolution_collector(evolution_id)
+            )
 
         # Kraken LNN monitoring
         if self.settings.monitoring.monitor_kraken:
             kraken_id = f"kraken_lnn_{int(time.time())}"
-            self.metrics_collector.component_metrics[kraken_id] = self._create_kraken_collector(kraken_id)
+            self.component_collectors[kraken_id] = (
+                self._create_kraken_collector(kraken_id)
+            )
 
         # Agent monitoring
         if self.settings.monitoring.monitor_agents:
             agent_id = f"agents_{int(time.time())}"
-            self.metrics_collector.component_metrics[agent_id] = self._create_agent_collector(agent_id)
+            self.component_collectors[agent_id] = (
+                self._create_agent_collector(agent_id)
+            )
 
         logger.info("Component monitoring setup completed")
 
@@ -107,16 +116,18 @@ class ObservabilityEngine:
         collector = ComponentMetricsCollector(
             component_type=ComponentType.SYSTEM,
             component_id="system",
-            metrics_collector=self.metrics_collector
+            metrics_collector=self.metrics_collector,
         )
         return collector
 
-    def _create_evolution_collector(self, component_id: str) -> ComponentMetricsCollector:
+    def _create_evolution_collector(
+        self, component_id: str
+    ) -> ComponentMetricsCollector:
         """Create evolution engine metrics collector."""
         collector = ComponentMetricsCollector(
             component_type=ComponentType.EVOLUTION_ENGINE,
             component_id=component_id,
-            metrics_collector=self.metrics_collector
+            metrics_collector=self.metrics_collector,
         )
 
         # Add evolution-specific metrics tracking
@@ -128,7 +139,7 @@ class ObservabilityEngine:
         collector = ComponentMetricsCollector(
             component_type=ComponentType.KRAKEN_LNN,
             component_id=component_id,
-            metrics_collector=self.metrics_collector
+            metrics_collector=self.metrics_collector,
         )
 
         # Add Kraken-specific metrics tracking
@@ -140,7 +151,7 @@ class ObservabilityEngine:
         collector = ComponentMetricsCollector(
             component_type=ComponentType.NLP_AGENT,
             component_id=component_id,
-            metrics_collector=self.metrics_collector
+            metrics_collector=self.metrics_collector,
         )
 
         # Add agent-specific metrics tracking
@@ -157,11 +168,13 @@ class ObservabilityEngine:
 
         # Start background monitoring tasks
         if self.settings.monitoring.enabled:
-            self._background_tasks.extend([
-                asyncio.create_task(self._monitor_system_resources()),
-                asyncio.create_task(self._cleanup_old_metrics()),
-                asyncio.create_task(self._generate_heartbeat_metrics())
-            ])
+            self._background_tasks.extend(
+                [
+                    asyncio.create_task(self._monitor_system_resources()),
+                    asyncio.create_task(self._cleanup_old_metrics()),
+                    asyncio.create_task(self._generate_heartbeat_metrics()),
+                ]
+            )
 
         logger.info("Observability engine started")
 
@@ -195,7 +208,9 @@ class ObservabilityEngine:
                     await self._collect_system_metrics(system_collector)
 
                 # Wait for next collection interval
-                await asyncio.sleep(self.settings.monitoring.collection_interval_seconds)
+                await asyncio.sleep(
+                    self.settings.monitoring.collection_interval_seconds
+                )
 
             except asyncio.CancelledError:
                 break
@@ -203,10 +218,12 @@ class ObservabilityEngine:
                 logger.error(f"Error in system resource monitoring: {e}")
                 await asyncio.sleep(5)  # Wait before retry
 
-    async def _collect_system_metrics(self, collector: ComponentMetricsCollector) -> None:
+    async def _collect_system_metrics(
+        self, collector: ComponentMetricsCollector
+    ) -> None:
         """Collect system resource metrics."""
         try:
-            import psutil
+            import psutil  # type: ignore[import-untyped]
 
             # CPU usage
             cpu_percent = psutil.cpu_percent(interval=None)
@@ -219,7 +236,8 @@ class ObservabilityEngine:
 
             # GPU usage (if available)
             try:
-                import GPUtil
+                import GPUtil  # type: ignore[import-untyped]
+
                 gpus = GPUtil.getGPUs()
                 if gpus:
                     gpu = gpus[0]  # Use first GPU
@@ -239,8 +257,12 @@ class ObservabilityEngine:
         while self.is_running:
             try:
                 # Clean up metrics older than retention period
-                cutoff_hours = self.settings.monitoring.retention_hours / 24  # Convert to days
-                cleared_count = self.metrics_collector.clear_metrics(older_than_hours=int(cutoff_hours * 24))
+                cutoff_hours = (
+                    self.settings.monitoring.retention_hours / 24
+                )  # Convert to days
+                cleared_count = self.metrics_collector.clear_metrics(
+                    older_than_hours=int(cutoff_hours * 24)
+                )
 
                 if cleared_count > 0:
                     logger.debug(f"Cleaned up {cleared_count} old metrics")
@@ -271,7 +293,9 @@ class ObservabilityEngine:
                 logger.error(f"Error in heartbeat generation: {e}")
                 await asyncio.sleep(30)  # Wait before retry
 
-    def get_component_collector(self, component_type: ComponentType, component_id: str) -> Optional[ComponentMetricsCollector]:
+    def get_component_collector(
+        self, component_type: ComponentType, component_id: str
+    ) -> Optional[ComponentMetricsCollector]:
         """Get a component metrics collector.
 
         Args:
@@ -328,7 +352,9 @@ class ObservabilityEngine:
         """Get current system metrics."""
         return self.metrics_collector.get_system_metrics()
 
-    def get_component_metrics(self, component_id: Optional[str] = None) -> Dict[str, ComponentMetrics]:
+    def get_component_metrics(
+        self, component_id: Optional[str] = None
+    ) -> Dict[str, ComponentMetrics]:
         """Get component metrics."""
         return self.metrics_collector.get_component_metrics(component_id)
 
@@ -338,7 +364,9 @@ class ObservabilityEngine:
 
     def get_active_alerts(self) -> List[Alert]:
         """Get currently active alerts."""
-        return [alert for alert in self.metrics_collector.alerts if alert.status == "active"]
+        return [
+            alert for alert in self.metrics_collector.alerts if alert.status == "active"
+        ]
 
     def get_alert_history(self, limit: int = 100) -> List[Alert]:
         """Get alert history.
@@ -350,9 +378,7 @@ class ObservabilityEngine:
             List of recent alerts
         """
         return sorted(
-            self.metrics_collector.alerts,
-            key=lambda a: a.triggered_at,
-            reverse=True
+            self.metrics_collector.alerts, key=lambda a: a.triggered_at, reverse=True
         )[:limit]
 
     def acknowledge_alert(self, alert_id: str, acknowledged_by: str) -> bool:
@@ -393,7 +419,9 @@ class ObservabilityEngine:
 
         return False
 
-    def export_metrics(self, format: str = "json", since: Optional[datetime] = None) -> str:
+    def export_metrics(
+        self, format: str = "json", since: Optional[datetime] = None
+    ) -> str:
         """Export metrics.
 
         Args:
@@ -417,7 +445,7 @@ class ObservabilityEngine:
                 "monitoring_enabled": self.settings.monitoring.enabled,
                 "alerting_enabled": self.settings.monitoring.alerting_enabled,
                 "dashboard_enabled": self.settings.dashboard.enabled,
-                "mlflow_enabled": self.settings.mlflow.enabled
+                "mlflow_enabled": self.settings.mlflow.enabled,
             },
             "system_metrics": {
                 "health_percentage": system_metrics.health_percentage(),
@@ -425,12 +453,12 @@ class ObservabilityEngine:
                 "memory_usage_mb": system_metrics.memory_usage_mb,
                 "components_total": system_metrics.total_components,
                 "components_healthy": system_metrics.healthy_components,
-                "active_alerts": system_metrics.active_alerts
+                "active_alerts": system_metrics.active_alerts,
             },
             "performance": performance_summary,
             "active_alerts": len(active_alerts),
             "components_monitored": len(self.component_collectors),
-            "last_updated": datetime.now(timezone.utc).isoformat()
+            "last_updated": datetime.now(timezone.utc).isoformat(),
         }
 
 

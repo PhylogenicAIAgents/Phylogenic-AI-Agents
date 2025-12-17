@@ -49,6 +49,7 @@ from .types import ConversationTurn
 
 logger = structlog.get_logger(__name__)
 
+
 @dataclass
 class AgentConfig:
     """Enhanced configuration for NLP agents with full LLM support.
@@ -108,7 +109,8 @@ class AgentConfig:
     max_context_length: int = 8000
 
     # System Prompt Customization
-    system_prompt_template: str = """
+    system_prompt_template: str = (
+        """
 You are an AI assistant with these personality traits:
 {trait_descriptions}
 
@@ -119,6 +121,7 @@ Current generation: {generation}
 
 Respond naturally while embodying these traits in your communication style.
 """.strip()
+    )
 
     # Feature Flags
     memory_enabled: bool = True
@@ -144,11 +147,13 @@ Respond naturally while embodying these traits in your communication style.
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
-        if self.llm_provider not in ['openai', 'anthropic', 'ollama']:
+        if self.llm_provider not in ["openai", "anthropic", "ollama"]:
             raise ValueError(f"Unsupported LLM provider: {self.llm_provider}")
 
         if not (0 <= self.temperature <= 2):
-            raise ValueError(f"Temperature must be between 0 and 2, got {self.temperature}")
+            raise ValueError(
+                f"Temperature must be between 0 and 2, got {self.temperature}"
+            )
 
         if self.max_tokens <= 0:
             raise ValueError("max_tokens must be positive")
@@ -164,7 +169,9 @@ Respond naturally while embodying these traits in your communication style.
 
         # Defensive limits to avoid OOM from unbounded memory settings
         if self.conversation_memory > 1000:
-            raise ValueError("conversation_memory is unreasonably large; must be <= 1000")
+            raise ValueError(
+                "conversation_memory is unreasonably large; must be <= 1000"
+            )
 
         if self.context_window > 100:
             raise ValueError("context_window is unreasonably large; must be <= 100")
@@ -190,12 +197,14 @@ Respond naturally while embodying these traits in your communication style.
             kraken_enabled=agent.kraken_enabled,
         )
 
-class NLPAgent:
-    """Enhanced NLP Agent with production-ready LLM integration and genome-based personality.
 
-    This agent combines conversational genome traits with real LLM capabilities,
-    providing dynamic personality-driven responses powered by state-of-the-art
-    language models with comprehensive error handling and monitoring.
+class NLPAgent:
+    """Enhanced NLP Agent with production-ready LLM integration
+    and genome-based personality.
+
+    This agent combines conversational genome traits with real LLM
+    capabilities, providing personality-driven responses powered by modern
+    language models, and includes error handling and observability features.
 
     Features:
     - Real LLM integration (OpenAI, Anthropic, Ollama)
@@ -215,11 +224,7 @@ class NLPAgent:
         ...     print(response, end='')
     """
 
-    def __init__(
-        self,
-        genome: ConversationalGenome,
-        config: AgentConfig
-    ):
+    def __init__(self, genome: ConversationalGenome, config: AgentConfig):
         """Initialize enhanced NLP agent with LLM integration.
 
         Args:
@@ -240,7 +245,7 @@ class NLPAgent:
         self.logger = logger.bind(
             agent_id=genome.genome_id,
             genome_generation=genome.generation,
-            llm_provider=config.llm_provider
+            llm_provider=config.llm_provider,
         )
 
         # LLM Client setup - resolve API key, with optional fallback to mock
@@ -249,7 +254,9 @@ class NLPAgent:
             resolved_api_key = self._resolve_api_key()
         except ValueError as e:
             if self.config.fallback_to_mock:
-                self.logger.warning("API key not found; falling back to Mock LLM", error=str(e))
+                self.logger.warning(
+                    "API key not found; falling back to Mock LLM", error=str(e)
+                )
                 resolved_api_key = "sk-mock"
                 use_mock = True
             else:
@@ -266,7 +273,7 @@ class NLPAgent:
             timeout=config.request_timeout,
             max_retries=config.max_retry_attempts,
             rate_limit_requests_per_minute=config.rate_limit_requests_per_minute,
-            rate_limit_tokens_per_minute=config.rate_limit_tokens_per_minute
+            rate_limit_tokens_per_minute=config.rate_limit_tokens_per_minute,
         )
 
         # Initialize LLM client (lazy loaded)
@@ -280,7 +287,7 @@ class NLPAgent:
             "total_tokens_used": 0,
             "conversation_topics": set(),
             "last_interaction": None,
-            "context_quality_score": 0.0
+            "context_quality_score": 0.0,
         }
 
         # Performance tracking
@@ -292,7 +299,7 @@ class NLPAgent:
             "error_rate": 0,
             "total_cost": 0.0,
             "total_tokens_used": 0,
-            "uptime_start": time.time()
+            "uptime_start": time.time(),
         }
 
         # Component initialization flags
@@ -308,15 +315,23 @@ class NLPAgent:
                 self.logger.warning("Failed to initialize Kraken LNN", error=str(e))
                 self.kraken_lnn = None
 
-        self.logger.info("NLP Agent created successfully",
-                        traits=genome.traits,
-                        provider=config.llm_provider)
+        self.logger.info(
+            "NLP Agent created successfully",
+            traits=genome.traits,
+            provider=config.llm_provider,
+        )
 
     def _validate_genome(self) -> None:
         """Validate genome has required conversational traits."""
         required_traits = [
-            'empathy', 'engagement', 'technical_knowledge', 'creativity',
-            'conciseness', 'context_awareness', 'adaptability', 'personability'
+            "empathy",
+            "engagement",
+            "technical_knowledge",
+            "creativity",
+            "conciseness",
+            "context_awareness",
+            "adaptability",
+            "personability",
         ]
 
         missing_traits = [t for t in required_traits if t not in self.genome.traits]
@@ -330,7 +345,11 @@ class NLPAgent:
 
     @property
     def conversation_history(self) -> List[ConversationTurn]:
-        """Compatibility alias for tests that expect `conversation_history` attribute."""
+        """Compatibility alias for tests that expect `conversation_history`.
+
+        Keeps backwards compatibility with older test suites that use
+        the `conversation_history` property name.
+        """
         return self.conversation_buffer
 
     def _resolve_api_key(self) -> str:
@@ -342,8 +361,10 @@ class NLPAgent:
         key_map = {
             "openai": "OPENAI_API_KEY",
             "anthropic": "ANTHROPIC_API_KEY",
-            "ollama": "OLLAMA_API_KEY"  # Ollama doesn't actually use API keys for local models
+            "ollama": "OLLAMA_API_KEY",
         }
+        # Note: Ollama typically runs local models and may not require an
+        # API key in many setups; the mapping remains for consistency.
 
         env_var = key_map.get(self.config.llm_provider)
         if not env_var:
@@ -390,7 +411,9 @@ class NLPAgent:
                     # Kraken initialization would go here if it had async init
                     pass
                 except Exception as e:
-                    self.logger.warning("Kraken initialization failed, disabling", error=str(e))
+                    self.logger.warning(
+                        "Kraken initialization failed, disabling", error=str(e)
+                    )
                     self.kraken_lnn = None
 
             # Step 4: Test basic functionality (optional)
@@ -398,31 +421,40 @@ class NLPAgent:
                 await self._test_basic_functionality()
 
             self.is_initialized = True
-            self.logger.info("Agent initialization completed successfully",
-                           llm_provider=self.config.llm_provider,
-                           model=self.config.model_name,
-                           kraken_enabled=self.kraken_lnn is not None)
+            self.logger.info(
+                "Agent initialization completed successfully",
+                llm_provider=self.config.llm_provider,
+                model=self.config.model_name,
+                kraken_enabled=self.kraken_lnn is not None,
+            )
 
             return True
 
         except Exception as e:
-            self.logger.error("Agent initialization failed", error=str(e), exc_info=True)
+            self.logger.error(
+                "Agent initialization failed", error=str(e), exc_info=True
+            )
             await self._cleanup_on_failure()
             raise AgentError(f"Agent initialization failed: {e}") from e
 
     async def _initialize_llm_client(self) -> None:
         """Initialize and validate LLM client based on provider."""
         try:
-            # Create appropriate client based on provider (lazy imports to avoid dependency issues)
+            # Create appropriate client based on provider.
+            # Lazy-import clients to avoid optional heavy dependencies and to
+            # reduce initialization cost when they are not needed.
             if getattr(self, "_use_mock", False):
                 # Use internal mock client for local/CI testing
                 from .llm_client import MockLLMClient
+
                 self.llm_client = MockLLMClient(self.llm_config)
             elif self.config.llm_provider == "openai":
                 from .llm_openai import OpenAIClient
+
                 self.llm_client = OpenAIClient(self.llm_config)
             elif self.config.llm_provider == "ollama":
                 from .llm_ollama import OllamaClient
+
                 self.llm_client = OllamaClient(self.llm_config)
             elif self.config.llm_provider == "anthropic":
                 # Anthropic client would be imported and instantiated here
@@ -459,9 +491,7 @@ class NLPAgent:
             pass  # Ignore cleanup errors during failure
 
     async def chat(
-        self,
-        message: str,
-        context: Optional[Dict[str, Any]] = None
+        self, message: str, context: Optional[Dict[str, Any]] = None
     ) -> AsyncGenerator[str, None]:
         """Enhanced conversational chat with real LLM integration.
 
@@ -481,17 +511,25 @@ class NLPAgent:
         if not self.is_initialized:
             raise AgentError("Agent not initialized. Call initialize() first.")
 
-        request_id = f"req_{uuid.uuid4().hex[:12]}" if self.config.correlation_id_enabled else None
-        log_context = self.logger.bind(request_id=request_id) if request_id else self.logger
+        request_id = (
+            f"req_{uuid.uuid4().hex[:12]}"
+            if self.config.correlation_id_enabled
+            else None
+        )
+        log_context = (
+            self.logger.bind(request_id=request_id) if request_id else self.logger
+        )
 
         start_time = time.time()
         response_chunks: List[str] = []
 
         try:
-            log_context.info("Processing chat request",
-                           message_length=len(message),
-                           has_context=context is not None,
-                           conversation_turns=len(self.conversation_buffer))
+            log_context.info(
+                "Processing chat request",
+                message_length=len(message),
+                has_context=context is not None,
+                conversation_turns=len(self.conversation_buffer),
+            )
 
             # Step 1: Add user message to conversation history
             await self._add_conversation_turn("user", message, context)
@@ -525,19 +563,23 @@ class NLPAgent:
             # Step 8: Update performance metrics
             await self._update_performance_metrics(start_time, len(full_response), True)
 
-            log_context.info("Chat request completed",
-                           response_length=len(full_response),
-                           duration_ms=round((time.time() - start_time) * 1000, 2))
+            log_context.info(
+                "Chat request completed",
+                response_length=len(full_response),
+                duration_ms=round((time.time() - start_time) * 1000, 2),
+            )
 
         except Exception as e:
             # Record failure metrics
             await self._update_performance_metrics(start_time, 0, False)
 
             error_type = type(e).__name__
-            log_context.error("Chat request failed",
-                            error=str(e),
-                            error_type=error_type,
-                            exc_info=True)
+            log_context.error(
+                "Chat request failed",
+                error=str(e),
+                error_type=error_type,
+                exc_info=True,
+            )
 
             # Fallback to mock response if enabled
             if self.config.fallback_to_mock:
@@ -554,22 +596,46 @@ class NLPAgent:
         # Enhanced trait descriptions with specific behavioral guidance
         trait_descriptions = []
         for trait_name, value in traits.items():
-            if trait_name == 'empathy':
-                desc = f"emotional understanding and compassionate responses ({value:.1f}/1.0)"
-            elif trait_name == 'engagement':
-                desc = f"conversational energy and enthusiasm ({value:.1f}/1.0)"
-            elif trait_name == 'technical_knowledge':
-                desc = f"depth of technical expertise and accuracy ({value:.1f}/1.0)"
-            elif trait_name == 'creativity':
-                desc = f"innovative thinking and creative problem-solving ({value:.1f}/1.0)"
-            elif trait_name == 'conciseness':
-                desc = f"balancing completeness with brevity ({value:.1f}/1.0)"
-            elif trait_name == 'context_awareness':
-                desc = f"understanding conversation history and maintaining continuity ({value:.1f}/1.0)"
-            elif trait_name == 'adaptability':
-                desc = f"flexible adaptation to different conversation styles ({value:.1f}/1.0)"
-            elif trait_name == 'personability':
-                desc = f"friendliness and natural human-like communication ({value:.1f}/1.0)"
+            if trait_name == "empathy":
+                desc = (
+                    "emotional understanding and compassionate "
+                    f"responses ({value:.1f}/1.0)"
+                )
+            elif trait_name == "engagement":
+                desc = (
+                    "conversational energy and enthusiasm "
+                    f"({value:.1f}/1.0)"
+                )
+            elif trait_name == "technical_knowledge":
+                desc = (
+                    "depth of technical expertise and accuracy "
+                    f"({value:.1f}/1.0)"
+                )
+            elif trait_name == "creativity":
+                desc = (
+                    "innovative thinking and creative problem-solving "
+                    f"({value:.1f}/1.0)"
+                )
+            elif trait_name == "conciseness":
+                desc = (
+                    "balancing completeness with brevity "
+                    f"({value:.1f}/1.0)"
+                )
+            elif trait_name == "context_awareness":
+                desc = (
+                    "understanding conversation history and maintaining "
+                    f"continuity ({value:.1f}/1.0)"
+                )
+            elif trait_name == "adaptability":
+                desc = (
+                    "flexible adaptation to different conversation "
+                    f"styles ({value:.1f}/1.0)"
+                )
+            elif trait_name == "personability":
+                desc = (
+                    "friendliness and natural human-like "
+                    f"communication ({value:.1f}/1.0)"
+                )
             else:
                 desc = f"{trait_name.replace('_', ' ')} ({value:.1f}/1.0)"
 
@@ -592,44 +658,46 @@ class NLPAgent:
                     context_items.append(f"Requested tone: {value}")
 
             if context_items:
-                context_text = "\nContext:\n" + "\n".join(f"  {item}" for item in context_items)
+                context_text = "\nContext:\n" + "\n".join(
+                    f"  {item}" for item in context_items
+                )
 
         # Format with template
         prompt = self.config.system_prompt_template.format(
             trait_descriptions="\n".join(trait_descriptions),
             genome_id=self.genome.genome_id,
             generation=self.genome.generation,
-            additional_context=context_text
+            additional_context=context_text,
         )
 
         return prompt
 
-    def _prepare_conversation_messages(self, system_prompt: str) -> List[Dict[str, str]]:
+    def _prepare_conversation_messages(
+        self, system_prompt: str
+    ) -> List[Dict[str, str]]:
         """Prepare conversation history for LLM context window."""
         messages = [{"role": "system", "content": system_prompt}]
 
         # Add recent conversation turns within context window
-        recent_turns = self.conversation_buffer[-self.config.context_window:]
+        recent_turns = self.conversation_buffer[-self.config.context_window :]
 
         for turn in recent_turns:
             # ConversationTurn uses `user_input` as the attribute name
             # (kept for backward compatibility with older tests that may
             # reference `user_message`). Prefer `user_input` when present.
-            user_text = getattr(turn, "user_input", None) or getattr(turn, "user_message", None)
+            user_text = getattr(turn, "user_input", None) or getattr(
+                turn, "user_message", None
+            )
             if user_text:
-                messages.append({
-                    "role": "user",
-                    "content": user_text
-                })
+                messages.append({"role": "user", "content": user_text})
             if turn.agent_response:
-                messages.append({
-                    "role": "assistant",
-                    "content": turn.agent_response
-                })
+                messages.append({"role": "assistant", "content": turn.agent_response})
 
         return messages
 
-    async def _enhance_with_kraken(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    async def _enhance_with_kraken(
+        self, messages: List[Dict[str, str]]
+    ) -> List[Dict[str, str]]:
         """Apply Kraken LNN enhancement to messages."""
         if not self.kraken_lnn:
             return messages
@@ -639,7 +707,9 @@ class NLPAgent:
             user_messages = [msg for msg in messages if msg["role"] == "user"]
             if user_messages:
                 # Convert text to numerical sequence for Kraken
-                text_to_process = user_messages[-1]["content"][:200]  # Limit for processing
+                text_to_process = user_messages[-1]["content"][
+                    :200
+                ]  # Limit for processing
                 sequence = [float(ord(c)) / 255.0 for c in text_to_process]
 
                 if len(sequence) >= 5:  # Minimum sequence length
@@ -647,18 +717,24 @@ class NLPAgent:
 
                     # Add neural processing insights to system message
                     if messages and messages[0]["role"] == "system":
-                        neural_insights = f"\nNeural processing: {result.get('liquid_outputs', [0])[:3]}"
+                        # Keep the neural insights message short to avoid long lines
+                        outs = result.get("liquid_outputs", [0])[:3]
+                        neural_insights = "\nNeural processing: " + str(outs)
                         messages[0]["content"] += neural_insights
 
             return messages
 
         except Exception as e:
-            self.logger.warning("Kraken enhancement failed, proceeding without it",
-                              error=str(e))
+            self.logger.warning(
+                "Kraken enhancement failed, proceeding without it", error=str(e)
+            )
             return messages
 
     def _truncate_context(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
-        """Truncate conversation context to stay within token limits using proper tokenization."""
+        """Truncate conversation context to stay within token limits.
+
+        Uses token estimation to trim older turns when necessary.
+        """
         # Keep system message always
         if not messages or messages[0]["role"] != "system":
             return messages
@@ -680,10 +756,12 @@ class NLPAgent:
             else:
                 # Add truncation notice
                 if len(truncated_messages) == 1:  # Only system message
-                    truncated_messages.append({
-                        "role": "system",
-                        "content": "... [conversation history truncated due to length limits] ..."
-                    })
+                    truncated_messages.append(
+                        {
+                            "role": "system",
+                            "content": "... [conversation history truncated] ...",
+                        }
+                    )
                 break
 
         return truncated_messages
@@ -692,7 +770,7 @@ class NLPAgent:
         """Estimate token count using available tokenization methods."""
         try:
             # Try to use LLM client's token estimation if available
-            if self.llm_client and hasattr(self.llm_client, '_estimate_token_count'):
+            if self.llm_client and hasattr(self.llm_client, "_estimate_token_count"):
                 client = self.llm_client
                 # `_estimate_token_count` is provider-specific (OpenAI/others) and
                 # not part of the abstract `LLMClient` interface, so narrow safely
@@ -710,10 +788,7 @@ class NLPAgent:
             return int(max(1, total_chars / 4))
 
     async def _add_conversation_turn(
-        self,
-        role: str,
-        content: str,
-        context: Optional[Dict[str, Any]] = None
+        self, role: str, content: str, context: Optional[Dict[str, Any]] = None
     ) -> None:
         """Add a conversation turn to the history with metadata."""
         turn = ConversationTurn(
@@ -722,7 +797,7 @@ class NLPAgent:
             timestamp=datetime.now(timezone.utc).isoformat(),
             context_embedding=None,  # Placeholder
             response_quality_score=0.0,  # Placeholder
-            evolutionary_adaptations=None  # Placeholder
+            evolutionary_adaptations=None,  # Placeholder
         )
 
         self.conversation_buffer.append(turn)
@@ -743,10 +818,7 @@ class NLPAgent:
             ) / total_turns
 
     async def _update_performance_metrics(
-        self,
-        start_time: float,
-        response_length: int,
-        success: bool
+        self, start_time: float, response_length: int, success: bool
     ) -> None:
         """Update comprehensive performance tracking metrics."""
         duration_ms = (time.time() - start_time) * 1000
@@ -755,7 +827,9 @@ class NLPAgent:
 
         if success:
             self.performance_metrics["successful_requests"] += 1
-            self.performance_metrics["total_tokens_used"] += response_length // 4  # Rough estimate
+            self.performance_metrics["total_tokens_used"] += (
+                response_length // 4
+            )  # Rough estimate
         else:
             self.performance_metrics["failed_requests"] += 1
 
@@ -773,25 +847,33 @@ class NLPAgent:
         )
 
         # Update LLM client metrics if available
-        if self.llm_client and hasattr(self.llm_client, 'metrics'):
+        if self.llm_client and hasattr(self.llm_client, "metrics"):
             self.performance_metrics["total_cost"] = self.llm_client.metrics.total_cost
 
-    async def _generate_fallback_response(self, message: str, error: str) -> AsyncGenerator[str, None]:
+    async def _generate_fallback_response(
+        self, message: str, error: str
+    ) -> AsyncGenerator[str, None]:
         """Generate fallback response when LLM integration fails."""
-        fallback_response = f"""**FALLBACK MODE** (LLM Error: {error[:50]}...)
+        # Build a concise fallback response with safe line lengths
+        preview = message[:100] + ("..." if len(message) > 100 else "")
+        trait_lines = chr(10).join(
+            [f"• {k}: {v:.1f}/1.0" for k, v in list(self.genome.traits.items())[:4]]
+        )
 
-Hello! I received your message: "{message[:100]}{'...' if len(message) > 100 else ''}"
-
-I apologize, but I'm currently operating in fallback mode due to a technical issue with the language model integration. While I can't provide a full AI-powered response right now, here's what I know:
-
-**Genome ID**: {self.genome.genome_id}
-**Generation**: {self.genome.generation}
-**Key Traits**:
-{chr(10).join(f"• {k}: {v:.1f}/1.0" for k, v in list(self.genome.traits.items())[:4])}
-
-Please check your API keys and network connection, then restart the agent.
-
-**End fallback response.**"""
+        fallback_response = (
+            f"**FALLBACK MODE** (LLM Error: {error[:50]}...)\n\n"
+            f"Hello! I received your message: \"{preview}\"\n\n"
+            "I apologize, but I'm currently operating in fallback mode due to a "
+            "technical issue with the language model integration. I can share "
+            "a brief summary of the current agent state:\n\n"
+            f"**Genome ID**: {self.genome.genome_id}\n"
+            f"**Generation**: {self.genome.generation}\n"
+            "**Key Traits**:\n"
+            f"{trait_lines}\n\n"
+            "Please check your API keys and network connection, "
+            "then restart the agent.\n\n"
+            "**End fallback response.**"
+        )
 
         for word in fallback_response.split():
             yield word + " "
@@ -799,22 +881,25 @@ Please check your API keys and network connection, then restart the agent.
 
     async def get_conversation_history(self) -> List[Dict[str, Any]]:
         """Get conversation history in a readable format."""
-        return [{
-            "timestamp": turn.timestamp,
-            "user_input": turn.user_input,
-            "agent_response": turn.agent_response,
-            "quality_score": turn.response_quality_score
-        } for turn in self.conversation_buffer]
+        return [
+            {
+                "timestamp": turn.timestamp,
+                "user_input": turn.user_input,
+                "agent_response": turn.agent_response,
+                "quality_score": turn.response_quality_score,
+            }
+            for turn in self.conversation_buffer
+        ]
 
     async def get_metrics(self) -> Dict[str, Any]:
         """Get comprehensive agent and LLM metrics."""
         llm_metrics = {}
-        if self.llm_client and hasattr(self.llm_client, 'metrics'):
+        if self.llm_client and hasattr(self.llm_client, "metrics"):
             llm_metrics = {
                 "llm_requests": self.llm_client.metrics.total_requests,
                 "llm_errors": self.llm_client.metrics.error_rate,
                 "llm_cost": round(self.llm_client.metrics.total_cost, 4),
-                "rate_limit_hits": self.llm_client.metrics.rate_limit_hits
+                "rate_limit_hits": self.llm_client.metrics.rate_limit_hits,
             }
 
         return {
@@ -822,7 +907,9 @@ Please check your API keys and network connection, then restart the agent.
                 "id": self.genome.genome_id,
                 "generation": self.genome.generation,
                 "traits": self.genome.traits,
-                "uptime_seconds": round(time.time() - self.performance_metrics["uptime_start"], 2)
+                "uptime_seconds": round(
+                    time.time() - self.performance_metrics["uptime_start"], 2
+                ),
             },
             "performance": self.performance_metrics,
             "conversation": dict(self.conversation_metadata),
@@ -832,8 +919,8 @@ Please check your API keys and network connection, then restart the agent.
                 "model": self.config.model_name,
                 "streaming": self.config.streaming,
                 "temperature": self.config.temperature,
-                "fallback_enabled": self.config.fallback_to_mock
-            }
+                "fallback_enabled": self.config.fallback_to_mock,
+            },
         }
 
     async def reset_conversation(self) -> None:
@@ -845,7 +932,7 @@ Please check your API keys and network connection, then restart the agent.
             "total_tokens_used": 0,
             "conversation_topics": set(),
             "last_interaction": None,
-            "context_quality_score": 0.0
+            "context_quality_score": 0.0,
         }
         self.logger.info("Conversation history reset")
 
@@ -865,9 +952,9 @@ Please check your API keys and network connection, then restart the agent.
         except Exception as e:
             self.logger.error("Error during agent cleanup", error=str(e))
 
+
 async def create_agent(
-    genome: ConversationalGenome,
-    config: Optional[AgentConfig] = None
+    genome: ConversationalGenome, config: Optional[AgentConfig] = None
 ) -> NLPAgent:
     """Create and initialize an NLP agent.
 

@@ -58,31 +58,26 @@ from .types import (
 
 __all__ = [
     # Anomaly Detection
-    'AnomalyDetector',
-    'IsolationForestDetector',
-    'OneClassSVMDetector',
-
+    "AnomalyDetector",
+    "IsolationForestDetector",
+    "OneClassSVMDetector",
     # Predictive Analytics
-    'PredictiveAnalyzer',
-    'TimeSeriesForecaster',
-    'PerformancePredictor',
-
+    "PredictiveAnalyzer",
+    "TimeSeriesForecaster",
+    "PerformancePredictor",
     # Alert Intelligence
-    'AlertCorrelator',
-    'IntelligentAlertManager',
-
+    "AlertCorrelator",
+    "IntelligentAlertManager",
     # Optimization
-    'OptimizationEngine',
-    'PerformanceOptimizer',
-    'ConfigurationRecommender',
-
+    "OptimizationEngine",
+    "PerformanceOptimizer",
+    "ConfigurationRecommender",
     # Configuration
-    'MLAnalyticsConfig',
-
+    "MLAnalyticsConfig",
     # Types
-    'AnomalyResult',
-    'PredictionResult',
-    'AlertCluster',
-    'OptimizationRecommendation',
-    'MLMetric'
+    "AnomalyResult",
+    "PredictionResult",
+    "AlertCluster",
+    "OptimizationRecommendation",
+    "MLMetric",
 ]

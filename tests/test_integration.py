@@ -4,7 +4,6 @@ Integration tests for Phylogenic system.
 Tests end-to-end workflows involving multiple components.
 """
 
-
 import numpy as np
 import pytest
 
@@ -14,7 +13,6 @@ from phylogenic import (
     EvolutionEngine,
     create_agent,
 )
-from phylogenic.exceptions import AgentError
 from tests.test_utils import (
     assert_genome_valid,
     calculate_population_diversity,
@@ -45,16 +43,16 @@ class TestIntegration:
         assert len(response_chunks) > 0
 
     @pytest.mark.asyncio
-    async def test_evolution_to_agent_workflow(self, evolution_engine, fitness_function):
+    async def test_evolution_to_agent_workflow(
+        self, evolution_engine, fitness_function
+    ):
         """Test workflow from evolution to agent creation."""
         # Initialize population
         population = evolution_engine.initialize_population()
 
         # Evolve population
         best_genome = await evolution_engine.evolve(
-            population,
-            fitness_function,
-            generations=5
+            population, fitness_function, generations=5
         )
 
         assert_genome_valid(best_genome)
@@ -91,7 +89,7 @@ class TestIntegration:
 
         # Verify Kraken state
         state = await agent.kraken_lnn.get_network_state()
-        assert state['reservoir_size'] == 100
+        assert state["reservoir_size"] == 100
 
     @pytest.mark.asyncio
     async def test_full_evolution_cycle(self, evolution_config, fitness_function):
@@ -112,8 +110,8 @@ class TestIntegration:
 
         # Verify fitness improved over generations
         if len(engine.evolution_history) > 1:
-            initial_fitness = engine.evolution_history[0]['best_fitness']
-            final_fitness = engine.evolution_history[-1]['best_fitness']
+            initial_fitness = engine.evolution_history[0]["best_fitness"]
+            final_fitness = engine.evolution_history[-1]["best_fitness"]
             # Fitness should improve or at least be tracked
             assert final_fitness >= initial_fitness - 0.1
 
@@ -144,12 +142,10 @@ class TestIntegration:
         """Test multiple agents with different genomes."""
         # Create diverse genomes
         genome1 = ConversationalGenome(
-            "agent1",
-            traits={'empathy': 0.95, 'engagement': 0.90}
+            "agent1", traits={"empathy": 0.95, "engagement": 0.90}
         )
         genome2 = ConversationalGenome(
-            "agent2",
-            traits={'technical_knowledge': 0.95, 'conciseness': 0.90}
+            "agent2", traits={"technical_knowledge": 0.95, "conciseness": 0.90}
         )
 
         # Create agents
@@ -171,6 +167,7 @@ class TestIntegration:
     @pytest.mark.asyncio
     async def test_evolution_with_fitness_from_agent(self, evolution_config):
         """Test evolution using fitness based on agent performance."""
+
         def agent_based_fitness(genome: ConversationalGenome) -> float:
             """Fitness based on trait balance (simulating agent quality)."""
             traits = genome.traits
@@ -213,7 +210,9 @@ class TestIntegration:
         assert final_memory >= initial_memory
 
     @pytest.mark.asyncio
-    async def test_genome_mutation_during_evolution(self, evolution_config, fitness_function):
+    async def test_genome_mutation_during_evolution(
+        self, evolution_config, fitness_function
+    ):
         """Test genome mutations occur during evolution."""
         engine = EvolutionEngine(evolution_config)
         population = engine.initialize_population()
@@ -240,7 +239,9 @@ class TestIntegration:
         assert mutations_found
 
     @pytest.mark.asyncio
-    async def test_crossover_produces_valid_offspring(self, custom_genome, technical_genome):
+    async def test_crossover_produces_valid_offspring(
+        self, custom_genome, technical_genome
+    ):
         """Test crossover produces valid offspring in workflow."""
         # Perform crossover
         offspring = custom_genome.crossover(technical_genome)
@@ -261,10 +262,11 @@ class TestIntegration:
     @pytest.mark.asyncio
     async def test_error_propagation(self):
         """Test error handling across components."""
-        # Invalid genome should fail
-        with pytest.raises(AgentError):
-            invalid_genome = ConversationalGenome("test", {'invalid_trait': 0.5})
-            await create_agent(invalid_genome)
+        # Invalid genome should fail at validation
+        from phylogenic.exceptions import ValidationError
+
+        with pytest.raises(ValidationError):
+            ConversationalGenome("test", {"invalid_trait": 0.5})
 
     @pytest.mark.asyncio
     async def test_state_consistency_across_operations(self, custom_genome):

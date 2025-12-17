@@ -4,7 +4,6 @@ Runtime tests for NLPAgent and agent creation.
 Tests actual execution of agent initialization, chat, and integration.
 """
 
-
 import pytest
 
 from phylogenic import AgentConfig, ConversationalGenome, NLPAgent, create_agent
@@ -59,8 +58,10 @@ class TestAgentRuntime:
 
         # Should contain trait information
         for trait_name in custom_genome.traits.keys():
-            assert trait_name.replace('_', ' ').lower() in prompt.lower() or \
-                   trait_name in prompt.lower()
+            assert (
+                trait_name.replace("_", " ").lower() in prompt.lower()
+                or trait_name in prompt.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_chat_execution(self, custom_genome, agent_config):
@@ -146,7 +147,7 @@ class TestAgentRuntime:
 
         # History should be tracked (if implemented)
         # Note: Current implementation may not track history yet
-        assert hasattr(agent, 'conversation_history')
+        assert hasattr(agent, "conversation_history")
 
     @pytest.mark.asyncio
     async def test_multiple_agents_independent(self, custom_genome, technical_genome):
@@ -178,14 +179,12 @@ class TestAgentRuntime:
         """Test genome traits affect agent behavior."""
         # Create high empathy genome
         high_empathy = ConversationalGenome(
-            "high_empathy",
-            traits={'empathy': 0.95, 'engagement': 0.90}
+            "high_empathy", traits={"empathy": 0.95, "engagement": 0.90}
         )
 
         # Create low empathy genome
         low_empathy = ConversationalGenome(
-            "low_empathy",
-            traits={'empathy': 0.20, 'engagement': 0.30}
+            "low_empathy", traits={"empathy": 0.20, "engagement": 0.30}
         )
 
         config = AgentConfig()
@@ -221,7 +220,7 @@ class TestAgentRuntime:
             streaming=False,
             memory_enabled=False,
             evolution_enabled=False,
-            kraken_enabled=False
+            kraken_enabled=False,
         )
 
         assert config.model_name == "claude-3"
@@ -231,4 +230,3 @@ class TestAgentRuntime:
         assert config.memory_enabled is False
         assert config.evolution_enabled is False
         assert config.kraken_enabled is False
-

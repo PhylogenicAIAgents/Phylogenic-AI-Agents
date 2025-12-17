@@ -34,9 +34,14 @@ Version: 1.0.0
 import logging
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Set
 
 import numpy as np
+from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    # Import cluster classes for typing only (silence missing-stub warnings at runtime)
+    pass
 
 from .ml_config import AlertIntelligenceConfig
 from .types import AlertCluster, AlertSeverity, AnomalyResult, ComponentType
@@ -54,9 +59,9 @@ class AlertCorrelator:
             config: Alert intelligence configuration
         """
         self.config = config
-        self.alert_clusters = {}  # cluster_id -> AlertCluster
-        self.alert_history = []  # Recent alerts for correlation
-        self.correlation_cache = {}
+        self.alert_clusters: Dict[str, AlertCluster] = {}  # cluster_id -> AlertCluster
+        self.alert_history: List[Dict[str, Any]] = []  # Recent alerts for correlation
+        self.correlation_cache: Dict[str, float] = {}
         self.similarity_threshold = config.similarity_threshold
 
         # Stable component type encoding to ensure reproducible ML features
@@ -67,10 +72,12 @@ class AlertCorrelator:
             ComponentType.LLM_CLIENT.value: 40,
             ComponentType.GENOME.value: 50,
             ComponentType.SYSTEM.value: 60,
-            "unknown": 0  # Default for unrecognized types
+            "unknown": 0,  # Default for unrecognized types
         }
 
-    async def process_alert_batch(self, alerts: List[Dict[str, Any]]) -> List[AlertCluster]:
+    async def process_alert_batch(
+        self, alerts: List[Dict[str, Any]]
+    ) -> List[AlertCluster]:
         """Process a batch of alerts and create clusters.
 
         Args:
@@ -89,8 +96,12 @@ class AlertCorrelator:
                 minutes=self.config.correlation_window_minutes * 2
             )
             self.alert_history = [
-                alert for alert in self.alert_history
-                if datetime.fromisoformat(alert.get('timestamp', datetime.now(timezone.utc).isoformat())) > cutoff_time
+                alert
+                for alert in self.alert_history
+                if datetime.fromisoformat(
+                    alert.get("timestamp", datetime.now(timezone.utc).isoformat())
+                )
+                > cutoff_time
             ]
 
             # Perform clustering
@@ -121,10 +132,14 @@ class AlertCorrelator:
         elif self.config.clustering_algorithm == "hierarchical":
             return await self._hierarchical_clustering(alerts)
         else:
-            logger.warning(f"Unknown clustering algorithm: {self.config.clustering_algorithm}")
+            logger.warning(
+                f"Unknown clustering algorithm: {self.config.clustering_algorithm}"
+            )
             return await self._simple_clustering(alerts)
 
-    async def _dbscan_clustering(self, alerts: List[Dict[str, Any]]) -> List[AlertCluster]:
+    async def _dbscan_clustering(
+        self, alerts: List[Dict[str, Any]]
+    ) -> List[AlertCluster]:
         """Perform DBSCAN clustering on alerts.
 
         Args:
@@ -134,7 +149,7 @@ class AlertCorrelator:
             List of alert clusters
         """
         try:
-            from sklearn.cluster import DBSCAN
+            from sklearn.cluster import DBSCAN  # type: ignore[import-untyped]
 
             if len(alerts) < 2:
                 return []
@@ -145,7 +160,7 @@ class AlertCorrelator:
             # Perform DBSCAN clustering
             clustering = DBSCAN(
                 eps=self.config.clustering_eps,
-                min_samples=self.config.clustering_min_samples
+                min_samples=self.config.clustering_min_samples,
             )
             cluster_labels = clustering.fit_predict(features)
 
@@ -156,23 +171,30 @@ class AlertCorrelator:
                     continue
 
                 cluster_alerts = [
-                    alerts[i] for i, label in enumerate(cluster_labels)
+                    alerts[i]
+                    for i, label in enumerate(cluster_labels)
                     if label == cluster_id
                 ]
 
-                cluster = self._create_alert_cluster(cluster_alerts, f"dbscan_{cluster_id}")
+                cluster = self._create_alert_cluster(
+                    cluster_alerts, f"dbscan_{cluster_id}"
+                )
                 clusters.append(cluster)
 
             return clusters
 
         except ImportError:
-            logger.warning("scikit-learn not available, falling back to simple clustering")
+            logger.warning(
+                "scikit-learn not available, falling back to simple clustering"
+            )
             return await self._simple_clustering(alerts)
         except Exception as e:
             logger.error(f"DBSCAN clustering failed: {e}")
             return await self._simple_clustering(alerts)
 
-    async def _kmeans_clustering(self, alerts: List[Dict[str, Any]]) -> List[AlertCluster]:
+    async def _kmeans_clustering(
+        self, alerts: List[Dict[str, Any]]
+    ) -> List[AlertCluster]:
         """Perform K-means clustering on alerts.
 
         Args:
@@ -201,23 +223,30 @@ class AlertCorrelator:
             clusters = []
             for cluster_id in range(n_clusters):
                 cluster_alerts = [
-                    alerts[i] for i, label in enumerate(cluster_labels)
+                    alerts[i]
+                    for i, label in enumerate(cluster_labels)
                     if label == cluster_id
                 ]
 
-                cluster = self._create_alert_cluster(cluster_alerts, f"kmeans_{cluster_id}")
+                cluster = self._create_alert_cluster(
+                    cluster_alerts, f"kmeans_{cluster_id}"
+                )
                 clusters.append(cluster)
 
             return clusters
 
         except ImportError:
-            logger.warning("scikit-learn not available, falling back to simple clustering")
+            logger.warning(
+                "scikit-learn not available, falling back to simple clustering"
+            )
             return await self._simple_clustering(alerts)
         except Exception as e:
             logger.error(f"K-means clustering failed: {e}")
             return await self._simple_clustering(alerts)
 
-    async def _hierarchical_clustering(self, alerts: List[Dict[str, Any]]) -> List[AlertCluster]:
+    async def _hierarchical_clustering(
+        self, alerts: List[Dict[str, Any]]
+    ) -> List[AlertCluster]:
         """Perform hierarchical clustering on alerts.
 
         Args:
@@ -239,33 +268,37 @@ class AlertCorrelator:
             n_clusters = min(len(alerts) // 3, 4)
 
             # Perform hierarchical clustering
-            clustering = AgglomerativeClustering(
-                n_clusters=n_clusters,
-                linkage='ward'
-            )
+            clustering = AgglomerativeClustering(n_clusters=n_clusters, linkage="ward")
             cluster_labels = clustering.fit_predict(features)
 
             # Create clusters
             clusters = []
             for cluster_id in range(n_clusters):
                 cluster_alerts = [
-                    alerts[i] for i, label in enumerate(cluster_labels)
+                    alerts[i]
+                    for i, label in enumerate(cluster_labels)
                     if label == cluster_id
                 ]
 
-                cluster = self._create_alert_cluster(cluster_alerts, f"hierarchical_{cluster_id}")
+                cluster = self._create_alert_cluster(
+                    cluster_alerts, f"hierarchical_{cluster_id}"
+                )
                 clusters.append(cluster)
 
             return clusters
 
         except ImportError:
-            logger.warning("scikit-learn not available, falling back to simple clustering")
+            logger.warning(
+                "scikit-learn not available, falling back to simple clustering"
+            )
             return await self._simple_clustering(alerts)
         except Exception as e:
             logger.error(f"Hierarchical clustering failed: {e}")
             return await self._simple_clustering(alerts)
 
-    async def _simple_clustering(self, alerts: List[Dict[str, Any]]) -> List[AlertCluster]:
+    async def _simple_clustering(
+        self, alerts: List[Dict[str, Any]]
+    ) -> List[AlertCluster]:
         """Simple clustering based on common attributes.
 
         Args:
@@ -282,8 +315,8 @@ class AlertCorrelator:
         severity_groups = defaultdict(list)
 
         for alert in alerts:
-            component_type = alert.get('component_type', 'unknown')
-            severity = alert.get('severity', AlertSeverity.INFO.value)
+            component_type = alert.get("component_type", "unknown")
+            severity = alert.get("severity", AlertSeverity.INFO.value)
 
             component_groups[component_type].append(alert)
             severity_groups[severity].append(alert)
@@ -294,8 +327,7 @@ class AlertCorrelator:
         for component_type, component_alerts in component_groups.items():
             if len(component_alerts) >= 2:
                 cluster = self._create_alert_cluster(
-                    component_alerts,
-                    f"component_{component_type}"
+                    component_alerts, f"component_{component_type}"
                 )
                 clusters.append(cluster)
 
@@ -303,14 +335,13 @@ class AlertCorrelator:
         for severity, severity_alerts in severity_groups.items():
             if len(severity_alerts) >= 3:
                 cluster = self._create_alert_cluster(
-                    severity_alerts,
-                    f"severity_{severity}"
+                    severity_alerts, f"severity_{severity}"
                 )
                 clusters.append(cluster)
 
         return clusters
 
-    def _extract_alert_features(self, alerts: List[Dict[str, Any]]) -> np.ndarray:
+    def _extract_alert_features(self, alerts: List[Dict[str, Any]]) -> NDArray[Any]:
         """Extract numerical features from alerts for clustering.
 
         Args:
@@ -329,35 +360,45 @@ class AlertCorrelator:
                 AlertSeverity.CRITICAL.value: 4,
                 AlertSeverity.ERROR.value: 3,
                 AlertSeverity.WARNING.value: 2,
-                AlertSeverity.INFO.value: 1
+                AlertSeverity.INFO.value: 1,
             }
-            feature_vector.append(float(severity_map.get(alert.get('severity', AlertSeverity.INFO.value), 1)))
+            feature_vector.append(
+                float(
+                    severity_map.get(alert.get("severity", AlertSeverity.INFO.value), 1)
+                )
+            )
 
             # Component type (stable encoding)
-            component_type = alert.get('component_type', 'unknown')
-            feature_vector.append(float(self.component_type_encoding.get(component_type, 0)))
+            component_type = alert.get("component_type", "unknown")
+            feature_vector.append(
+                float(self.component_type_encoding.get(component_type, 0))
+            )
 
             # Anomaly score (if available)
-            anomaly_score = alert.get('anomaly_score', 0.0)
+            anomaly_score = alert.get("anomaly_score", 0.0)
             feature_vector.append(float(anomaly_score))
 
             # Timestamp (hour of day)
-            timestamp_str = alert.get('timestamp', datetime.now(timezone.utc).isoformat())
+            timestamp_str = alert.get(
+                "timestamp", datetime.now(timezone.utc).isoformat()
+            )
             try:
-                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
                 feature_vector.append(float(timestamp.hour))
             except Exception:
                 feature_vector.append(12.0)  # Default to noon
 
             # Confidence (if available)
-            confidence = alert.get('confidence', 0.5)
+            confidence = alert.get("confidence", 0.5)
             feature_vector.append(float(confidence))
 
             features.append(feature_vector)
 
         return np.array(features, dtype=float)
 
-    def _create_alert_cluster(self, alerts: List[Dict[str, Any]], cluster_id: str) -> AlertCluster:
+    def _create_alert_cluster(
+        self, alerts: List[Dict[str, Any]], cluster_id: str
+    ) -> AlertCluster:
         """Create an alert cluster from a list of alerts.
 
         Args:
@@ -383,7 +424,11 @@ class AlertCorrelator:
         timestamps = []
         for alert in alerts:
             try:
-                ts = datetime.fromisoformat(alert.get('timestamp', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00'))
+                ts = datetime.fromisoformat(
+                    alert.get(
+                        "timestamp", datetime.now(timezone.utc).isoformat()
+                    ).replace("Z", "+00:00")
+                )
                 timestamps.append(ts)
             except Exception:
                 timestamps.append(datetime.now(timezone.utc))
@@ -405,7 +450,8 @@ class AlertCorrelator:
             impact_assessment=self._assess_impact(alerts),
             first_alert_time=first_alert_time,
             last_alert_time=last_alert_time,
-            duration_minutes=(last_alert_time - first_alert_time).total_seconds() / 60.0
+            duration_minutes=(last_alert_time - first_alert_time).total_seconds()
+            / 60.0,
         )
 
         return cluster
@@ -423,12 +469,12 @@ class AlertCorrelator:
             return "independent"
 
         # Check for same component
-        components = {alert.get('component_type', 'unknown') for alert in alerts}
+        components = {alert.get("component_type", "unknown") for alert in alerts}
         if len(components) == 1:
             return "component_related"
 
         # Check for same metric
-        metrics = {alert.get('metric_name', 'unknown') for alert in alerts}
+        metrics = {alert.get("metric_name", "unknown") for alert in alerts}
         if len(metrics) == 1:
             return "metric_related"
 
@@ -436,14 +482,21 @@ class AlertCorrelator:
         timestamps = []
         for alert in alerts:
             try:
-                ts = datetime.fromisoformat(alert.get('timestamp', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00'))
+                ts = datetime.fromisoformat(
+                    alert.get(
+                        "timestamp", datetime.now(timezone.utc).isoformat()
+                    ).replace("Z", "+00:00")
+                )
                 timestamps.append(ts)
             except Exception:
                 pass
 
         if len(timestamps) > 1:
             timestamps.sort()
-            max_gap = max((timestamps[i+1] - timestamps[i]).total_seconds() for i in range(len(timestamps)-1))
+            max_gap = max(
+                (timestamps[i + 1] - timestamps[i]).total_seconds()
+                for i in range(len(timestamps) - 1)
+            )
             if max_gap < 300:  # 5 minutes
                 return "cascading"
 
@@ -462,7 +515,7 @@ class AlertCorrelator:
             return {}
 
         common = {}
-        all_keys = set()
+        all_keys: Set[str] = set()
 
         # Collect all keys
         for alert in alerts:
@@ -474,8 +527,10 @@ class AlertCorrelator:
             # Convert unhashable types (lists, dicts) to strings for comparison
             try:
                 hashable_values = [
-                    tuple(v) if isinstance(v, list) else (
-                        frozenset(v.items()) if isinstance(v, dict) else v
+                    (
+                        tuple(v)
+                        if isinstance(v, list)
+                        else (frozenset(v.items()) if isinstance(v, dict) else v)
                     )
                     for v in values
                 ]
@@ -507,11 +562,11 @@ class AlertCorrelator:
             AlertSeverity.CRITICAL.value: 1.0,
             AlertSeverity.ERROR.value: 0.8,
             AlertSeverity.WARNING.value: 0.5,
-            AlertSeverity.INFO.value: 0.2
+            AlertSeverity.INFO.value: 0.2,
         }
 
         severity_score = sum(
-            severity_scores.get(alert.get('severity', AlertSeverity.INFO.value), 0.2)
+            severity_scores.get(alert.get("severity", AlertSeverity.INFO.value), 0.2)
             for alert in alerts
         ) / len(alerts)
 
@@ -519,7 +574,11 @@ class AlertCorrelator:
         timestamps = []
         for alert in alerts:
             try:
-                ts = datetime.fromisoformat(alert.get('timestamp', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00'))
+                ts = datetime.fromisoformat(
+                    alert.get(
+                        "timestamp", datetime.now(timezone.utc).isoformat()
+                    ).replace("Z", "+00:00")
+                )
                 timestamps.append(ts)
             except Exception:
                 pass
@@ -527,20 +586,24 @@ class AlertCorrelator:
         duration_score = 0.0
         if len(timestamps) > 1:
             timestamps.sort()
-            duration_minutes = (max(timestamps) - min(timestamps)).total_seconds() / 60.0
+            duration_minutes = (
+                max(timestamps) - min(timestamps)
+            ).total_seconds() / 60.0
             duration_score = min(duration_minutes / 60.0, 1.0)  # Cap at 1 hour
 
         # Combined score
         priority_score = (
-            alert_count_score * self.config.priority_factors.get("frequency", 0.2) +
-            severity_score * self.config.priority_factors.get("severity", 0.4) +
-            duration_score * self.config.priority_factors.get("duration", 0.3) +
-            0.1  # Component criticality factor
+            alert_count_score * self.config.priority_factors.get("frequency", 0.2)
+            + severity_score * self.config.priority_factors.get("severity", 0.4)
+            + duration_score * self.config.priority_factors.get("duration", 0.3)
+            + 0.1  # Component criticality factor
         )
 
         return min(priority_score, 1.0)
 
-    def _generate_root_cause_candidates(self, alerts: List[Dict[str, Any]]) -> List[str]:
+    def _generate_root_cause_candidates(
+        self, alerts: List[Dict[str, Any]]
+    ) -> List[str]:
         """Generate potential root cause candidates.
 
         Args:
@@ -552,8 +615,8 @@ class AlertCorrelator:
         candidates = []
 
         # Analyze alert patterns
-        component_types = [alert.get('component_type', 'unknown') for alert in alerts]
-        metric_names = [alert.get('metric_name', 'unknown') for alert in alerts]
+        component_types = [alert.get("component_type", "unknown") for alert in alerts]
+        metric_names = [alert.get("metric_name", "unknown") for alert in alerts]
 
         # Component-based candidates
         component_counter = Counter(component_types)
@@ -568,7 +631,7 @@ class AlertCorrelator:
             candidates.append(f"Problem with {most_common_metric} metric")
 
         # Anomaly-based candidates
-        anomaly_scores = [alert.get('anomaly_score', 0.0) for alert in alerts]
+        anomaly_scores = [alert.get("anomaly_score", 0.0) for alert in alerts]
         if anomaly_scores:
             avg_anomaly_score = sum(anomaly_scores) / len(anomaly_scores)
             if avg_anomaly_score > 0.8:
@@ -581,16 +644,23 @@ class AlertCorrelator:
         for alert in alerts:
             try:
                 ts = datetime.fromisoformat(
-                    alert.get('timestamp', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00')
+                    alert.get(
+                        "timestamp", datetime.now(timezone.utc).isoformat()
+                    ).replace("Z", "+00:00")
                 )
                 timestamps.append(ts)
             except Exception as e:
                 # Skip invalid timestamps but keep a debug log for diagnostics
-                logger.debug(f"Failed to parse alert timestamp: {e}", alert=alert)
+                logger.debug(
+                    f"Failed to parse alert timestamp: {e} for alert_id={alert.get('alert_id')}"
+                )
 
         if len(timestamps) > 1:
             timestamps.sort()
-            time_gaps = [(timestamps[i+1] - timestamps[i]).total_seconds() for i in range(len(timestamps)-1)]
+            time_gaps = [
+                (timestamps[i + 1] - timestamps[i]).total_seconds()
+                for i in range(len(timestamps) - 1)
+            ]
             avg_gap = sum(time_gaps) / len(time_gaps) if time_gaps else 0
 
             if avg_gap < 60:  # Less than 1 minute
@@ -598,7 +668,7 @@ class AlertCorrelator:
             elif avg_gap < 300:  # Less than 5 minutes
                 candidates.append("Progressive system degradation")
 
-        return candidates[:self.config.max_root_cause_candidates]
+        return candidates[: self.config.max_root_cause_candidates]
 
     def _assess_impact(self, alerts: List[Dict[str, Any]]) -> str:
         """Assess the impact of alert cluster.
@@ -613,7 +683,9 @@ class AlertCorrelator:
             return "No impact"
 
         # Count by severity
-        severity_counts = Counter(alert.get('severity', AlertSeverity.INFO.value) for alert in alerts)
+        severity_counts = Counter(
+            alert.get("severity", AlertSeverity.INFO.value) for alert in alerts
+        )
 
         # Critical alerts
         if severity_counts.get(AlertSeverity.CRITICAL.value, 0) > 0:
@@ -628,7 +700,7 @@ class AlertCorrelator:
             return "Medium - Multiple warning conditions detected"
 
         # Component-specific impact
-        components = {alert.get('component_type', 'unknown') for alert in alerts}
+        components = {alert.get("component_type", "unknown") for alert in alerts}
         if len(components) == 1:
             component = list(components)[0]
             if component == "evolution_engine":
@@ -665,7 +737,8 @@ class AlertCorrelator:
         # Remove old clusters
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=2)
         expired_clusters = [
-            cluster_id for cluster_id, cluster in self.alert_clusters.items()
+            cluster_id
+            for cluster_id, cluster in self.alert_clusters.items()
             if cluster.last_alert_time < cutoff_time
         ]
 
@@ -684,11 +757,13 @@ class IntelligentAlertManager:
         """
         self.config = config
         self.correlator = AlertCorrelator(config)
-        self.deduplication_cache = {}
-        self.alert_priorities = {}
-        self.escalation_timers = {}
+        self.deduplication_cache: Dict[str, Dict[str, Any]] = {}
+        self.alert_priorities: Dict[str, float] = {}
+        self.escalation_timers: Dict[str, datetime] = {}
 
-    async def process_alerts(self, anomalies: List[AnomalyResult]) -> List[Dict[str, Any]]:
+    async def process_alerts(
+        self, anomalies: List[AnomalyResult]
+    ) -> List[Dict[str, Any]]:
         """Process anomalies and create intelligent alerts.
 
         Args:
@@ -699,7 +774,9 @@ class IntelligentAlertManager:
         """
         try:
             # Convert anomalies to alert dictionaries
-            alert_dicts = [self._anomaly_to_alert_dict(anomaly) for anomaly in anomalies]
+            alert_dicts = [
+                self._anomaly_to_alert_dict(anomaly) for anomaly in anomalies
+            ]
 
             # Perform correlation and clustering
             clusters = await self.correlator.process_alert_batch(alert_dicts)
@@ -708,7 +785,9 @@ class IntelligentAlertManager:
             deduplicated_alerts = await self._deduplicate_alerts(alert_dicts)
 
             # Prioritize alerts
-            prioritized_alerts = await self._prioritize_alerts(deduplicated_alerts, clusters)
+            prioritized_alerts = await self._prioritize_alerts(
+                deduplicated_alerts, clusters
+            )
 
             # Set up escalation timers
             await self._setup_escalation_timers(prioritized_alerts)
@@ -728,13 +807,17 @@ class IntelligentAlertManager:
         Returns:
             Alert dictionary
         """
+        alert_id = (
+            f"{anomaly.component_type}_{anomaly.metric_name}_"
+            f"{anomaly.timestamp.isoformat()}"
+        )
         return {
-            "alert_id": f"{anomaly.component_type}_{anomaly.metric_name}_{anomaly.timestamp.isoformat()}",
+            "alert_id": alert_id,
             "timestamp": anomaly.timestamp.isoformat(),
             "component_type": anomaly.component_type.value,
             "component_id": anomaly.component_id,
             "metric_name": anomaly.metric_name,
-            "severity": anomaly.severity.value,
+            "severity": anomaly.severity.value if anomaly.severity is not None else AlertSeverity.INFO.value,
             "anomaly_type": anomaly.anomaly_type.value,
             "anomaly_score": anomaly.anomaly_score,
             "confidence": anomaly.confidence,
@@ -742,10 +825,12 @@ class IntelligentAlertManager:
             "expected_value": anomaly.expected_value,
             "deviation": anomaly.deviation,
             "context": anomaly.context,
-            "recommendations": anomaly.recommendations
+            "recommendations": anomaly.recommendations,
         }
 
-    async def _deduplicate_alerts(self, alerts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def _deduplicate_alerts(
+        self, alerts: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Remove duplicate alerts based on similarity.
 
         Args:
@@ -759,7 +844,9 @@ class IntelligentAlertManager:
         else:
             return alerts
 
-    async def _smart_deduplication(self, alerts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def _smart_deduplication(
+        self, alerts: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Perform smart deduplication using similarity metrics.
 
         Args:
@@ -803,15 +890,15 @@ class IntelligentAlertManager:
         """
         # Key attributes for signature
         key_attrs = [
-            alert.get('component_type', ''),
-            alert.get('metric_name', ''),
-            alert.get('anomaly_type', ''),
-            alert.get('severity', '')
+            alert.get("component_type", ""),
+            alert.get("metric_name", ""),
+            alert.get("anomaly_type", ""),
+            alert.get("severity", ""),
         ]
 
         # Round values to reduce noise
-        anomaly_score = round(alert.get('anomaly_score', 0.0), 1)
-        confidence = round(alert.get('confidence', 0.0), 1)
+        anomaly_score = round(alert.get("anomaly_score", 0.0), 1)
+        confidence = round(alert.get("confidence", 0.0), 1)
 
         signature = f"{'_'.join(key_attrs)}_{anomaly_score}_{confidence}"
         return signature
@@ -833,7 +920,11 @@ class IntelligentAlertManager:
 
         for cached_alert in self.deduplication_cache.values():
             try:
-                alert_time = datetime.fromisoformat(cached_alert.get('timestamp', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00'))
+                alert_time = datetime.fromisoformat(
+                    cached_alert.get(
+                        "timestamp", datetime.now(timezone.utc).isoformat()
+                    ).replace("Z", "+00:00")
+                )
 
                 if alert_time > cutoff_time:
                     similarity = self._calculate_alert_similarity(alert, cached_alert)
@@ -844,7 +935,9 @@ class IntelligentAlertManager:
 
         return similar_alerts
 
-    def _calculate_alert_similarity(self, alert1: Dict[str, Any], alert2: Dict[str, Any]) -> float:
+    def _calculate_alert_similarity(
+        self, alert1: Dict[str, Any], alert2: Dict[str, Any]
+    ) -> float:
         """Calculate similarity between two alerts.
 
         Args:
@@ -858,28 +951,28 @@ class IntelligentAlertManager:
         total_weight = 0.0
 
         # Component type similarity
-        if alert1.get('component_type') == alert2.get('component_type'):
+        if alert1.get("component_type") == alert2.get("component_type"):
             similarity_score += 0.3
         total_weight += 0.3
 
         # Metric name similarity
-        if alert1.get('metric_name') == alert2.get('metric_name'):
+        if alert1.get("metric_name") == alert2.get("metric_name"):
             similarity_score += 0.2
         total_weight += 0.2
 
         # Anomaly type similarity
-        if alert1.get('anomaly_type') == alert2.get('anomaly_type'):
+        if alert1.get("anomaly_type") == alert2.get("anomaly_type"):
             similarity_score += 0.2
         total_weight += 0.2
 
         # Severity similarity
-        if alert1.get('severity') == alert2.get('severity'):
+        if alert1.get("severity") == alert2.get("severity"):
             similarity_score += 0.1
         total_weight += 0.1
 
         # Value similarity (if available)
-        val1 = alert1.get('actual_value', 0.0)
-        val2 = alert2.get('actual_value', 0.0)
+        val1 = alert1.get("actual_value", 0.0)
+        val2 = alert2.get("actual_value", 0.0)
         if val1 > 0 and val2 > 0:
             relative_diff = abs(val1 - val2) / max(val1, val2)
             value_similarity = max(0.0, 1.0 - relative_diff)
@@ -888,7 +981,9 @@ class IntelligentAlertManager:
 
         return similarity_score / total_weight if total_weight > 0 else 0.0
 
-    def _should_suppress_alert(self, current_alert: Dict[str, Any], similar_alert: Dict[str, Any]) -> bool:
+    def _should_suppress_alert(
+        self, current_alert: Dict[str, Any], similar_alert: Dict[str, Any]
+    ) -> bool:
         """Determine if current alert should be suppressed.
 
         Args:
@@ -900,25 +995,35 @@ class IntelligentAlertManager:
         """
         # Check if similar alert is more recent and of equal or higher severity
         try:
-            current_time = datetime.fromisoformat(current_alert.get('timestamp', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00'))
-            similar_time = datetime.fromisoformat(similar_alert.get('timestamp', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00'))
+            current_time = datetime.fromisoformat(
+                current_alert.get(
+                    "timestamp", datetime.now(timezone.utc).isoformat()
+                ).replace("Z", "+00:00")
+            )
+            similar_time = datetime.fromisoformat(
+                similar_alert.get(
+                    "timestamp", datetime.now(timezone.utc).isoformat()
+                ).replace("Z", "+00:00")
+            )
 
             # If similar alert is more recent, suppress current
             if similar_time > current_time:
                 return True
 
             # Check severity
-            current_severity = current_alert.get('severity', AlertSeverity.INFO.value)
-            similar_severity = similar_alert.get('severity', AlertSeverity.INFO.value)
+            current_severity = current_alert.get("severity", AlertSeverity.INFO.value)
+            similar_severity = similar_alert.get("severity", AlertSeverity.INFO.value)
 
             severity_order = {
                 AlertSeverity.CRITICAL.value: 4,
                 AlertSeverity.ERROR.value: 3,
                 AlertSeverity.WARNING.value: 2,
-                AlertSeverity.INFO.value: 1
+                AlertSeverity.INFO.value: 1,
             }
 
-            if severity_order.get(similar_severity, 0) >= severity_order.get(current_severity, 0):
+            if severity_order.get(similar_severity, 0) >= severity_order.get(
+                current_severity, 0
+            ):
                 return True
 
         except Exception:
@@ -926,8 +1031,9 @@ class IntelligentAlertManager:
 
         return False
 
-    async def _prioritize_alerts(self, alerts: List[Dict[str, Any]],
-                               clusters: List[AlertCluster]) -> List[Dict[str, Any]]:
+    async def _prioritize_alerts(
+        self, alerts: List[Dict[str, Any]], clusters: List[AlertCluster]
+    ) -> List[Dict[str, Any]]:
         """Prioritize alerts based on various factors.
 
         Args:
@@ -946,15 +1052,17 @@ class IntelligentAlertManager:
 
             # Boost priority if part of a high-priority cluster
             for cluster in clusters:
-                if any(a.get('alert_id') == alert.get('alert_id') for a in cluster.alerts):
-                    priority *= (1.0 + cluster.priority_score)
+                if any(
+                    a.get("alert_id") == alert.get("alert_id") for a in cluster.alerts
+                ):
+                    priority *= 1.0 + cluster.priority_score
                     break
 
-            alert['priority_score'] = min(priority, 1.0)
-            alert['cluster_info'] = self._get_cluster_info(alert, clusters)
+            alert["priority_score"] = min(priority, 1.0)
+            alert["cluster_info"] = self._get_cluster_info(alert, clusters)
 
         # Sort by priority
-        alerts.sort(key=lambda x: x.get('priority_score', 0.0), reverse=True)
+        alerts.sort(key=lambda x: x.get("priority_score", 0.0), reverse=True)
 
         return alerts
 
@@ -972,30 +1080,36 @@ class IntelligentAlertManager:
             AlertSeverity.CRITICAL.value: 1.0,
             AlertSeverity.ERROR.value: 0.8,
             AlertSeverity.WARNING.value: 0.5,
-            AlertSeverity.INFO.value: 0.2
+            AlertSeverity.INFO.value: 0.2,
         }
 
-        base_priority = severity_scores.get(alert.get('severity', AlertSeverity.INFO.value), 0.2)
+        base_priority = severity_scores.get(
+            alert.get("severity", AlertSeverity.INFO.value), 0.2
+        )
 
         # Boost from anomaly score
-        anomaly_score = alert.get('anomaly_score', 0.0)
+        anomaly_score = alert.get("anomaly_score", 0.0)
         anomaly_boost = anomaly_score * 0.3
 
         # Boost from confidence
-        confidence = alert.get('confidence', 0.0)
+        confidence = alert.get("confidence", 0.0)
         confidence_boost = confidence * 0.2
 
         # Component criticality boost
-        component_type = alert.get('component_type', '')
+        component_type = alert.get("component_type", "")
         component_boost = 0.0
-        if component_type in ['evolution_engine', 'kraken_lnn']:
+        if component_type in ["evolution_engine", "kraken_lnn"]:
             component_boost = 0.2
 
-        total_priority = base_priority + anomaly_boost + confidence_boost + component_boost
+        total_priority = (
+            base_priority + anomaly_boost + confidence_boost + component_boost
+        )
 
-        return min(total_priority, 1.0)
+        return float(min(total_priority, 1.0))
 
-    def _get_cluster_info(self, alert: Dict[str, Any], clusters: List[AlertCluster]) -> Dict[str, Any]:
+    def _get_cluster_info(
+        self, alert: Dict[str, Any], clusters: List[AlertCluster]
+    ) -> Dict[str, Any]:
         """Get cluster information for an alert.
 
         Args:
@@ -1006,19 +1120,21 @@ class IntelligentAlertManager:
             Cluster information dictionary
         """
         for cluster in clusters:
-            if any(a.get('alert_id') == alert.get('alert_id') for a in cluster.alerts):
+            if any(a.get("alert_id") == alert.get("alert_id") for a in cluster.alerts):
                 return {
-                    'cluster_id': cluster.cluster_id,
-                    'cluster_type': cluster.cluster_type,
-                    'priority_score': cluster.priority_score,
-                    'confidence': cluster.confidence,
-                    'impact_assessment': cluster.impact_assessment,
-                    'root_cause_candidates': cluster.root_cause_candidates
+                    "cluster_id": cluster.cluster_id,
+                    "cluster_type": cluster.cluster_type,
+                    "priority_score": cluster.priority_score,
+                    "confidence": cluster.confidence,
+                    "impact_assessment": cluster.impact_assessment,
+                    "root_cause_candidates": cluster.root_cause_candidates,
                 }
 
         return {}
 
-    async def _setup_escalation_timers(self, prioritized_alerts: List[Dict[str, Any]]) -> None:
+    async def _setup_escalation_timers(
+        self, prioritized_alerts: List[Dict[str, Any]]
+    ) -> None:
         """Set up escalation timers for high-priority alerts.
 
         Args:
@@ -1027,9 +1143,13 @@ class IntelligentAlertManager:
         current_time = datetime.now(timezone.utc)
 
         for alert in prioritized_alerts:
-            if alert.get('priority_score', 0.0) > 0.7:  # High priority alerts
-                escalation_time = current_time + timedelta(minutes=self.config.escalation_time_minutes)
-                self.escalation_timers[alert.get('alert_id')] = escalation_time
+            if alert.get("priority_score", 0.0) > 0.7:  # High priority alerts
+                escalation_time = current_time + timedelta(
+                    minutes=self.config.escalation_time_minutes
+                )
+                alert_id = alert.get("alert_id")
+                if alert_id:
+                    self.escalation_timers[alert_id] = escalation_time
 
     async def check_escalations(self) -> List[Dict[str, Any]]:
         """Check for alerts that need escalation.
@@ -1042,11 +1162,16 @@ class IntelligentAlertManager:
 
         for alert_id, escalation_time in list(self.escalation_timers.items()):
             if current_time > escalation_time:
-                escalations.append({
-                    'alert_id': alert_id,
-                    'escalation_time': escalation_time.isoformat(),
-                    'reason': f"No acknowledgment within {self.config.escalation_time_minutes} minutes"
-                })
+                escalations.append(
+                    {
+                        "alert_id": alert_id,
+                        "escalation_time": escalation_time.isoformat(),
+                        "reason": (
+                            f"No acknowledgment within "
+                            f"{self.config.escalation_time_minutes} minutes"
+                        ),
+                    }
+                )
                 # Remove from timers
                 del self.escalation_timers[alert_id]
 
