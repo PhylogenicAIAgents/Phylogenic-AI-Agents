@@ -2,18 +2,18 @@
 
 **Status**: ✅ READY TO LAUNCH
 **Date**: December 8, 2025
-**Package**: allele v1.0.0
+**Package**: phylogenic v1.0.0
 
 ---
 
 ## ✅ WHAT'S DONE (100% COMPLETE)
 
 ### Package Renamed & Rebuilt
-- [X] Renamed from `abe-nlp` to `allele`
+- [X] Renamed from `abe-nlp` to `phylogenic`
 - [X] Updated all imports and references
 - [X] Rebuilt distribution packages
-  - `dist/allele-1.0.0.tar.gz`
-  - `dist/allele-1.0.0-py3-none-any.whl`
+  - `dist/phylogenic-1.0.0.tar.gz`
+  - `dist/phylogenic-1.0.0-py3-none-any.whl`
 - [X] All 10 tests passing (100%)
 - [X] Code quality: 8.83/10
 
@@ -38,13 +38,13 @@
 
 1. **Rename the repo on GitHub**:
    - Go to: https://github.com/bravetto/Abe-NLP/settings
-   - Repository name: `allele`
+   - Repository name: `phylogenic`
    - Click "Rename"
 
 2. **Update local git remote**:
    ```bash
    cd C:\Users\jimmy\Abe-NLP
-   git remote set-url origin https://github.com/bravetto/allele.git
+   git remote set-url origin https://github.com/bravetto/phylogenic.git
    ```
 
 3. **Commit all changes**:
@@ -52,7 +52,7 @@
    git add .
    git commit -m "Rebrand to ALLELE - Phylogenic AI Agents
 
-   - Rename package from abe-nlp to allele
+   - Rename package from abe-nlp to phylogenic
    - Update all branding and documentation
    - Rebuild distribution packages
    - All tests passing (10/10)
@@ -62,7 +62,7 @@
    ```
 
 4. **Create GitHub Release**:
-   - Go to: https://github.com/bravetto/allele/releases/new
+   - Go to: https://github.com/bravetto/phylogenic/releases/new
    - Tag: `v1.0.0`
    - Title: `ALLELE v1.0.0 - Phylogenic AI Agents`
    - Description:
@@ -71,7 +71,7 @@
 
      **Don't write prompts. Breed Agents.**
 
-     ## What's Allele?
+     ## What's Phylogenic?
 
      Phylogenic AI SDK that treats agent personalities as genetic code.
 
@@ -83,13 +83,13 @@
      ## Installation
 
      ```bash
-     pip install allele
+     pip install phylogenic
      ```
 
      ## Quick Start
 
      ```python
-     from allele import ConversationalGenome, create_agent
+     from phylogenic import ConversationalGenome, create_agent
 
      genome = ConversationalGenome("agent", traits={
          'empathy': 0.95,
@@ -109,17 +109,17 @@
 
      ## Links
 
-     - [Documentation](https://github.com/bravetto/allele#readme)
-     - [Examples](https://github.com/bravetto/allele/tree/main/examples)
-     - [PyPI](https://pypi.org/project/allele/)
+     - [Documentation](https://github.com/bravetto/phylogenic#readme)
+     - [Examples](https://github.com/bravetto/phylogenic/tree/main/examples)
+     - [PyPI](https://pypi.org/project/phylogenic/)
 
      ---
 
      **Made with genetic algorithms and liquid neural networks** 🧬
      ```
    - Attach files:
-     - `dist/allele-1.0.0.tar.gz`
-     - `dist/allele-1.0.0-py3-none-any.whl`
+     - `dist/phylogenic-1.0.0.tar.gz`
+     - `dist/phylogenic-1.0.0-py3-none-any.whl`
    - Click "Publish release"
 
 ---
@@ -141,7 +141,7 @@
    ```bash
    cd C:\Users\jimmy\Abe-NLP
    twine upload --repository testpypi dist/*
-   # Test install: pip install --index-url https://test.pypi.org/simple/ allele
+   # Test install: pip install --index-url https://test.pypi.org/simple/ phylogenic
    ```
 
 4. **Upload to real PyPI**:
@@ -151,8 +151,8 @@
    ```
 
 5. **Verify**:
-   - Visit: https://pypi.org/project/allele/
-   - Test install: `pip install allele`
+   - Visit: https://pypi.org/project/phylogenic/
+   - Test install: `pip install phylogenic`
 
 ---
 
@@ -176,8 +176,8 @@
 **Hacker News (Show HN)**
 
 1. Go to: https://news.ycombinator.com/submit
-2. Title: `Show HN: Allele – Evolve AI Agent Personalities with Genetic Algorithms`
-3. URL: `https://github.com/bravetto/allele`
+2. Title: `Show HN: Phylogenic – Evolve AI Agent Personalities with Genetic Algorithms`
+3. URL: `https://github.com/bravetto/phylogenic`
 4. Submit!
 5. Add first comment with TL;DR from your launch post
 
@@ -259,9 +259,9 @@ Better coherence than standard RAG
 
 (7/7) Try it:
 
-pip install allele
+pip install phylogenic
 
-GitHub: github.com/bravetto/allele
+GitHub: github.com/bravetto/phylogenic
 Docs: [link]
 Examples: [link]
 
@@ -276,7 +276,7 @@ What would you build with genetically evolved AI agents? 🧬
 
 **GitHub Discussions**
 
-1. Go to: https://github.com/bravetto/allele/settings
+1. Go to: https://github.com/bravetto/phylogenic/settings
 2. Features → Check "Discussions"
 3. Create categories:
    - General
@@ -286,7 +286,7 @@ What would you build with genetically evolved AI agents? 🧬
 
 **Discord Server** (if you want)
 
-1. Create server: "Allele Community"
+1. Create server: "Phylogenic Community"
 2. Channels:
    - #announcements
    - #general
@@ -335,7 +335,7 @@ What would you build with genetically evolved AI agents? 🧬
 ## 🎯 POST-LAUNCH (Week 1-2)
 
 ### Content Creation
-- [ ] Write "How Allele Works" blog post
+- [ ] Write "How Phylogenic Works" blog post
 - [ ] Record 5-min demo video
 - [ ] Create 3 use case tutorials
 - [ ] Make comparison chart (vs LangChain, etc.)
@@ -441,7 +441,7 @@ cd "C:\Users\jimmy\Abe-NLP"
 pytest                                    # All tests should pass
 python -m build                           # Should build without errors
 pip install -e .                          # Should install
-python -c "import allele; print(allele.__version__)"  # Should print 1.0.0
+python -c "import phylogenic; print(phylogenic.__version__)"  # Should print 1.0.0
 ```
 
 ---

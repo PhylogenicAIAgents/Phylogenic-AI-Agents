@@ -1,6 +1,6 @@
-# Contributing to Allele
+# Contributing to Phylogenic
 
-Thank you for your interest in contributing to Allele! We welcome contributions from everyone. Please read this guide to get started.
+Thank you for your interest in contributing to Phylogenic! We welcome contributions from everyone. Please read this guide to get started.
 
 ## Table of Contents
 - [Code of Conduct](#code-of-conduct)
@@ -16,13 +16,27 @@ This project follows a [Code of Conduct](CODE_OF_CONDUCT.md) to ensure a welcomi
 
 ## Getting Started
 1. Fork the repository on GitHub.
-2. Clone your fork locally: `git clone https://github.com/your-username/allele.git`
+2. Clone your fork locally: `git clone https://github.com/your-username/phylogenic.git`
 3. Create a new branch for your changes: `git checkout -b your-feature-branch`
 
 ## Development Environment
-1. Install Python 3.8 or later.
+1. Install Python 3.9 or later.
 2. Install dependencies: `pip install -e .[dev]`
 3. Set up pre-commit hooks: `pre-commit install`
+
+### OpenSpec dependency
+
+Some documentation and CI jobs rely on the `openspec` CLI. It is distributed separately as an npm package. Please install it globally if you want to run docs or local tools that depend on it:
+
+```bash
+# with npm
+npm install -g openspec
+
+# with pnpm
+pnpm add -g openspec
+```
+
+OpenSpec requires Node.js >= 20.19.0.
 
 ## Making Changes
 - Follow the coding standards in this project.
