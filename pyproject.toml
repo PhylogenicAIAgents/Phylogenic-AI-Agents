@@ -101,11 +101,11 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/bravetto/allele"
-Documentation = "https://github.com/bravetto/allele#readme"
-Repository = "https://github.com/bravetto/allele"
-Issues = "https://github.com/bravetto/allele/issues"
-Changelog = "https://github.com/bravetto/allele/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/jimmyjdejesus-cmyk/Phylogenic-AI-Agents"
+Documentation = "https://github.com/jimmyjdejesus-cmyk/Phylogenic-AI-Agents#readme"
+Repository = "https://github.com/jimmyjdejesus-cmyk/Phylogenic-AI-Agents"
+Issues = "https://github.com/jimmyjdejesus-cmyk/Phylogenic-AI-Agents/issues"
+Changelog = "https://github.com/jimmyjdejesus-cmyk/Phylogenic-AI-Agents/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/phylogenic"]
