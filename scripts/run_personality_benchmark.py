@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.phylogenic.llm_client import LLMConfig
 from src.phylogenic.llm_ollama import OllamaClient
 from src.phylogenic.genome import ConversationalGenome
+from src.benchmark.utils import check_answer
 
 
 # Define personality archetypes to test
@@ -202,16 +203,8 @@ REASONING_SAMPLES = [
 ]
 
 
-def check_answer(response: str, expected: str) -> bool:
-    import re
-    response = response.upper().strip()
-    expected = expected.upper().strip()
-    
-    if len(expected) == 1 and expected in "ABCD":
-        pattern = rf'\b{expected}\b|{expected}\.|{expected}\)|^{expected}$'
-        return bool(re.search(pattern, response))
-    
-    return expected in response
+# Use the shared `check_answer` utility from `src.benchmark.utils` to avoid
+# duplicated and potentially-buggy implementations across scripts.
 
 
 async def evaluate_samples(model: GenomeModel, samples: List[Dict]) -> tuple[float, int]:

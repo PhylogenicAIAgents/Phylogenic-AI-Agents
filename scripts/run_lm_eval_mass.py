@@ -111,8 +111,15 @@ class BenchmarkRunner:
             # Hugging Face backend (e.g. for T5)
             real_model = model[3:]
             backend = "hf"
-            # Use MPS for M1 acceleration, trusting trust_remote_code
-            model_args = f"pretrained={real_model},device=mps,trust_remote_code=True"
+            # Use MPS for M1 acceleration. Only enable trust_remote_code when
+            # explicitly requested via CLI flag due to remote code execution risk.
+            trc = getattr(self, "trust_remote_code", False)
+            if trc:
+                logger.warning(
+                    "Enabling trust_remote_code for Hugging Face models is unsafe. "
+                    "Ensure you trust the model source before enabling this flag."
+                )
+            model_args = f"pretrained={real_model},device=mps,trust_remote_code={str(bool(trc))}"
         else:
             # Ollama backend (default)
             backend = "local-completions"
@@ -229,6 +236,11 @@ def main():
                         help="Benchmark mode (default: quick)")
     parser.add_argument("--models", nargs="+", default=RECOMMENDED_MODELS,
                         help="List of models to benchmark")
+    parser.add_argument(
+        "--trust-remote-code",
+        action="store_true",
+        help="Allow loading remote model code for Hugging Face models (unsafe). Disabled by default."
+    )
     parser.add_argument("--limit", type=int, help="Override sample limit")
     parser.add_argument("--resume", help="Resume from checkpoint file")
     
@@ -240,6 +252,8 @@ def main():
         models = args.models
         
     runner = BenchmarkRunner()
+    # propagate unsafe flag to runner
+    runner.trust_remote_code = bool(args.trust_remote_code)
     runner.run_mass_benchmarks(
         models=models,
         mode=args.mode,

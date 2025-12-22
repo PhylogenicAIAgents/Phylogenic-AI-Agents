@@ -53,6 +53,16 @@ def main():
         print("Potential secret-like patterns found in files:")
         for f, m in flagged:
             print(f" - {f}: {', '.join(m)}")
+        # Additional checks for known risky settings
+        # Search for explicit trust_remote_code usage
+        trc_occurrences = []
+        for p in ROOT.rglob("*.py"):
+            if 'trust_remote_code=True' in p.read_text(errors='ignore'):
+                trc_occurrences.append(p.relative_to(ROOT))
+        if trc_occurrences:
+            print("\nWarning: explicit 'trust_remote_code=True' found in:")
+            for p in trc_occurrences:
+                print(f" - {p}")
         print("\nPlease ensure secrets are stored in GitHub secrets and not in the repository.")
         sys.exit(2)
 
