@@ -1,5 +1,3 @@
-import pytest
-
 from src.benchmark.utils import check_answer
 
 
