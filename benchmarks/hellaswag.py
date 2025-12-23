@@ -17,6 +17,7 @@ import aiohttp
 
 from .base import Benchmark, BenchmarkResult
 from .registry import register_benchmark
+from src.benchmark.utils import check_answer
 
 
 @register_benchmark("hellaswag")
@@ -231,11 +232,9 @@ class HellaSwagBenchmark(Benchmark):
                 # Get model prediction
                 prediction = await self._get_model_prediction(model, prompt, item["options"])
                 
-                # Check if correct
+# Check if correct using central utility
                 correct_option = item["choices"][item["correct_answer"]]
-                is_correct = self._check_answer(prediction, correct_option)
-                
-                if is_correct:
+                if check_answer(prediction, correct_option):
                     correct_count += 1
                 
                 # Track option selection
@@ -318,9 +317,7 @@ class HellaSwagBenchmark(Benchmark):
         # Default to first option
         return "A" if options else "A"
     
-    def _check_answer(self, prediction: str, correct_answer: str) -> bool:
-        """Check if model prediction is correct."""
-        return prediction.upper().strip() == correct_answer.upper().strip()
+    # _check_answer removed in favor of central `check_answer` utility
     
     def get_dataset_size(self) -> int:
         """Return total number of HellaSwag questions."""

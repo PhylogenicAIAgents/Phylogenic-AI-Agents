@@ -18,6 +18,7 @@ import aiohttp
 
 from .base import Benchmark, BenchmarkResult
 from .registry import register_benchmark
+from src.benchmark.utils import check_answer
 
 
 @register_benchmark("gsm8k")
@@ -278,16 +279,8 @@ class GSM8KBenchmark(Benchmark):
             return ""
     
     def _check_answer(self, prediction: str, correct_answer: str) -> bool:
-        """Check if model prediction is correct."""
-        # Extract numerical answer from prediction
-        predicted_number = self._extract_number(prediction)
-        correct_number = self._extract_number(correct_answer)
-        
-        # Compare as floats to handle different formats
-        try:
-            return abs(float(predicted_number) - float(correct_number)) < 0.001
-        except (ValueError, TypeError):
-            return False
+        """Check if model prediction is correct (delegates to central utility)."""
+        return check_answer(prediction, correct_answer)
     
     def _extract_number(self, text: str) -> Optional[float]:
         """Extract the final numerical answer from text."""

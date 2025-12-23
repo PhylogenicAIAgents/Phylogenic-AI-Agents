@@ -18,6 +18,7 @@ import zipfile
 
 from .base import Benchmark, BenchmarkResult
 from .registry import register_benchmark
+from src.benchmark.utils import check_answer
 
 
 @register_benchmark("mmlu")
@@ -295,13 +296,8 @@ class MMLUBenchmark(Benchmark):
             return "A"
     
     def _check_answer(self, prediction: str, correct_answer: str) -> bool:
-        """Check if model prediction is correct."""
-        # Extract letter from prediction
-        prediction = prediction.upper().strip()
-        correct_answer = correct_answer.upper().strip()
-        
-        # Check if prediction contains the correct answer
-        return correct_answer in prediction
+        """Delegate answer checking to the central utility to avoid duplication and bugs."""
+        return check_answer(prediction, correct_answer)
     
     def get_dataset_size(self) -> int:
         """Return total number of MMLU questions."""

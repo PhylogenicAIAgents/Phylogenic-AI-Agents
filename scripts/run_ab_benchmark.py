@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.phylogenic.llm_client import LLMConfig
 from src.phylogenic.llm_ollama import OllamaClient
 from src.phylogenic.genome import ConversationalGenome
+from src.benchmark.utils import check_answer
 
 
 @dataclass
@@ -167,19 +168,8 @@ class SimpleBenchmark:
         return score, correct, time_taken
     
     def _check_answer(self, response: str, expected: str) -> bool:
-        """Check if response contains expected answer."""
-        response = response.upper().strip()
-        expected = expected.upper().strip()
-        
-        # For multiple choice, check if the letter is present
-        if len(expected) == 1 and expected in "ABCD":
-            # Look for patterns like "A", "A.", "(A)", "Answer: A"
-            import re
-            pattern = rf'\b{expected}\b|{expected}\.|{expected}\)|^{expected}$'
-            return bool(re.search(pattern, response))
-        
-        # For other answers, check substring
-        return expected in response
+        """Delegate to central `check_answer` utility."""
+        return check_answer(response, expected)
 
 
 def create_mmlu_samples(max_samples: int = 50) -> List[Dict[str, Any]]:
