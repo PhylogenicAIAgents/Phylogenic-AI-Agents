@@ -16,14 +16,21 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install dependencies (agent-safety)
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
-          pip install -e '.[dev]'
+          pip install -v -e .[dev] 2>&1 | tee pip-install-agent-safety.log
+
+      - name: Upload pip install logs (agent-safety)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-install-log-agent-safety
+          path: pip-install-agent-safety.log
 
       - name: Lint (ruff)
         run: ruff check . || true
