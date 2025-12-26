@@ -132,3 +132,22 @@ PY
       with:
         name: pip-install-log-heavy
         path: pip-install-heavy.log
+
+  workflow-lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install yamllint
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install yamllint
+
+    - name: Lint workflow YAML files
+      run: |
+        yamllint .github/workflows || true
