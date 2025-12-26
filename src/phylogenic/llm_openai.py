@@ -24,10 +24,10 @@
 
 """OpenAI LLM client implementation with comprehensive error handling."""
 
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, AsyncIterable, Dict, List, Optional, cast
 
 import structlog
-from openai import (  # type: ignore[import-not-found]
+from openai import (
     APIError,
     APITimeoutError,
     AsyncOpenAI,
@@ -231,7 +231,7 @@ class OpenAIClient(LLMClient):
 
                 if stream:
                     # Type ignore: stream response is AsyncIterable
-                    async for chunk in response:
+                    async for chunk in cast(AsyncIterable[Any], response):
                         if hasattr(chunk, "choices") and chunk.choices:
                             delta = chunk.choices[0].delta
                             if hasattr(delta, "content") and delta.content:
