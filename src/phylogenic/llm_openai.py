@@ -27,7 +27,7 @@
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import structlog
-from openai import (
+from openai import (  # type: ignore[import-not-found]
     APIError,
     APITimeoutError,
     AsyncOpenAI,
@@ -231,7 +231,7 @@ class OpenAIClient(LLMClient):
 
                 if stream:
                     # Type ignore: stream response is AsyncIterable
-                    async for chunk in response:  # type: ignore[union-attr]
+                    async for chunk in response:
                         if hasattr(chunk, "choices") and chunk.choices:
                             delta = chunk.choices[0].delta
                             if hasattr(delta, "content") and delta.content:

@@ -172,7 +172,7 @@ class AlleleSettings(BaseModel):
         try:
             import os as _os
 
-            def _coerce_env_value(val: str, target_type: type):
+            def _coerce_env_value(val: str, target_type: type) -> Any:
                 v = val.strip()
                 if target_type is bool:
                     return v.lower() in ("1", "true", "yes", "on")
