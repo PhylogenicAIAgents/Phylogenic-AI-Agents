@@ -109,3 +109,26 @@ PY
         pip install codespell
         # Run codespell while skipping generated benchmark outputs and common binary files
         codespell -q 3 --skip="benchmark_results/**,*.pyc,*.json,*.jsonl,*.lock"
+
+  # Dedicated job to install heavy/optional extras in an isolated run
+  heavy-deps:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install heavy extras (docs,all)
+      run: |
+        set -euo pipefail
+        python -m pip install --upgrade pip
+        pip install -v -e .[docs,all] 2>&1 | tee pip-install-heavy.log
+
+    - name: Upload pip install logs (heavy)
+      uses: actions/upload-artifact@v4
+      with:
+        name: pip-install-log-heavy
+        path: pip-install-heavy.log
