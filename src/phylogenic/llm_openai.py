@@ -33,7 +33,6 @@ from openai import (
     AuthenticationError,
     RateLimitError,
 )
-
 import structlog
 
 from .llm_client import LLMClient, LLMConfig
