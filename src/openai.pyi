@@ -1,6 +1,8 @@
-from typing import Any, AsyncIterator
+from typing import Any
 
-class APIError(Exception): ...
+class APIError(Exception):
+    code: Any
+    type: Any
 
 class APITimeoutError(Exception): ...
 
@@ -14,12 +16,22 @@ class ModelsListResponse:  # minimal container
     data: Any
 
 
-class AsyncOpenAI:
-    class models:
-        async def list(self) -> ModelsListResponse: ...
+class ModelsAPI:
+    async def list(self) -> ModelsListResponse: ...
 
-    class chat:
-        class completions:
-            async def create(self, *args, **kwargs) -> Any: ...
+
+class CompletionsAPI:
+    async def create(self, *args: Any, **kwargs: Any) -> Any: ...
+
+
+class ChatAPI:
+    completions: CompletionsAPI
+
+
+class AsyncOpenAI:
+    def __init__(self, api_key: str | None = None, base_url: str | None = None, timeout: int | None = None, max_retries: int | None = None) -> None: ...
+
+    models: ModelsAPI
+    chat: ChatAPI
 
     async def close(self) -> None: ...
