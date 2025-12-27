@@ -27,6 +27,7 @@
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import structlog
+
 from openai import (
     APIError,
     APITimeoutError,
