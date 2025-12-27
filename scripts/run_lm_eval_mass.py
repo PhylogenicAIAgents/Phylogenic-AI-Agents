@@ -8,7 +8,6 @@ Handles model downloading, progress tracking, and results management.
 """
 
 import argparse
-import asyncio
 import json
 import logging
 import subprocess
@@ -16,7 +15,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
+from typing import Any, Dict, List, Optional
 
 # Configuration
 RECOMMENDED_MODELS = [
@@ -30,7 +29,7 @@ BENCHMARK_TASKS = {
     "quick": ["mmlu", "hellaswag", "gsm8k"],  # 3 core tasks
     "standard": ["mmlu", "hellaswag", "gsm8k", "arc_easy", "truthfulqa_mc2"],
     "comprehensive": [
-        "mmlu", "hellaswag", "gsm8k", "arc_easy", "arc_challenge", 
+        "mmlu", "hellaswag", "gsm8k", "arc_easy", "arc_challenge",
         "truthfulqa_mc2", "winogrande", "piqa", "boolq", "siqa"
     ]
 }
@@ -48,12 +47,12 @@ logger = logging.getLogger(__name__)
 
 class BenchmarkRunner:
     """Orchestrates mass LLM benchmarking using lm-eval."""
-    
+
     def __init__(self, output_dir: str = "benchmark_results/lm_eval"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.base_url = "http://localhost:11434"
-        
+
     def check_ollama_running(self) -> bool:
         """Check if Ollama service is running."""
         try:
@@ -65,15 +64,15 @@ class BenchmarkRunner:
             return result.returncode == 0
         except Exception:
             return False
-            
+
     def ensure_model_available(self, model: str) -> bool:
         """Ensure model is downloaded. Handles Ollama pull or verifies HF access."""
         if model.startswith("hf:"):
             logger.info(f"Using Hugging Face model: {model[3:]} (will download if missing)")
             return True
-            
+
         logger.info(f"Checking availability for model: {model}")
-        
+
         # Check list first
         try:
             list_cmd = subprocess.run(["ollama", "list"], capture_output=True, text=True)
@@ -83,7 +82,7 @@ class BenchmarkRunner:
         except Exception as e:
             logger.error(f"Failed to list models: {e}")
             return False
-            
+
         # Pull if not found
         logger.info(f"Pulling model {model}...")
         try:
@@ -93,19 +92,19 @@ class BenchmarkRunner:
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to pull model {model}: {e}")
             return False
-            
+
     def run_benchmark_task(
-        self, 
-        model: str, 
-        tasks: List[str], 
+        self,
+        model: str,
+        tasks: List[str],
         limit: Optional[int] = None,
         num_fewshot: int = 0
     ) -> Optional[Dict[str, Any]]:
         """Run lm-eval for a specific model and task set."""
-        
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         run_output_dir = self.output_dir / f"{model.replace(':', '_').replace('/', '_')}_{timestamp}"
-        
+
         # Determine backend and args
         if model.startswith("hf:"):
             # Hugging Face backend (e.g. for T5)
@@ -126,7 +125,7 @@ class BenchmarkRunner:
             # Add generic tokenizer to avoid HF validation errors with Ollama names
             # Use local-completions with base_url pointing to /v1
             model_args = f"model={model},base_url={self.base_url}/v1,tokenizer=gpt2"
-        
+
         cmd = [
             sys.executable, "-m", "lm_eval",
             "--model", backend,
@@ -137,29 +136,29 @@ class BenchmarkRunner:
             "--num_fewshot", str(num_fewshot),
             "--batch_size", "1"  # M1 optimization
         ]
-        
+
         if limit:
             cmd.extend(["--limit", str(limit)])
-            
+
         logger.info(f"Starting benchmark for {model}")
         logger.info(f"Tasks: {tasks}")
         logger.info(f"Limit: {limit if limit else 'None'}")
-        
+
         try:
             start_time = time.time()
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            _result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             duration = time.time() - start_time
-            
+
             logger.info(f"Benchmark completed in {duration:.2f}s")
-            
+
             # Load results
             results_file = run_output_dir / "results.json"
             if results_file.exists():
-                with open(results_file, 'r') as f:
+                with open(results_file) as f:
                     return json.load(f)
-            
+
             return None
-            
+
         except subprocess.CalledProcessError as e:
             logger.error(f"Benchmark failed for {model}: {e}")
             logger.error(f"STDERR: {e.stderr}")
@@ -173,13 +172,13 @@ class BenchmarkRunner:
         resume_from: Optional[str] = None
     ) -> Dict[str, Any]:
         """Run mass benchmarks across multiple models."""
-        
+
         if not self.check_ollama_running():
             logger.error("Ollama is not running! Please start it with 'ollama serve'")
             return {}
-            
+
         tasks = BENCHMARK_TASKS.get(mode, BENCHMARK_TASKS["quick"])
-        
+
         # Determine limit based on mode
         limit = custom_limit
         if limit is None:
@@ -187,46 +186,46 @@ class BenchmarkRunner:
                 limit = 20
             elif mode == "standard":
                 limit = None  # Full dataset
-                
+
         all_results = {}
-        
+
         # Load resume state if provided
         completed_models = []
         if resume_from and Path(resume_from).exists():
-            with open(resume_from, 'r') as f:
+            with open(resume_from) as f:
                 saved_state = json.load(f)
                 all_results = saved_state.get("results", {})
                 completed_models = list(all_results.keys())
                 logger.info(f"Resuming run. Skipping: {completed_models}")
-        
+
         for model in models:
             if model in completed_models:
                 continue
-                
+
             if not self.ensure_model_available(model):
                 logger.warning(f"Skipping {model} due to unavailability")
                 continue
-                
+
             logger.info(f"Processing {model}...")
             results = self.run_benchmark_task(model, tasks, limit)
-            
+
             if results:
                 all_results[model] = results
-                
+
                 # Save checkpoint
                 checkpoint_file = self.output_dir / "checkpoint_latest.json"
                 with open(checkpoint_file, 'w') as f:
                     json.dump({"mode": mode, "results": all_results}, f, indent=2)
             else:
                 logger.error(f"Failed to get results for {model}")
-        
+
         # Save consolidated results
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         consolidated_file = self.output_dir / f"consolidated_{mode}_{timestamp}.json"
-        
+
         with open(consolidated_file, 'w') as f:
             json.dump(all_results, f, indent=2)
-            
+
         logger.info(f"All benchmarks complete. Results saved to {consolidated_file}")
         return all_results
 
@@ -243,14 +242,14 @@ def main():
     )
     parser.add_argument("--limit", type=int, help="Override sample limit")
     parser.add_argument("--resume", help="Resume from checkpoint file")
-    
+
     args = parser.parse_args()
-    
+
     if "all" in args.models:
         models = RECOMMENDED_MODELS
     else:
         models = args.models
-        
+
     runner = BenchmarkRunner()
     # propagate unsafe flag to runner
     runner.trust_remote_code = bool(args.trust_remote_code)

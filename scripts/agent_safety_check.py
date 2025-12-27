@@ -3,6 +3,7 @@
 
 Scans repository for potential secret-like strings and flags files under AGENTS/ or src/agent modules.
 """
+import os
 import re
 import sys
 from pathlib import Path

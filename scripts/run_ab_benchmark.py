@@ -23,14 +23,14 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from phylogenic.benchmark.utils import check_answer
+from src.phylogenic.genome import ConversationalGenome
 from src.phylogenic.llm_client import LLMConfig
 from src.phylogenic.llm_ollama import OllamaClient
-from src.phylogenic.genome import ConversationalGenome
-from phylogenic.benchmark.utils import check_answer
 
 
 @dataclass
@@ -61,11 +61,11 @@ class ABBenchmarkSuite:
 
 class BaselineModel:
     """Baseline model wrapper - raw LLM without genome enhancement."""
-    
+
     def __init__(self, client: OllamaClient):
         self.client = client
         self.name = "baseline"
-    
+
     async def generate(self, prompt: str) -> str:
         """Generate response without any enhancement."""
         messages = [{"role": "user", "content": prompt}]
@@ -77,19 +77,19 @@ class BaselineModel:
 
 class PhylogenicModel:
     """Phylogenic-enhanced model with genetic genome traits."""
-    
+
     def __init__(self, client: OllamaClient, genome: ConversationalGenome):
         self.client = client
         self.genome = genome
         self.name = "phylogenic"
-    
+
     def _build_system_prompt(self) -> str:
         """Build system prompt from genome traits."""
         traits = self.genome.traits
-        
+
         # Map trait values to behavioral descriptors
         trait_descriptions = []
-        
+
         if traits.get("empathy", 0.5) > 0.7:
             trait_descriptions.append("Show deep understanding and emotional intelligence")
         if traits.get("technical_knowledge", 0.5) > 0.7:
@@ -106,14 +106,14 @@ class PhylogenicModel:
             trait_descriptions.append("Be engaging and maintain conversational flow")
         if traits.get("personability", 0.5) > 0.7:
             trait_descriptions.append("Be friendly and approachable")
-        
+
         system_prompt = """You are an AI assistant with evolved personality traits optimized for high performance.
 
 Your behavioral guidelines:
 """
         for desc in trait_descriptions:
             system_prompt += f"- {desc}\n"
-        
+
         system_prompt += """
 When answering questions:
 1. Analyze the question carefully before responding
@@ -122,7 +122,7 @@ When answering questions:
 4. For code problems, write clean, working code
 """
         return system_prompt
-    
+
     async def generate(self, prompt: str) -> str:
         """Generate response with genome-enhanced prompting."""
         system_prompt = self._build_system_prompt()
@@ -138,35 +138,35 @@ When answering questions:
 
 class SimpleBenchmark:
     """Simple benchmark implementation for A/B testing."""
-    
+
     def __init__(self, name: str, samples: List[Dict[str, Any]]):
         self.name = name
         self.samples = samples
-    
+
     async def evaluate(self, model: Any) -> tuple[float, int, float]:
         """Evaluate model and return (score, correct_count, time_taken)."""
         correct = 0
         total = len(self.samples)
         start_time = time.time()
-        
+
         for sample in self.samples:
             try:
                 prompt = sample["prompt"]
                 expected = sample["expected"]
-                
+
                 response = await model.generate(prompt)
-                
+
                 # Check if response contains expected answer
                 if self._check_answer(response, expected):
                     correct += 1
             except Exception as e:
                 print(f"  Error evaluating sample: {e}")
                 continue
-        
+
         time_taken = time.time() - start_time
         score = (correct / total) * 100 if total > 0 else 0
         return score, correct, time_taken
-    
+
     def _check_answer(self, response: str, expected: str) -> bool:
         """Delegate to central `check_answer` utility."""
         return check_answer(response, expected)
@@ -339,7 +339,7 @@ async def run_ab_benchmark(
     output_dir: str = "benchmark_results"
 ) -> ABBenchmarkSuite:
     """Run complete A/B benchmark suite."""
-    
+
     print("=" * 60)
     print("PHYLOGENIC AI GENOME A/B BENCHMARK")
     print("=" * 60)
@@ -347,7 +347,7 @@ async def run_ab_benchmark(
     print(f"Max samples per benchmark: {max_samples}")
     print(f"Timestamp: {datetime.now().isoformat()}")
     print()
-    
+
     # Initialize Ollama client
     config = LLMConfig(
         provider="ollama",
@@ -356,9 +356,9 @@ async def run_ab_benchmark(
         max_tokens=256,
         timeout=120
     )
-    
+
     client = OllamaClient(config)
-    
+
     try:
         await client.initialize()
         print(f"[OK] Connected to Ollama ({model_name})")
@@ -368,10 +368,10 @@ async def run_ab_benchmark(
         print(f"  ollama pull {model_name}")
         print("  ollama serve")
         sys.exit(1)
-    
+
     # Create models
     baseline = BaselineModel(client)
-    
+
     # Create optimized genome for benchmarking
     optimized_genome = ConversationalGenome(
         genome_id="benchmark_optimized_v1",
@@ -386,44 +386,44 @@ async def run_ab_benchmark(
             "personability": 0.3      # Lower for factual tasks
         }
     )
-    
+
     phylogenic = PhylogenicModel(client, optimized_genome)
-    
+
     # Initialize results
     suite = ABBenchmarkSuite(
         model=model_name,
         timestamp=datetime.now().isoformat(),
         genome_config=optimized_genome.traits
     )
-    
+
     # Define benchmarks
     benchmarks = [
         ("MMLU (Knowledge)", SimpleBenchmark("MMLU", create_mmlu_samples(max_samples))),
         ("GSM8K (Math)", SimpleBenchmark("GSM8K", create_gsm8k_samples(max_samples // 3))),
         ("HellaSwag (Reasoning)", SimpleBenchmark("HellaSwag", create_reasoning_samples(max_samples // 3))),
     ]
-    
+
     # Run each benchmark
     for bench_name, benchmark in benchmarks:
         print(f"\n{'-' * 50}")
         print(f"Running: {bench_name}")
         print(f"Samples: {len(benchmark.samples)}")
         print("-" * 50)
-        
+
         # Run baseline
         print("  [A] Baseline model...", end=" ", flush=True)
         baseline_score, baseline_correct, baseline_time = await benchmark.evaluate(baseline)
         print(f"{baseline_score:.1f}% ({baseline_correct}/{len(benchmark.samples)}) in {baseline_time:.1f}s")
-        
+
         # Run phylogenic
         print("  [B] Phylogenic model...", end=" ", flush=True)
         phylogenic_score, phylogenic_correct, phylogenic_time = await benchmark.evaluate(phylogenic)
         print(f"{phylogenic_score:.1f}% ({phylogenic_correct}/{len(benchmark.samples)}) in {phylogenic_time:.1f}s")
-        
+
         # Calculate delta
         delta = phylogenic_score - baseline_score
         delta_percent = (delta / baseline_score * 100) if baseline_score > 0 else 0
-        
+
         if delta > 1:
             status = "improved"
             status_icon = "[+]"
@@ -433,9 +433,9 @@ async def run_ab_benchmark(
         else:
             status = "neutral"
             status_icon = "[=]"
-        
+
         print(f"  {status_icon} Delta: {delta:+.1f}% ({status})")
-        
+
         result = ABResult(
             benchmark_name=benchmark.name,
             baseline_score=baseline_score,
@@ -448,20 +448,20 @@ async def run_ab_benchmark(
             status=status
         )
         suite.results.append(result)
-    
+
     # Calculate totals
     if suite.results:
         suite.total_baseline_score = sum(r.baseline_score for r in suite.results) / len(suite.results)
         suite.total_phylogenic_score = sum(r.phylogenic_score for r in suite.results) / len(suite.results)
         suite.total_delta = suite.total_phylogenic_score - suite.total_baseline_score
-    
+
     # Close client
     await client.close()
-    
+
     # Save results
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
-    
+
     results_file = output_path / f"ab_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(results_file, 'w') as f:
         json.dump({
@@ -486,24 +486,24 @@ async def run_ab_benchmark(
                 for r in suite.results
             ]
         }, f, indent=2)
-    
+
     print(f"\n[OK] Results saved to: {results_file}")
-    
+
     return suite
 
 
 def print_results_matrix(suite: ABBenchmarkSuite) -> str:
     """Print and return results as markdown table."""
-    
+
     print("\n" + "=" * 60)
     print("A/B BENCHMARK RESULTS MATRIX")
     print("=" * 60)
-    
+
     # Build markdown table (using ASCII for console, emoji for markdown file)
     md = f"""
 ## Phylogenic Genome A/B Benchmark Results
 
-**Model**: `{suite.model}`  
+**Model**: `{suite.model}`
 **Date**: {suite.timestamp[:10]}
 
 ### Performance Comparison
@@ -511,7 +511,7 @@ def print_results_matrix(suite: ABBenchmarkSuite) -> str:
 | Benchmark | Baseline | + Genome | Delta | Status |
 |-----------|----------|----------|-------|--------|
 """
-    
+
     for r in suite.results:
         if r.status == "improved":
             status_icon = "[+] Improved"
@@ -519,14 +519,14 @@ def print_results_matrix(suite: ABBenchmarkSuite) -> str:
             status_icon = "[-] Degraded"
         else:
             status_icon = "[=] Neutral"
-        
+
         md += f"| **{r.benchmark_name}** | {r.baseline_score:.1f}% | {r.phylogenic_score:.1f}% | {r.delta:+.1f}% | {status_icon} |\n"
-    
+
     # Add totals
     total_status = "[+]" if suite.total_delta > 0 else "[-]" if suite.total_delta < 0 else "[=]"
     md += f"| **AVERAGE** | **{suite.total_baseline_score:.1f}%** | **{suite.total_phylogenic_score:.1f}%** | **{suite.total_delta:+.1f}%** | {total_status} |\n"
-    
-    md += f"""
+
+    md += """
 ### Genome Configuration
 
 | Trait | Value |
@@ -534,8 +534,8 @@ def print_results_matrix(suite: ABBenchmarkSuite) -> str:
 """
     for trait, value in suite.genome_config.items():
         md += f"| {trait} | {value:.2f} |\n"
-    
-    md += f"""
+
+    md += """
 ### Interpretation
 
 - **Baseline**: Raw LLM responses without enhancement
@@ -543,7 +543,7 @@ def print_results_matrix(suite: ABBenchmarkSuite) -> str:
 - **Delta**: Performance difference (positive = improvement)
 
 """
-    
+
     if suite.total_delta > 2:
         md += "> **Conclusion**: Phylogenic genome enhancement shows significant improvement over baseline.\n"
     elif suite.total_delta > 0:
@@ -552,7 +552,7 @@ def print_results_matrix(suite: ABBenchmarkSuite) -> str:
         md += "> **Conclusion**: Baseline performs better - genome configuration may need tuning.\n"
     else:
         md += "> **Conclusion**: Performance is comparable between baseline and genome-enhanced models.\n"
-    
+
     print(md)
     return md
 
@@ -563,29 +563,29 @@ async def main():
     parser.add_argument("--samples", type=int, default=50, help="Max samples per benchmark")
     parser.add_argument("--output", default="benchmark_results", help="Output directory")
     parser.add_argument("--update-readme", action="store_true", help="Update README with results")
-    
+
     args = parser.parse_args()
-    
+
     # Run benchmarks
     suite = await run_ab_benchmark(
         model_name=args.model,
         max_samples=args.samples,
         output_dir=args.output
     )
-    
+
     # Print results matrix
     markdown = print_results_matrix(suite)
-    
+
     # Optionally update README
     if args.update_readme:
         readme_path = Path("README.md")
         if readme_path.exists():
             content = readme_path.read_text(encoding='utf-8')
-            
+
             # Find or create benchmark section
             marker_start = "<!-- BENCHMARK_RESULTS_START -->"
             marker_end = "<!-- BENCHMARK_RESULTS_END -->"
-            
+
             if marker_start in content:
                 # Replace existing section
                 import re
@@ -598,10 +598,10 @@ async def main():
                 if insert_point != -1:
                     new_section = f"\n{marker_start}\n{markdown}\n{marker_end}\n\n"
                     content = content[:insert_point] + new_section + content[insert_point:]
-            
+
             readme_path.write_text(content, encoding='utf-8')
-            print(f"\n[OK] README.md updated with benchmark results")
-    
+            print("\n[OK] README.md updated with benchmark results")
+
     # Save markdown separately
     md_path = Path(args.output) / "results_matrix.md"
     md_path.write_text(markdown, encoding='utf-8')
