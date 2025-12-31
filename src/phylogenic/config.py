@@ -213,7 +213,7 @@ if PydanticBaseSettingsImpl is not None:
         # Filter out internal pydantic attributes to avoid conflicts during dynamic class creation
         runtime_dict = {
             k: v for k, v in AlleleSettings.__dict__.items()
-            if not k.startswith("__")
+            if not k.startswith("__") and not k.startswith("model_")
         }
         AlleleSettingsRuntime = type("AlleleSettingsRuntime", (PydanticBaseSettingsImpl,), runtime_dict)
         settings = AlleleSettingsRuntime()
