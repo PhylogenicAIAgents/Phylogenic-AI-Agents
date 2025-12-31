@@ -1,37 +1,36 @@
-from typing import Any
+from typing import Any, AsyncIterator
 
 class APIError(Exception):
-    code: Any
-    type: Any
+    code: str | None
+    type: str | None
 
-class APITimeoutError(Exception): ...
+class APITimeoutError(Exception):
+    pass
 
-class AuthenticationError(Exception): ...
+class AuthenticationError(Exception):
+    pass
 
 class RateLimitError(Exception):
-    retry_after: int
+    retry_after: float | None
 
+class ChatCompletion:  # Minimal placeholder for sync completion
+    choices: Any
+    usage: Any
 
-class ModelsListResponse:  # minimal container
-    data: Any
+class ChatCompletionChunk:  # Minimal placeholder for streamed chunk
+    choices: Any
+    usage: Any
 
-
-class ModelsAPI:
-    async def list(self) -> ModelsListResponse: ...
-
-
-class CompletionsAPI:
-    async def create(self, *args: Any, **kwargs: Any) -> Any: ...
-
-
-class ChatAPI:
-    completions: CompletionsAPI
-
+class AsyncStream(AsyncIterator[ChatCompletionChunk]):
+    def __aiter__(self) -> AsyncStream: ...
+    async def __anext__(self) -> ChatCompletionChunk: ...
 
 class AsyncOpenAI:
-    def __init__(self, api_key: str | None = None, base_url: str | None = None, timeout: int | None = None, max_retries: int | None = None) -> None: ...
-
-    models: ModelsAPI
-    chat: ChatAPI
+    def __init__(self, *args: Any, **kwargs: Any):
+        ...
 
     async def close(self) -> None: ...
+    @property
+    def models(self) -> Any: ...
+    @property
+    def chat(self) -> Any: ...

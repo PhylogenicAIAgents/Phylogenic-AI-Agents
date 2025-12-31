@@ -13,17 +13,17 @@ import asyncio
 import json
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Dict, List
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from phylogenic.benchmark.utils import check_answer
+from src.phylogenic.genome import ConversationalGenome
 from src.phylogenic.llm_client import LLMConfig
 from src.phylogenic.llm_ollama import OllamaClient
-from src.phylogenic.genome import ConversationalGenome
-
 
 # Define personality archetypes to test
 PERSONALITY_ARCHETYPES = {
@@ -95,18 +95,18 @@ class PersonalityResult:
 
 class GenomeModel:
     """Model with optional genome enhancement."""
-    
+
     def __init__(self, client: OllamaClient, genome: ConversationalGenome = None):
         self.client = client
         self.genome = genome
-    
+
     def _build_system_prompt(self) -> str:
         if self.genome is None:
             return ""
-        
+
         traits = self.genome.traits
         trait_descriptions = []
-        
+
         if traits.get("empathy", 0.5) > 0.7:
             trait_descriptions.append("Show deep understanding and emotional intelligence")
         if traits.get("technical_knowledge", 0.5) > 0.7:
@@ -123,20 +123,20 @@ class GenomeModel:
             trait_descriptions.append("Be engaging and thorough")
         if traits.get("personability", 0.5) > 0.7:
             trait_descriptions.append("Be friendly and approachable")
-        
+
         if not trait_descriptions:
             return ""
-        
+
         prompt = "You are an AI assistant. Your behavioral guidelines:\n"
         for desc in trait_descriptions:
             prompt += f"- {desc}\n"
-        
+
         prompt += "\nFor multiple choice: answer with just the letter. For math: show work then final number."
         return prompt
-    
+
     async def generate(self, prompt: str) -> str:
         system_prompt = self._build_system_prompt()
-        
+
         if system_prompt:
             messages = [
                 {"role": "system", "content": system_prompt},
@@ -144,7 +144,7 @@ class GenomeModel:
             ]
         else:
             messages = [{"role": "user", "content": prompt}]
-        
+
         response = ""
         async for chunk in self.client.chat_completion(messages, stream=False):
             response += chunk
@@ -202,16 +202,8 @@ REASONING_SAMPLES = [
 ]
 
 
-def check_answer(response: str, expected: str) -> bool:
-    import re
-    response = response.upper().strip()
-    expected = expected.upper().strip()
-    
-    if len(expected) == 1 and expected in "ABCD":
-        pattern = rf'\b{expected}\b|{expected}\.|{expected}\)|^{expected}$'
-        return bool(re.search(pattern, response))
-    
-    return expected in response
+# Use the shared `check_answer` utility from `src.benchmark.utils` to avoid
+# duplicated and potentially-buggy implementations across scripts.
 
 
 async def evaluate_samples(model: GenomeModel, samples: List[Dict]) -> tuple[float, int]:
@@ -230,7 +222,7 @@ async def evaluate_samples(model: GenomeModel, samples: List[Dict]) -> tuple[flo
 
 async def run_personality_benchmark(model_name: str, max_samples: int = 30):
     """Run benchmarks for all personality archetypes."""
-    
+
     print("=" * 70)
     print("PHYLOGENIC PERSONALITY A/B BENCHMARK")
     print("=" * 70)
@@ -238,7 +230,7 @@ async def run_personality_benchmark(model_name: str, max_samples: int = 30):
     print(f"Samples per benchmark: {max_samples}")
     print(f"Personalities to test: {list(PERSONALITY_ARCHETYPES.keys())}")
     print()
-    
+
     # Initialize client
     config = LLMConfig(
         provider="ollama",
@@ -247,23 +239,23 @@ async def run_personality_benchmark(model_name: str, max_samples: int = 30):
         max_tokens=256,
         timeout=120
     )
-    
+
     client = OllamaClient(config)
-    
+
     try:
         await client.initialize()
-        print(f"[OK] Connected to Ollama")
+        print("[OK] Connected to Ollama")
     except Exception as e:
         print(f"[FAIL] {e}")
         sys.exit(1)
-    
+
     # Prepare samples
     mmlu = MMLU_SAMPLES[:max_samples]
     gsm8k = GSM8K_SAMPLES[:max(max_samples // 3, 3)]
     reasoning = REASONING_SAMPLES[:max(max_samples // 3, 3)]
-    
+
     results: List[PersonalityResult] = []
-    
+
     # Test each personality
     for name, traits in PERSONALITY_ARCHETYPES.items():
         print(f"\n{'-' * 60}")
@@ -272,34 +264,34 @@ async def run_personality_benchmark(model_name: str, max_samples: int = 30):
             key_traits = [f"{k}={v:.1f}" for k, v in traits.items() if v > 0.7]
             print(f"High traits: {', '.join(key_traits) if key_traits else 'balanced'}")
         print("-" * 60)
-        
+
         # Create model with genome
         if traits:
             genome = ConversationalGenome(genome_id=f"personality_{name}", traits=traits)
             model = GenomeModel(client, genome)
         else:
             model = GenomeModel(client, None)
-        
+
         start = time.time()
-        
+
         # Run benchmarks
         print(f"  MMLU ({len(mmlu)} samples)...", end=" ", flush=True)
         mmlu_score, mmlu_correct = await evaluate_samples(model, mmlu)
         print(f"{mmlu_score:.1f}% ({mmlu_correct}/{len(mmlu)})")
-        
+
         print(f"  GSM8K ({len(gsm8k)} samples)...", end=" ", flush=True)
         gsm8k_score, gsm8k_correct = await evaluate_samples(model, gsm8k)
         print(f"{gsm8k_score:.1f}% ({gsm8k_correct}/{len(gsm8k)})")
-        
+
         print(f"  Reasoning ({len(reasoning)} samples)...", end=" ", flush=True)
         reasoning_score, reasoning_correct = await evaluate_samples(model, reasoning)
         print(f"{reasoning_score:.1f}% ({reasoning_correct}/{len(reasoning)})")
-        
+
         elapsed = time.time() - start
         avg = (mmlu_score + gsm8k_score + reasoning_score) / 3
-        
+
         print(f"  AVERAGE: {avg:.1f}% (in {elapsed:.1f}s)")
-        
+
         results.append(PersonalityResult(
             personality_name=name,
             traits=traits or {},
@@ -309,30 +301,30 @@ async def run_personality_benchmark(model_name: str, max_samples: int = 30):
             average_score=avg,
             total_time=elapsed
         ))
-    
+
     await client.close()
-    
+
     # Print summary matrix
     print("\n" + "=" * 70)
     print("RESULTS MATRIX")
     print("=" * 70)
-    
+
     # Find baseline for comparison
     baseline_avg = next((r.average_score for r in results if r.personality_name == "baseline"), 0)
-    
-    print(f"\n| Personality | MMLU | GSM8K | Reasoning | AVG | vs Baseline |")
-    print(f"|-------------|------|-------|-----------|-----|-------------|")
-    
+
+    print("\n| Personality | MMLU | GSM8K | Reasoning | AVG | vs Baseline |")
+    print("|-------------|------|-------|-----------|-----|-------------|")
+
     for r in results:
         delta = r.average_score - baseline_avg
         delta_str = f"+{delta:.1f}%" if delta >= 0 else f"{delta:.1f}%"
         status = "[+]" if delta > 2 else "[-]" if delta < -2 else "[=]"
         print(f"| {r.personality_name:11} | {r.mmlu_score:4.1f}% | {r.gsm8k_score:5.1f}% | {r.reasoning_score:9.1f}% | {r.average_score:3.1f}% | {delta_str:6} {status} |")
-    
+
     # Save results
     output_dir = Path("benchmark_results")
     output_dir.mkdir(exist_ok=True)
-    
+
     results_data = {
         "model": model_name,
         "timestamp": datetime.now().isoformat(),
@@ -351,16 +343,16 @@ async def run_personality_benchmark(model_name: str, max_samples: int = 30):
             for r in results
         ]
     }
-    
+
     results_file = output_dir / f"personality_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(results_file, 'w') as f:
         json.dump(results_data, f, indent=2)
-    
+
     # Update README with markdown
     md = f"""
 ## Personality A/B Benchmark Results
 
-**Model**: `{model_name}`  
+**Model**: `{model_name}`
 **Date**: {datetime.now().strftime('%Y-%m-%d')}
 
 ### Performance by Personality Archetype
@@ -373,24 +365,24 @@ async def run_personality_benchmark(model_name: str, max_samples: int = 30):
         delta_str = f"+{delta:.1f}%" if delta >= 0 else f"{delta:.1f}%"
         status = "[+]" if delta > 2 else "[-]" if delta < -2 else "[=]"
         md += f"| **{r.personality_name}** | {r.mmlu_score:.1f}% | {r.gsm8k_score:.1f}% | {r.reasoning_score:.1f}% | {r.average_score:.1f}% | {delta_str} {status} |\n"
-    
+
     # Best performer
     best = max(results, key=lambda x: x.average_score)
     md += f"\n> **Best performing personality**: `{best.personality_name}` with {best.average_score:.1f}% average\n"
-    
+
     md_file = output_dir / "personality_results.md"
     md_file.write_text(md, encoding='utf-8')
-    
+
     print(f"\n[OK] Results saved to: {results_file}")
     print(f"[OK] Markdown saved to: {md_file}")
-    
+
     # Update README
     readme_path = Path("README.md")
     if readme_path.exists():
         content = readme_path.read_text(encoding='utf-8')
         marker_start = "<!-- PERSONALITY_RESULTS_START -->"
         marker_end = "<!-- PERSONALITY_RESULTS_END -->"
-        
+
         if marker_start in content:
             import re
             pattern = f"{marker_start}.*?{marker_end}"
@@ -405,7 +397,7 @@ async def main():
     parser = argparse.ArgumentParser(description="Run personality A/B benchmarks")
     parser.add_argument("--model", default="tinyllama:latest", help="Ollama model")
     parser.add_argument("--samples", type=int, default=20, help="Samples per benchmark")
-    
+
     args = parser.parse_args()
     await run_personality_benchmark(args.model, args.samples)
 
