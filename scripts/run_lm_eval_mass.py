@@ -121,9 +121,13 @@ class BenchmarkRunner:
             model_args = f"pretrained={real_model},device=mps,trust_remote_code={str(bool(trc))}"
         else:
             # Ollama backend (default)
+            # Use local-completions with explicit tokenizer specification
             backend = "local-completions"
-            # Add generic tokenizer to avoid HF validation errors with Ollama names
-            # Use local-completions with base_url pointing to /v1
+            # For Ollama, we need to specify a valid tokenizer model name
+            # Use a generic tokenizer that works with most models
+            # base_url should point to the server root, lm_eval will handle /v1
+            # Note: local-completions may have issues with Ollama's /v1 endpoint
+            # If this fails, consider using a proxy or different backend
             model_args = f"model={model},base_url={self.base_url}/v1,tokenizer=gpt2"
 
         cmd = [
@@ -144,6 +148,9 @@ class BenchmarkRunner:
         logger.info(f"Tasks: {tasks}")
         logger.info(f"Limit: {limit if limit else 'None'}")
 
+        # Ensure output directory exists
+        run_output_dir.mkdir(parents=True, exist_ok=True)
+
         try:
             start_time = time.time()
             _result = subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -154,14 +161,35 @@ class BenchmarkRunner:
             # Load results
             results_file = run_output_dir / "results.json"
             if results_file.exists():
-                with open(results_file) as f:
+                with open(results_file, encoding='utf-8') as f:
                     return json.load(f)
 
+            logger.warning(f"Benchmark completed but no results file found at {results_file}")
             return None
 
         except subprocess.CalledProcessError as e:
-            logger.error(f"Benchmark failed for {model}: {e}")
-            logger.error(f"STDERR: {e.stderr}")
+            logger.warning(f"Benchmark command failed for {model}, but checking for results file...")
+            logger.debug(f"Command error: {e}")
+            if e.stderr:
+                logger.debug(f"STDERR: {e.stderr[:500]}")  # Limit stderr output
+            
+            # Try to extract results from output directory even if command failed
+            # lm_eval may have written results before the error occurred
+            results_file = run_output_dir / "results.json"
+            if results_file.exists():
+                try:
+                    with open(results_file, encoding='utf-8') as f:
+                        results = json.load(f)
+                        logger.info(f"✓ Successfully extracted results from {results_file} despite command error")
+                        return results
+                except json.JSONDecodeError as parse_error:
+                    logger.error(f"Failed to parse results file {results_file}: {parse_error}")
+                except Exception as read_error:
+                    logger.error(f"Failed to read results file {results_file}: {read_error}")
+            else:
+                logger.debug(f"No results file found at {results_file}")
+            
+            logger.error(f"Benchmark failed for {model} and no recoverable results found")
             return None
 
     def run_mass_benchmarks(

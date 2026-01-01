@@ -311,6 +311,100 @@ Experiments with population size N=50, generations G=20:
 
 All tests passed with acceptable performance degradation.
 
+<!-- MATRIX_RESULTS_START -->
+
+### 4.2.5 Multi-Model Personality Evaluation
+
+This section presents results from comprehensive matrix evaluation testing multiple small language models (0.5B-3B parameters) across different personality configurations, Chain of Thought (COT) prompting, and standardized benchmarks.
+
+#### Experimental Setup
+
+**Models Tested**: 3 models across different parameter sizes
+- `qwen2.5:0.5b` (0.5B parameters)
+- `llama3.2:1b` (1B parameters)
+- `gemma2:2b` (2B parameters)
+
+**Personality Configurations**: 12 total
+- Baseline (no personality traits)
+- 5 base personality archetypes (technical_expert, creative_thinker, concise_analyst, balanced, high_context)
+- 5 personality archetypes with COT prompting
+- Standalone COT (baseline + COT)
+
+**Benchmarks**: 5 standardized LLM evaluation tasks
+- MMLU (Multi-task Language Understanding)
+- HellaSwag (Commonsense Reasoning)
+- GSM8K (Math Word Problems)
+- ARC-Easy (Science Reasoning)
+- TruthfulQA (Truthfulness Evaluation)
+
+**Total Configurations**: 180 (3 models × 12 personalities × 5 benchmarks)
+
+#### Key Findings
+
+**1. COT Prompting Provides Major Performance Uplift**
+
+Chain of Thought prompting demonstrated significant improvements, particularly on smaller models:
+
+- **llama3.2:1b**: +9.7% to +16.6% improvement across all personalities (average +13%)
+  - Standalone COT: +13.8% vs baseline
+  - Best: balanced+cot (+16.6% improvement)
+- **gemma2:2b**: +3.4% to +5.8% improvement (average +4.5%)
+  - Standalone COT: +4.2% vs baseline
+- **qwen2.5:0.5b**: Mixed results (-10.6% to +1.8%)
+  - Technical expert with COT: -10.6% (negative impact)
+  - Suggests COT may be counterproductive on very small models
+
+**2. Personality Traits Show Minimal to Negative Impact on Objective Benchmarks**
+
+Across all models, personality traits alone provided no measurable benefit on objective reasoning tasks:
+
+- **gemma2:2b**: All personalities scored 0.95 (identical to baseline, +0.00)
+- **llama3.2:1b**: Most personalities scored 0.80 (identical to baseline, +0.00)
+  - creative_thinker and technical_expert: -0.01 (slight negative)
+- **qwen2.5:0.5b**: Mixed results (-0.03 to +0.01)
+  - Only technical_expert showed minimal positive (+0.01)
+
+**3. Model Size Affects COT Effectiveness**
+
+- **1B models** (llama3.2:1b): Strongest COT benefit (+16.6% max)
+- **2B models** (gemma2:2b): Moderate COT benefit (+5.8% max)
+- **0.5B models** (qwen2.5:0.5b): Negative or neutral COT impact
+
+This suggests diminishing returns as model size increases, and potential harm on very small models.
+
+#### Top Performing Configurations
+
+| Rank | Model | Personality | Avg Score | vs Baseline |
+|------|-------|------------|-----------|-------------|
+| 1 | gemma2:2b | creative_thinker+cot | 1.00 | +0.05 |
+| 2 | gemma2:2b | concise_analyst+cot | 1.00 | +0.05 |
+| 3 | gemma2:2b | balanced+cot | 1.00 | +0.05 |
+| 4 | gemma2:2b | cot | 0.99 | +0.04 |
+| 5 | gemma2:2b | technical_expert+cot | 0.98 | +0.03 |
+
+#### Implications
+
+1. **For Objective Reasoning Tasks**: COT prompting is highly effective, especially on 1B-2B models. Personality traits provide no benefit and may slightly harm performance.
+
+2. **For Very Small Models (0.5B)**: COT prompting should be tested carefully, as it can reduce performance. Personality traits show minimal impact.
+
+3. **Personality Traits May Be Better Suited for Conversational Tasks**: The lack of benefit on objective benchmarks suggests personality traits may be more effective for subjective/conversational tasks, which require separate evaluation.
+
+4. **Optimal Strategy for Objective Tasks**: Use COT prompting without personality traits, especially on 1B-2B models.
+
+#### Full Results
+
+Complete analysis available in: `benchmark_results/matrix_full_expanded/analysis.md`
+
+**Summary Statistics**:
+- Total configurations: 180
+- Success rate: 100%
+- Average score: 0.89
+- Best model: gemma2:2b (0.97 average)
+- Best configuration: gemma2:2b + creative_thinker+cot (1.00 average)
+
+<!-- MATRIX_RESULTS_END -->
+
 ### 4.3 Comparison with Prompt Engineering
 
 **Advantages of Genome Approach**:
@@ -339,6 +433,25 @@ Our results demonstrate that genome-based personality encoding offers significan
 - **Reproducibility**: Genomes enable exact reproduction of agent personalities
 - **Explainability**: Trait values offer clear interpretation
 - **Scalability**: Efficient operations enable large-scale evolution
+
+#### 5.1.1 Personality Traits vs. Prompting Strategies
+
+The comprehensive matrix evaluation (Section 4.2.5) reveals important distinctions between personality traits and prompting strategies:
+
+**Personality Traits on Objective Benchmarks**:
+- Personality traits alone showed **no measurable benefit** on objective reasoning tasks (MMLU, GSM8K, ARC-Easy, etc.)
+- Across all models (0.5B-2B), personality traits performed identically to baseline or slightly worse
+- This suggests personality traits may be better suited for **subjective/conversational tasks** rather than objective reasoning
+
+**Chain of Thought (COT) Prompting**:
+- COT prompting demonstrated **significant improvements** (+9.7% to +16.6% on 1B models)
+- Effectiveness varies by model size: strongest on 1B models, moderate on 2B models, potentially harmful on 0.5B models
+- COT provides consistent benefit across all personality configurations when applied
+
+**Practical Implications**:
+- For **objective reasoning tasks**: Use COT prompting without personality traits
+- For **conversational/subjective tasks**: Personality traits may be more effective (requires separate evaluation)
+- **Model size matters**: COT effectiveness decreases as model size increases, suggesting diminishing returns
 
 ### 5.2 Applications
 

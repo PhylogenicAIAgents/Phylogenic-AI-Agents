@@ -20,7 +20,7 @@ from typing import Dict, List
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from phylogenic.benchmark.utils import check_answer, build_system_prompt
+from phylogenic.benchmark.utils import check_answer, build_system_prompt, build_cot_prompt
 from src.phylogenic.genome import ConversationalGenome
 from src.phylogenic.llm_client import LLMConfig
 from src.phylogenic.llm_ollama import OllamaClient
@@ -96,9 +96,10 @@ class PersonalityResult:
 class GenomeModel:
     """Model with optional genome enhancement."""
 
-    def __init__(self, client: OllamaClient, genome: ConversationalGenome = None):
+    def __init__(self, client: OllamaClient, genome: ConversationalGenome = None, cot_mode: bool = False):
         self.client = client
         self.genome = genome
+        self.cot_mode = cot_mode
 
     def _build_system_prompt(self) -> str:
         """Delegate prompt building to shared utility to avoid duplication."""
@@ -108,14 +109,19 @@ class GenomeModel:
 
     async def generate(self, prompt: str) -> str:
         system_prompt = self._build_system_prompt()
+        
+        # Apply COT wrapper to user prompt if COT mode is enabled
+        user_prompt = prompt
+        if self.cot_mode:
+            user_prompt = build_cot_prompt(prompt)
 
         if system_prompt:
             messages = [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": user_prompt}
             ]
         else:
-            messages = [{"role": "user", "content": prompt}]
+            messages = [{"role": "user", "content": user_prompt}]
 
         response = ""
         async for chunk in self.client.chat_completion(messages, stream=False):

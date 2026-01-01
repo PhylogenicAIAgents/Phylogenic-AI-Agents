@@ -77,6 +77,20 @@ def check_answer(response: str, expected: str) -> bool:
     return expected.lower() in response.lower()
 
 
+def build_cot_prompt(base_prompt: str) -> str:
+    """Wrap a prompt with Chain of Thought instructions.
+
+    Args:
+        base_prompt: The original prompt to wrap
+
+    Returns:
+        Prompt with COT instruction appended
+    """
+    if not base_prompt:
+        return "Let's think step by step:"
+    return f"{base_prompt}\n\nLet's think step by step:"
+
+
 def build_system_prompt(traits: Optional[Dict[str, float]]) -> str:
     """Build system prompt from genome traits.
 

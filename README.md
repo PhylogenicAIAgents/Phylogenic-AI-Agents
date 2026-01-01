@@ -338,6 +338,73 @@ Run benchmarks: `python scripts/run_lm_eval_mass.py --mode quick`
 Run benchmarks: `python scripts/run_personality_benchmark.py --model qwen2.5:0.5b --samples 30`
 <!-- PERSONALITY_RESULTS_END -->
 
+<!-- MATRIX_EVALUATION_START -->
+
+## Multi-Model Personality Matrix Evaluation
+
+Comprehensive evaluation testing multiple small language models (0.5B-3B parameters) across different personality configurations, Chain of Thought (COT) prompting, and standardized benchmarks.
+
+### Results Summary
+
+**Total Configurations**: 180 (3 models × 12 personalities × 5 benchmarks)  
+**Success Rate**: 100%  
+**Average Score**: 0.89
+
+### Key Findings
+
+#### ✅ COT Prompting: Major Performance Uplift
+
+- **llama3.2:1b (1B)**: +9.7% to +16.6% improvement (average +13%)
+  - Standalone COT: +13.8% vs baseline
+- **gemma2:2b (2B)**: +3.4% to +5.8% improvement (average +4.5%)
+- **qwen2.5:0.5b (0.5B)**: Mixed results (-10.6% to +1.8%)
+
+#### ❌ Personality Traits: Minimal to Negative Impact
+
+- **All models**: Personality traits alone showed no measurable benefit on objective benchmarks
+- **gemma2:2b**: All personalities = baseline (+0.00)
+- **llama3.2:1b**: Most personalities = baseline (+0.00)
+- **qwen2.5:0.5b**: Mixed results (-0.03 to +0.01)
+
+#### 📊 Top Performers
+
+| Rank | Model | Personality | Avg Score | vs Baseline |
+|------|-------|------------|-----------|-------------|
+| 1 | gemma2:2b | creative_thinker+cot | 1.00 | +0.05 |
+| 2 | gemma2:2b | concise_analyst+cot | 1.00 | +0.05 |
+| 3 | gemma2:2b | balanced+cot | 1.00 | +0.05 |
+| 4 | gemma2:2b | cot | 0.99 | +0.04 |
+| 5 | gemma2:2b | technical_expert+cot | 0.98 | +0.03 |
+
+### Recommendations
+
+**For Objective Reasoning Tasks**:
+- ✅ Use COT prompting, especially on 1B-2B models
+- ❌ Skip personality traits (no benefit, may slightly harm)
+- ⚠️ Test COT carefully on 0.5B models (can reduce performance)
+
+**For Conversational Tasks**:
+- Personality traits may be more effective (requires separate evaluation)
+
+### Full Results
+
+Complete analysis: [`benchmark_results/matrix_full_expanded/analysis.md`](benchmark_results/matrix_full_expanded/analysis.md)
+
+### Quick Start
+
+```bash
+# Run matrix evaluation
+python scripts/run_matrix_evaluation.py --models qwen2.5:0.5b llama3.2:1b gemma2:2b
+
+# Analyze results
+python scripts/analyze_matrix_results.py --input benchmark_results/matrix_full_expanded/results.json
+
+# Update documentation
+python scripts/update_readme_matrix.py --input benchmark_results/matrix_full_expanded/results.json
+```
+
+<!-- MATRIX_EVALUATION_END -->
+
 ---
 
 ## Architecture
