@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "allele"
+name = "phylogenic"
 version = "1.0.2"
 description = "Phylogenic AI Agents - Beyond Prompt Engineering. Evolve Genetically Optimized Personalities with Liquid Memory."
 readme = "README.md"
