@@ -53,6 +53,19 @@ jobs:
           python -m build --sdist --wheel
           ls -lah dist
 
+      - name: Build whitepaper PDF (dry-run)
+        run: |
+          set -euo pipefail
+          if [ -f docs/whitepaper/phylogenic_whitepaper.tex ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended || true
+            pdflatex -interaction=nonstopmode -halt-on-error -output-directory docs/whitepaper docs/whitepaper/phylogenic_whitepaper.tex || true
+            if [ -f docs/whitepaper/phylogenic_whitepaper.pdf ]; then
+              mkdir -p dist
+              mv docs/whitepaper/phylogenic_whitepaper.pdf dist/
+            fi
+          fi
+
       - name: Collect zenodo metadata payload
         run: |
           set -euo pipefail
@@ -76,7 +89,8 @@ if os.path.exists(zen_file):
     meta.update(extra)
 payload={'metadata':{
     'title': f"{meta.get('name','') or os.environ.get('RELEASE_NAME')} {os.environ.get('RELEASE_TAG')}",
-    'upload_type':'software',
+    'upload_type':'publication',
+    'publication_type':'report',
     'description': os.environ.get('RELEASE_BODY','').strip() or f'Release {os.environ.get("RELEASE_TAG")}',
     'creators':[],
     'version': meta.get('version',''),
@@ -107,6 +121,8 @@ PY
           jq . .zenodo/payload.json || true
           echo "Files to upload:"
           ls -lah dist || true
+          echo "Whitepaper PDFs:"
+          ls -lah docs/whitepaper/*.pdf || true
           if [ "$DRY_RUN" = "true" ]; then
             echo "DRY RUN enabled: No remote uploads will be performed.";
             exit 0
