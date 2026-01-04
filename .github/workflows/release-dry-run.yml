@@ -114,6 +114,21 @@ with open('.zenodo/payload.json','w') as f:
 print('Wrote .zenodo/payload.json')
 PY
 
+      - name: Validate zenodo payload and PDFs
+        run: |
+          set -euo pipefail
+          echo "Validating .zenodo/payload.json ..."
+          jq -e '.metadata.upload_type == "publication"' .zenodo/payload.json >/dev/null || (echo "ERROR: payload.metadata.upload_type is not 'publication'" && exit 1)
+          if jq -e '.metadata.publication_type' .zenodo/payload.json >/dev/null 2>&1; then
+            jq -e '.metadata.publication_type == "report"' .zenodo/payload.json >/dev/null || (echo "ERROR: payload.metadata.publication_type is not 'report'" && exit 1)
+          fi
+          if ls dist/*.pdf 1> /dev/null 2>&1 || ls docs/whitepaper/*.pdf 1> /dev/null 2>&1; then
+            echo "Found PDF artifact for upload."
+          else
+            echo "ERROR: No PDF artifact found in dist/ or docs/whitepaper/. Aborting dry-run to avoid empty publication."
+            exit 1
+          fi
+
       - name: Show dry-run summary
         run: |
           echo "Release tag: $RELEASE_TAG"
