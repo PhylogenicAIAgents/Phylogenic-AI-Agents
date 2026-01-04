@@ -315,64 +315,15 @@ All tests passed with acceptable performance degradation.
 
 ### 4.2.5 Multi-Model Personality Evaluation
 
-This section presents results from comprehensive matrix evaluation testing multiple small language models (0.5B-3B parameters) across different personality configurations, Chain of Thought (COT) prompting, and standardized benchmarks.
+This section presents results from comprehensive matrix evaluation testing multiple small language models (0.5B-3B parameters) across different personality configurations and standardized benchmarks.
 
-#### Experimental Setup
+- Total configurations evaluated: 36
+- Models tested: 3
+- Benchmarks: arc_easy, gsm8k, hellaswag, mmlu, truthfulqa_mc2
 
-**Models Tested**: 3 models across different parameter sizes
-- `qwen2.5:0.5b` (0.5B parameters)
-- `llama3.2:1b` (1B parameters)
-- `gemma2:2b` (2B parameters)
+#### Top Performers
 
-**Personality Configurations**: 12 total
-- Baseline (no personality traits)
-- 5 base personality archetypes (technical_expert, creative_thinker, concise_analyst, balanced, high_context)
-- 5 personality archetypes with COT prompting
-- Standalone COT (baseline + COT)
-
-**Benchmarks**: 5 standardized LLM evaluation tasks
-- MMLU (Multi-task Language Understanding)
-- HellaSwag (Commonsense Reasoning)
-- GSM8K (Math Word Problems)
-- ARC-Easy (Science Reasoning)
-- TruthfulQA (Truthfulness Evaluation)
-
-**Total Configurations**: 180 (3 models × 12 personalities × 5 benchmarks)
-
-#### Key Findings
-
-**1. COT Prompting Provides Major Performance Uplift**
-
-Chain of Thought prompting demonstrated significant improvements, particularly on smaller models:
-
-- **llama3.2:1b**: +9.7% to +16.6% improvement across all personalities (average +13%)
-  - Standalone COT: +13.8% vs baseline
-  - Best: balanced+cot (+16.6% improvement)
-- **gemma2:2b**: +3.4% to +5.8% improvement (average +4.5%)
-  - Standalone COT: +4.2% vs baseline
-- **qwen2.5:0.5b**: Mixed results (-10.6% to +1.8%)
-  - Technical expert with COT: -10.6% (negative impact)
-  - Suggests COT may be counterproductive on very small models
-
-**2. Personality Traits Show Minimal to Negative Impact on Objective Benchmarks**
-
-Across all models, personality traits alone provided no measurable benefit on objective reasoning tasks:
-
-- **gemma2:2b**: All personalities scored 0.95 (identical to baseline, +0.00)
-- **llama3.2:1b**: Most personalities scored 0.80 (identical to baseline, +0.00)
-  - creative_thinker and technical_expert: -0.01 (slight negative)
-- **qwen2.5:0.5b**: Mixed results (-0.03 to +0.01)
-  - Only technical_expert showed minimal positive (+0.01)
-
-**3. Model Size Affects COT Effectiveness**
-
-- **1B models** (llama3.2:1b): Strongest COT benefit (+16.6% max)
-- **2B models** (gemma2:2b): Moderate COT benefit (+5.8% max)
-- **0.5B models** (qwen2.5:0.5b): Negative or neutral COT impact
-
-This suggests diminishing returns as model size increases, and potential harm on very small models.
-
-#### Top Performing Configurations
+### Ranked by Average Score
 
 | Rank | Model | Personality | Avg Score | vs Baseline |
 |------|-------|------------|-----------|-------------|
@@ -381,27 +332,78 @@ This suggests diminishing returns as model size increases, and potential harm on
 | 3 | gemma2:2b | balanced+cot | 1.00 | +0.05 |
 | 4 | gemma2:2b | cot | 0.99 | +0.04 |
 | 5 | gemma2:2b | technical_expert+cot | 0.98 | +0.03 |
+| 6 | gemma2:2b | high_context+cot | 0.98 | +0.03 |
+| 7 | gemma2:2b | technical_expert | 0.95 | +0.00 |
+| 8 | gemma2:2b | creative_thinker | 0.95 | +0.00 |
+| 9 | gemma2:2b | concise_analyst | 0.95 | +0.00 |
+| 10 | gemma2:2b | balanced | 0.95 | +0.00 |
 
-#### Implications
+## COT Prompting Impact
 
-1. **For Objective Reasoning Tasks**: COT prompting is highly effective, especially on 1B-2B models. Personality traits provide no benefit and may slightly harm performance.
+Improvement when adding COT to each personality:
 
-2. **For Very Small Models (0.5B)**: COT prompting should be tested carefully, as it can reduce performance. Personality traits show minimal impact.
+| Model | Personality | Without COT | With COT | Improvement | % Change |
+|-------|-------------|-------------|----------|-------------|----------|
+| gemma2:2b | balanced | 0.95 | 1.00 | +0.05 | +5.8% |
+| gemma2:2b | concise_analyst | 0.95 | 1.00 | +0.05 | +5.8% |
+| gemma2:2b | creative_thinker | 0.95 | 1.00 | +0.05 | +5.8% |
+| gemma2:2b | high_context | 0.95 | 0.98 | +0.03 | +3.4% |
+| gemma2:2b | technical_expert | 0.95 | 0.98 | +0.03 | +3.4% |
+| llama3.2:1b | balanced | 0.80 | 0.94 | +0.13 | +16.6% |
+| llama3.2:1b | concise_analyst | 0.80 | 0.92 | +0.11 | +14.1% |
+| llama3.2:1b | creative_thinker | 0.79 | 0.87 | +0.08 | +9.7% |
+| llama3.2:1b | high_context | 0.81 | 0.93 | +0.11 | +13.9% |
+| llama3.2:1b | technical_expert | 0.79 | 0.88 | +0.09 | +10.9% |
+| qwen2.5:0.5b | balanced | 0.84 | 0.80 | -0.05 | -5.8% |
+| qwen2.5:0.5b | concise_analyst | 0.85 | 0.86 | +0.02 | +1.8% |
+| qwen2.5:0.5b | creative_thinker | 0.82 | 0.82 | +0.01 | +0.7% |
+| qwen2.5:0.5b | high_context | 0.85 | 0.84 | -0.01 | -1.0% |
+| qwen2.5:0.5b | technical_expert | 0.86 | 0.76 | -0.09 | -10.6% |
 
-3. **Personality Traits May Be Better Suited for Conversational Tasks**: The lack of benefit on objective benchmarks suggests personality traits may be more effective for subjective/conversational tasks, which require separate evaluation.
+#### Full Results Matrix
 
-4. **Optimal Strategy for Objective Tasks**: Use COT prompting without personality traits, especially on 1B-2B models.
+### Performance by Model × Personality × Benchmark
 
-#### Full Results
+| Model | Personality | arc_easy | gsm8k | hellaswag | mmlu | truthfulqa_mc2 | Average | vs Baseline |
+|---|---|---|---|---|---|---|---|---|
+| gemma2:2b | balanced | 1.00 | 0.78 | 0.95 | 1.00 | 1.00 | 0.95 | +0.00 |
+| gemma2:2b | balanced+cot | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | +0.05 |
+| gemma2:2b | baseline | 1.00 | 0.78 | 0.95 | 1.00 | 1.00 | 0.95 | - |
+| gemma2:2b | concise_analyst | 1.00 | 0.78 | 0.95 | 1.00 | 1.00 | 0.95 | +0.00 |
+| gemma2:2b | concise_analyst+cot | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | +0.05 |
+| gemma2:2b | cot | 1.00 | 1.00 | 1.00 | 1.00 | 0.95 | 0.99 | +0.04 |
+| gemma2:2b | creative_thinker | 1.00 | 0.78 | 0.95 | 1.00 | 1.00 | 0.95 | +0.00 |
+| gemma2:2b | creative_thinker+cot | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | +0.05 |
+| gemma2:2b | high_context | 1.00 | 0.78 | 0.95 | 1.00 | 1.00 | 0.95 | +0.00 |
+| gemma2:2b | high_context+cot | 1.00 | 0.89 | 1.00 | 1.00 | 1.00 | 0.98 | +0.03 |
+| gemma2:2b | technical_expert | 1.00 | 0.78 | 0.95 | 1.00 | 1.00 | 0.95 | +0.00 |
+| gemma2:2b | technical_expert+cot | 1.00 | 0.89 | 1.00 | 1.00 | 1.00 | 0.98 | +0.03 |
+| llama3.2:1b | balanced | 0.95 | 0.33 | 0.90 | 0.93 | 0.90 | 0.80 | +0.00 |
+| llama3.2:1b | balanced+cot | 0.95 | 1.00 | 1.00 | 0.93 | 0.80 | 0.94 | +0.13 |
+| llama3.2:1b | baseline | 0.95 | 0.33 | 0.90 | 0.93 | 0.90 | 0.80 | - |
+| llama3.2:1b | concise_analyst | 1.00 | 0.33 | 0.85 | 0.93 | 0.90 | 0.80 | +0.00 |
+| llama3.2:1b | concise_analyst+cot | 0.80 | 1.00 | 1.00 | 0.93 | 0.85 | 0.92 | +0.11 |
+| llama3.2:1b | cot | 0.85 | 1.00 | 1.00 | 0.87 | 0.85 | 0.91 | +0.11 |
+| llama3.2:1b | creative_thinker | 0.95 | 0.33 | 0.85 | 0.93 | 0.90 | 0.79 | -0.01 |
+| llama3.2:1b | creative_thinker+cot | 0.85 | 1.00 | 1.00 | 0.80 | 0.70 | 0.87 | +0.07 |
+| llama3.2:1b | high_context | 0.95 | 0.33 | 0.95 | 0.93 | 0.90 | 0.81 | +0.01 |
+| llama3.2:1b | high_context+cot | 0.80 | 1.00 | 1.00 | 0.93 | 0.90 | 0.93 | +0.12 |
+| llama3.2:1b | technical_expert | 1.00 | 0.33 | 0.80 | 0.93 | 0.90 | 0.79 | -0.01 |
+| llama3.2:1b | technical_expert+cot | 0.80 | 1.00 | 1.00 | 0.80 | 0.80 | 0.88 | +0.08 |
+| qwen2.5:0.5b | balanced | 0.80 | 0.89 | 1.00 | 0.73 | 0.80 | 0.84 | -0.00 |
+| qwen2.5:0.5b | balanced+cot | 0.65 | 0.78 | 1.00 | 0.80 | 0.75 | 0.80 | -0.05 |
+| qwen2.5:0.5b | baseline | 0.85 | 0.78 | 1.00 | 0.87 | 0.75 | 0.85 | - |
+| qwen2.5:0.5b | concise_analyst | 0.85 | 0.78 | 1.00 | 0.87 | 0.75 | 0.85 | +0.00 |
+| qwen2.5:0.5b | concise_analyst+cot | 0.85 | 0.89 | 1.00 | 0.93 | 0.65 | 0.86 | +0.02 |
+| qwen2.5:0.5b | cot | 0.65 | 1.00 | 1.00 | 0.80 | 0.75 | 0.84 | -0.01 |
+| qwen2.5:0.5b | creative_thinker | 0.75 | 0.78 | 1.00 | 0.87 | 0.70 | 0.82 | -0.03 |
+| qwen2.5:0.5b | creative_thinker+cot | 0.60 | 0.89 | 1.00 | 0.93 | 0.70 | 0.82 | -0.02 |
+| qwen2.5:0.5b | high_context | 0.80 | 0.78 | 1.00 | 0.87 | 0.80 | 0.85 | +0.00 |
+| qwen2.5:0.5b | high_context+cot | 0.70 | 1.00 | 1.00 | 0.80 | 0.70 | 0.84 | -0.01 |
+| qwen2.5:0.5b | technical_expert | 0.80 | 0.78 | 1.00 | 0.80 | 0.90 | 0.86 | +0.01 |
+| qwen2.5:0.5b | technical_expert+cot | 0.55 | 0.89 | 1.00 | 0.73 | 0.65 | 0.76 | -0.08 |
 
-Complete analysis available in: `benchmark_results/matrix_full_expanded/analysis.md`
-
-**Summary Statistics**:
-- Total configurations: 180
-- Success rate: 100%
-- Average score: 0.89
-- Best model: gemma2:2b (0.97 average)
-- Best configuration: gemma2:2b + creative_thinker+cot (1.00 average)
+*Full analysis available in: `benchmark_results/matrix_full_expanded/analysis.md`*
 
 <!-- MATRIX_RESULTS_END -->
 
