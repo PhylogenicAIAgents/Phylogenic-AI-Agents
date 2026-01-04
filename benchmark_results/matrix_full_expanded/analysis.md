@@ -1,6 +1,6 @@
 # Multi-Model Personality Matrix Analysis
 
-**Generated**: 2026-01-01 00:59:04
+**Generated**: 2026-01-04 18:08:56
 
 ## Summary Statistics
 
@@ -108,7 +108,7 @@ Improvement when adding COT to each personality:
 
 ## Matrix Evaluation Results
 
-### Performance by Model × Personality × Benchmark
+### Performance by Model Ã— Personality Ã— Benchmark
 
 | Model | Personality | arc_easy | gsm8k | hellaswag | mmlu | truthfulqa_mc2 | Average | vs Baseline |
 |---|---|---|---|---|---|---|---|---|
