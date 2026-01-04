@@ -40,6 +40,24 @@ jobs:
           python -m build --sdist --wheel
           ls -lah dist
 
+      - name: Build whitepaper PDF
+        run: |
+          set -euo pipefail
+          # Attempt to compile the LaTeX whitepaper into a PDF. This is non-fatal
+          # for the release (we don't want to block releases if building the PDF
+          # fails); successful builds are moved into `dist/` for release and Zenodo upload.
+          if [ -f docs/whitepaper/phylogenic_whitepaper.tex ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended || true
+            pdflatex -interaction=nonstopmode -halt-on-error -output-directory docs/whitepaper docs/whitepaper/phylogenic_whitepaper.tex || true
+            if [ -f docs/whitepaper/phylogenic_whitepaper.pdf ]; then
+              mkdir -p dist
+              mv docs/whitepaper/phylogenic_whitepaper.pdf dist/
+            fi
+          else
+            echo "No LaTeX source found at docs/whitepaper/phylogenic_whitepaper.tex; skipping PDF build"
+          fi
+
       - name: Upload to PyPI (if PYPI_API_TOKEN provided)
         if: ${{ secrets.PYPI_API_TOKEN != '' }}
         env:
@@ -96,7 +114,8 @@ if os.path.exists(zenodo_file):
 payload = {
   'metadata': {
     'title': f"{meta.get('name','') or os.environ.get('RELEASE_NAME')} {os.environ.get('RELEASE_TAG')}",
-    'upload_type': 'software',
+    'upload_type': 'publication',
+    'publication_type': 'report',
     'description': os.environ.get('RELEASE_BODY','').strip() or f'Release {os.environ.get("RELEASE_TAG")}',
     'creators': [],
     'version': meta.get('version',''),
@@ -160,10 +179,22 @@ PY
           echo "Zenodo deposition id: $depo_id"
 
           for f in dist/*; do
-            echo "Uploading $f to Zenodo deposition $depo_id..."
-            curl -s -X PUT "$ZENODO_URL/api/deposit/depositions/$depo_id/files?name=$(basename "$f")" \
-              -H "Authorization: Bearer $ZENODO_TOKEN" \
-              --data-binary @"$f"
+            if [ -f "$f" ]; then
+              echo "Uploading $f to Zenodo deposition $depo_id..."
+              curl -s -X PUT "$ZENODO_URL/api/deposit/depositions/$depo_id/files?name=$(basename "$f")" \
+                -H "Authorization: Bearer $ZENODO_TOKEN" \
+                --data-binary @"$f"
+            fi
+          done
+
+          # Also upload whitepaper PDFs if present (docs/whitepaper/)
+          for wp in docs/whitepaper/*.pdf; do
+            if [ -f "$wp" ]; then
+              echo "Uploading $wp to Zenodo deposition $depo_id..."
+              curl -s -X PUT "$ZENODO_URL/api/deposit/depositions/$depo_id/files?name=$(basename "$wp")" \
+                -H "Authorization: Bearer $ZENODO_TOKEN" \
+                --data-binary @"$wp"
+            fi
           done
 
           # Publish deposition
