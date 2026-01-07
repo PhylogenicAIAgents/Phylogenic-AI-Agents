@@ -1,7 +1,8 @@
 {
   "metadata": {
     "title": "phylogenic v0.0.0-test",
-    "upload_type": "software",
+    "upload_type": "publication",
+    "publication_type": "report",
     "description": "Testing package name phylogenic",
     "creators": [
       {
@@ -20,7 +21,8 @@
     "related_identifiers": [
       {
         "identifier": "https://github.com/PhylogenicAIAgents/Phylogenic-AI-Agents/pull/19",
-        "relation": "isSupplementTo"
+        "relation": "isSupplementTo",
+        "scheme": "url"
       },
       {
         "identifier": "https://zenodo.org/records/18010560",
